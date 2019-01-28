@@ -1,0 +1,31 @@
+defaultInterval: &interval
+    days: 0
+    hours: 0
+    minutes: 0
+    seconds: 0
+
+ingester:
+    directories:
+        - data
+    butler:
+        class:
+            import : lsst.ctrl.oods.gen2ButlerIngester
+            name : Gen2ButlerIngester
+        repoDirectory : repo
+    batchSize: 20
+    scanInterval:
+        <<: *interval
+        seconds: 10
+
+cacheCleaner:
+    directories:
+        - repo/raw
+    scanInterval:
+        <<: *interval
+        seconds: 30
+    filesOlderThan:
+        <<: *interval
+        days: 30 
+    directoriesEmptyForMoreThan:
+        <<: *interval
+        days: 1
