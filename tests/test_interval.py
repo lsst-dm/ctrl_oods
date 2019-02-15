@@ -1,10 +1,10 @@
+# This file is part of ctrl_oods
 #
-# LSST Data Management System
-#
-# Copyright 2008-2019  AURA/LSST.
-#
-# This product includes software developed by the
-# LSST Project (http://www.lsst.org/).
+# Developed for the LSST Data Management System.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,17 +16,11 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the LSST License Statement and
-# the GNU General Public License along with this program.  If not,
-# see <https://www.lsstcorp.org/LegalNotices/>.
-#
-
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import unittest
 from lsst.ctrl.oods.timeInterval import TimeInterval
 import lsst.utils.tests
-
-
-def setup_module(module):
-    lsst.utils.tests.init()
 
 
 class IntervalTestCase(lsst.utils.tests.TestCase):
@@ -40,11 +34,18 @@ class IntervalTestCase(lsst.utils.tests.TestCase):
         config["minutes"] = 1
         config["seconds"] = 1
 
-        interval = TimeInterval(config)
-
-        seconds = interval.calculateTotalSeconds()
+        seconds = TimeInterval.calculateTotalSeconds(config)
         self.assertTrue(seconds, 86400+3600+60+1)
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
     pass
+
+
+def setup_module(module):
+    lsst.utils.tests.init()
+
+
+if __name__ == "__main__":
+    lsst.utils.tests.init()
+    unittest.main()

@@ -1,10 +1,10 @@
+# This file is part of ctrl_oods
 #
-# LSST Data Management System
-#
-# Copyright 2008-2019  AURA/LSST.
-#
-# This product includes software developed by the
-# LSST Project (http://www.lsst.org/).
+# Developed for the LSST Data Management System.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,26 +16,26 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the LSST License Statement and
-# the GNU General Public License along with this program.  If not,
-# see <https://www.lsstcorp.org/LegalNotices/>.
-#
-
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import time
 from lsst.ctrl.oods.timeInterval import TimeInterval
 
 
 class CacheCleaner(object):
-    """Removes files and subdirectories older than a certain interval"""
+    """Removes files and subdirectories older than a certain interval."""
 
-    def __init__(self, config, verbose=False):
+    def __init__(self, logger, config):
+        self.logger = logger
         self.config = config
-        self.verbose = verbose
+        self.directories = self.config["directories"]
+        self.fileInterval = self.config["filesOlderThan"]
+        self.emptyDirsInterval = self.config["directoriesEmptyForMoreThan"]
 
-    def runTask(self):
-        """Remove files older than a given, and directories
-        that have been empty for a given interval
+    def run_task(self):
+        """Remove files older than a given interval, and directories
+        that have been empty for a given interval.
         """
 
         # The removal of files and directories have different
@@ -43,32 +43,28 @@ class CacheCleaner(object):
         # since the file was last modified.  Directories are removed
         # based on how long it's been since they've been empty.
 
-        directories = self.config["directories"]
+        now = time.time()
 
         # remove old files
-        fileInterval = self.config["filesOlderThan"]
-        interval = TimeInterval(fileInterval)
-        seconds = interval.calculateTotalSeconds()
+        seconds = TimeInterval.calculateTotalSeconds(self.fileInterval)
+        seconds = now - seconds
 
-        files = self.getAllFilesOlderThan(seconds, directories)
+        files = self.getAllFilesOlderThan(seconds, self.directories)
         for name in files:
-            if self.verbose:
-                print("removing", name)
+            self.logger.info("removing", name)
             os.unlink(name)
 
         # remove empty directories
-        emptyDirsInterval = self.config["directoriesEmptyForMoreThan"]
-        interval = TimeInterval(emptyDirsInterval)
-        seconds = interval.calculateTotalSeconds()
+        seconds = TimeInterval.calculateTotalSeconds(self.emptyDirsInterval)
+        seconds = now - seconds
 
-        dirs = self.getAllEmptyDirectoriesOlderThan(seconds, directories)
+        dirs = self.getAllEmptyDirectoriesOlderThan(seconds, self.directories)
         for name in dirs:
-            if self.verbose:
-                print("removing", name)
+            self.logger.info("removing", name)
             os.rmdir(name)
 
     def getAllFilesOlderThan(self, seconds, directories):
-        """Get files in directories older than a certain time
+        """Get files in directories older than 'seconds'.
         @param seconds: age to match files against
         @param directories: directories to observe
         @return: all files that haven't been modified in 'seconds'
@@ -80,26 +76,24 @@ class CacheCleaner(object):
         return allFiles
 
     def getFilesOlderThan(self, seconds, directory):
-        """Get files in one directory older than a certain time
+        """Get files in one directory older than 'seconds'.
         @param seconds: age to match files against
         @param directory: directory to observe
         @return: all files that haven't been modified in 'seconds'
         """
         files = []
-        now = time.time()
-        olderThan = now - seconds
 
         for dirName, subdirs, fileList in os.walk(directory):
             for fname in fileList:
                 fullName = os.path.join(dirName, fname)
                 stat_info = os.stat(fullName)
                 modification_time = stat_info.st_mtime
-                if modification_time < olderThan:
+                if modification_time < seconds:
                     files.append(fullName)
         return files
 
     def getAllEmptyDirectoriesOlderThan(self, seconds, directories):
-        """Get subdirectories empty more than 'seconds' in all directories
+        """Get subdirectories empty more than 'seconds' in all directories.
         @param seconds: age to match files against
         @param directories: directories to observe
         @return: all subdirectories empty for more  than 'seconds'
@@ -111,20 +105,22 @@ class CacheCleaner(object):
         return allDirs
 
     def getEmptyDirectoriesOlderThan(self, seconds, directory):
-        """Get subdirectories empty more than 'seconds' in a directory
+        """Get subdirectories empty more than 'seconds' in a directory.
+        All subdirectories are checked to see if they're empty and are marked
+        as older than 'seconds" if the modification time for that directory
+        is at least that old.
         @param seconds: age to match files against
         @param directory: single directory to observe
         @return: all subdirectories empty for more than 'seconds'
         """
         directories = []
-        now = time.time()
-        olderThan = now - seconds
+
         for root, dirs, files in os.walk(directory, topdown=False):
             for name in dirs:
                 fullName = os.path.join(root, name)
                 if os.listdir(fullName) == []:
                     stat_info = os.stat(fullName)
                     modification_time = stat_info.st_mtime
-                    if modification_time < olderThan:
+                    if modification_time < seconds:
                         directories.append(fullName)
         return directories

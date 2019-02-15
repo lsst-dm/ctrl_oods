@@ -1,10 +1,10 @@
+# This file is part of ctrl_oods
 #
-# LSST Data Management System
-#
-# Copyright 2008-2019  AURA/LSST.
-#
-# This product includes software developed by the
-# LSST Project (http://www.lsst.org/).
+# Developed for the LSST Data Management System.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,26 +16,24 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the LSST License Statement and
-# the GNU General Public License along with this program.  If not,
-# see <https://www.lsstcorp.org/LegalNotices/>.
-#
-
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import datetime
 import os
+import tempfile
 import time
-import lsst.ctrl.oods.directoryScanner as ds
+import unittest
+from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 import lsst.utils.tests
-import tempfile
-
-
-def setup_module(module):
-    lsst.utils.tests.init()
+import logging
 
 
 class CleanerTestCase(lsst.utils.tests.TestCase):
     """Test cache cleaning"""
+
+    def setUp(self):
+        self.logger = logging.getLogger("CleanerTestCase")
 
     def testFileCleaner(self):
 
@@ -61,7 +59,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
 
         # create a DirectoryScanner so we can keep tabs on the files
         # we put into the temp directory
-        scanner = ds.DirectoryScanner(config)
+        scanner = DirectoryScanner(config)
         files = scanner.getAllFiles()
 
         # check to make sure we have the files in there that we
@@ -69,8 +67,8 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         self.assertEqual(len(files), 3)
 
         # run the cleaner once
-        cleaner = CacheCleaner(config)
-        cleaner.runTask()
+        cleaner = CacheCleaner(self.logger, config)
+        cleaner.run_task()
 
         # get the list of files
         files = scanner.getAllFiles()
@@ -82,7 +80,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         self.changeModificationDate(filename1)
 
         # clean up that "old" file
-        cleaner.runTask()
+        cleaner.run_task()
 
         # check to see that we now have the number of files we expect
         files = scanner.getAllFiles()
@@ -93,7 +91,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         self.changeModificationDate(filename3)
 
         # clean up that "old" file
-        cleaner.runTask()
+        cleaner.run_task()
 
         # check to see that we now have the number of files we expect
         files = scanner.getAllFiles()
@@ -129,8 +127,8 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         (fh2, filename2) = tempfile.mkstemp(dir=dirPath)
 
         # run the cleaner once
-        cleaner = CacheCleaner(config, verbose=True)
-        cleaner.runTask()
+        cleaner = CacheCleaner(self.logger, config)
+        cleaner.run_task()
 
         # check to see if all the directories are still there
         self.assertTrue(os.path.exists(dirname1))
@@ -145,7 +143,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         self.changeModificationDate(dirname2)
 
         # turn off verbosity and clean up that "old" subdirectory
-        cleaner.runTask()
+        cleaner.run_task()
 
         # check to see that we now have the number of subdirectories we expect
         self.assertTrue(os.path.exists(dirname1))
@@ -155,7 +153,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
 
         # change the modification date of the subdirectory with a file in it
         self.changeModificationDate(dirname1)
-        cleaner.runTask()
+        cleaner.run_task()
 
         # the subdirectory should still be there because the file is newer
         self.assertTrue(os.path.exists(dirname1))
@@ -164,7 +162,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
 
         # change the modifiction date of the file to the past
         self.changeModificationDate(testFile)
-        cleaner.runTask()
+        cleaner.run_task()
 
         # make sure the file was removed...and the subdirectory NOT.
         self.assertFalse(os.path.exists(testFile))
@@ -177,7 +175,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         self.changeModificationDate(dirname1)
 
         # clean up the "old" directory
-        cleaner.runTask()
+        cleaner.run_task()
 
         # check to see that we now have one subdirectory left
         self.assertFalse(os.path.exists(dirname1))
@@ -185,14 +183,13 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
 
         # change the date of the last subdirectory and remove it.
         self.changeModificationDate(dirname3)
-        cleaner.verbose = False
-        cleaner.runTask()
+        cleaner.run_task()
         self.assertFalse(os.path.exists(dirname3))
 
         # change the date of the last file in the main directory
         self.assertTrue(os.path.exists(filename2))
         self.changeModificationDate(filename2)
-        cleaner.runTask()
+        cleaner.run_task()
         self.assertFalse(os.path.exists(filename2))
 
         # close handles to old files
@@ -211,3 +208,12 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
     pass
+
+
+def setup_module(module):
+    lsst.utils.tests.init()
+
+
+if __name__ == "__main__":
+    lsst.utils.tests.init()
+    unittest.main()
