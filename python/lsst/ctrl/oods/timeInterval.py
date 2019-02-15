@@ -1,10 +1,10 @@
+# This file is part of ctrl_oods
 #
-# LSST Data Management System
-#
-# Copyright 2008-2019  AURA/LSST.
-#
-# This product includes software developed by the
-# LSST Project (http://www.lsst.org/).
+# Developed for the LSST Data Management System.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,10 +16,8 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the LSST License Statement and
-# the GNU General Public License along with this program.  If not,
-# see <https://www.lsstcorp.org/LegalNotices/>.
-#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 SECONDS_PER_DAY = 86400
 SECONDS_PER_HOUR = 3600
 SECONDS_PER_MINUTE = 60
@@ -28,17 +26,18 @@ SECONDS_PER_MINUTE = 60
 class TimeInterval(object):
     """representation of a time interval from a configuration
     """
-    def __init__(self, config):
-        self.days = config["days"]
-        self.hours = config["hours"]
-        self.minutes = config["minutes"]
-        self.seconds = config["seconds"]
 
-    def calculateTotalSeconds(self):
+    @staticmethod
+    def calculateTotalSeconds(config):
         """calculate the number of seconds represented by this configuration
         """
-        total = self.days * SECONDS_PER_DAY
-        total = total + (self.hours * SECONDS_PER_HOUR)
-        total = total + (self.minutes * SECONDS_PER_MINUTE)
-        total = total + self.seconds
+        days = config["days"]
+        hours = config["hours"]
+        minutes = config["minutes"]
+        seconds = config["seconds"]
+
+        total = days * SECONDS_PER_DAY
+        total = total + (hours * SECONDS_PER_HOUR)
+        total = total + (minutes * SECONDS_PER_MINUTE)
+        total = total + seconds
         return total
