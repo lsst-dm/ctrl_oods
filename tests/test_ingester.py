@@ -1,10 +1,10 @@
+# This file is part of ctrl_oods
 #
-# LSST Data Management System
-#
-# Copyright 2008-2019  AURA/LSST.
-#
-# This product includes software developed by the
-# LSST Project (http://www.lsst.org/).
+# Developed for the LSST Data Management System.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,28 +16,25 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the LSST License Statement and
-# the GNU General Public License along with this program.  If not,
-# see <https://www.lsstcorp.org/LegalNotices/>.
-#
-
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
-import lsst.ctrl.oods.directoryScanner as ds
-import lsst.ctrl.oods.fileIngester as fi
-import lsst.utils.tests
 import tempfile
+import unittest
 from shutil import copyfile
 import yaml
-
-
-def setup_module(module):
-    lsst.utils.tests.init()
+from lsst.ctrl.oods.directoryScanner import DirectoryScanner
+from lsst.ctrl.oods.fileIngester import FileIngester
+import lsst.utils.tests
+import logging
 
 
 class Gen2IngesterTestCase(lsst.utils.tests.TestCase):
     """Test Scanning directory"""
 
     def setUp(self):
+        self.logger = logging.getLogger("gen2IngesterTestCase")
+
         package = lsst.utils.getPackageDir("ctrl_oods")
         testFile = os.path.join(package, "tests", "etc", "ingest.yaml")
 
@@ -64,53 +61,30 @@ class Gen2IngesterTestCase(lsst.utils.tests.TestCase):
         copyfile(mapperPath, destFile)
 
     def testIngest(self):
-        scanner = ds.DirectoryScanner(self.config["ingester"])
+        scanner = DirectoryScanner(self.config["ingester"])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = fi.FileIngester(self.config["ingester"])
-        ingester.runTask()
+        ingester = FileIngester(self.logger, self.config["ingester"])
+        ingester.run_task()
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        ingester.runTask()
-
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 0)
-
-    def testVerbosityBatch(self):
-        scanner = ds.DirectoryScanner(self.config["ingester"])
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 1)
-
-        ingester = fi.FileIngester(self.config["ingester"], verbose=True)
-        ingester.runTask()
-
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 0)
-
-    def testVerbosityNoBatch(self):
-        scanner = ds.DirectoryScanner(self.config["ingester"])
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 1)
-
-        self.config["ingester"]["batchSize"] = -1
-        ingester = fi.FileIngester(self.config["ingester"], verbose=True)
-        ingester.runTask()
+        ingester.run_task()
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
     def testBatchSize(self):
-        scanner = ds.DirectoryScanner(self.config["ingester"])
+        scanner = DirectoryScanner(self.config["ingester"])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         self.config["ingester"]["batchSize"] = -1
 
-        ingester = fi.FileIngester(self.config["ingester"])
-        ingester.runTask()
+        ingester = FileIngester(self.logger, self.config["ingester"])
+        ingester.run_task()
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
@@ -118,3 +92,12 @@ class Gen2IngesterTestCase(lsst.utils.tests.TestCase):
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
     pass
+
+
+def setup_module(module):
+    lsst.utils.tests.init()
+
+
+if __name__ == "__main__":
+    lsst.utils.tests.init()
+    unittest.main()
