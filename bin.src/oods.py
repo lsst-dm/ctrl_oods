@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
+# This file is part of ctrl_oods
 #
-# LSST Data Management System
-#
-# Copyright 2008-2019  AURA/LSST.
-#
-# This product includes software developed by the
-# LSST Project (http://www.lsst.org/).
+# Developed for the LSST Data Management System.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,69 +18,76 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the LSST License Statement and
-# the GNU General Public License along with this program.  If not,
-# see <https://www.lsstcorp.org/LegalNotices/>.
-#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import optparse
+import argparse
+import logging
 import os
 import sys
 import yaml
 import lsst.utils
 from lsst.ctrl.oods.taskRunner import TaskRunner
 from lsst.ctrl.oods.fileIngester import FileIngester
-from lsst.ctrl.oods.cacheCleaner import CacheCleaner
+from lsst.ctrl.oods.cache_cleaner import CacheCleaner
 from lsst.ctrl.oods.validator import Validator
 
-usage = """usage: %prog [[-c config]|[-y config]]"""
+logger = logging.getLogger("ctrl_oods")
 
-parser = optparse.OptionParser("usage")
-parser.add_option("-c", "--config", action="store", dest="configFile",
-                  default=None, help="OODS configuration file")
-parser.add_option("-y", "--yaml-validate", action="store_true", dest="validate",
-                  default=False, help="validate YAML file")
-parser.add_option("-v", "--verbose", action="store_true",
-                  dest="verbose", default=False, help="verbose output")
+name = os.path.basename(sys.argv[0])
 
-parser.opts = {}
-parser.args = []
+parser = argparse.ArgumentParser(prog=name,
+                                 description='''Ingests new files into a Butler''')
+parser.add_argument("config", default=None, nargs='?',
+                    help="use specified OODS YAML configuration file")
 
-(parser.opts, parser.args) = parser.parse_args()
+parser.add_argument("-y", "--yaml-validate", action="store_true",
+                    dest="validate", default=False,
+                    help="validate YAML configuration file")
+parser.add_argument("-l", "--loglevel", nargs='?',
+                    choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL'),
+                    default='warn', help="print logging statements")
 
-if parser.opts.validate is True:
-    with open(parser.args[0], 'r') as f:
-        config = yaml.load(f)
-        v = Validator(config, parser.opts.verbose)
-        v.verify()
-        if not v.isValid:
-            print("invalid OODS YAML configuration file")
-        else:
-            print("valid OODS YAML configuration file")
-    sys.exit(0)
+args = parser.parse_args()
+lvls = {'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WARN': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'FATAL': logging.CRITICAL}
 
-package = lsst.utils.getPackageDir("ctrl_oods")
-yamlPath = os.path.join(package, "etc", "oods.yaml")
-if parser.opts.configFile is not None:
-    yamlPath = os.path.join(parser.opts.configFile)
+logger.setLevel(lvls[args.loglevel.upper()])
 
-oodsConfig = None
-with open(yamlPath, 'r') as f:
-    oodsConfig = yaml.load(f)
+if args.config is None:
+    package = lsst.utils.getPackageDir("ctrl_oods")
+    yaml_path = os.path.join(package, "etc", "oods.yaml")
+else:
+    yaml_path = args.config
+
+with open(yaml_path, 'r') as f:
+    oods_config = yaml.load(f)
+
+if args.validate:
+    v = Validator(logger, oods_config)
+    v.verify()
+    if v.isValid:
+        print("valid OODS YAML configuration file")
+        sys.exit(0)
+    print("invalid OODS YAML configuration file")
+    sys.exit(10)
 
 
-print("starting...")
+logger.info("starting...")
 
 
-ingesterConfig = oodsConfig["ingester"]
-ingester = FileIngester(ingesterConfig, parser.args.verbose)
-ingest = TaskRunner(interval=ingesterConfig["scanInterval"],
-                    task=ingester.runTask)
+ingester_config = oods_config["ingester"]
+ingester = FileIngester(logger, ingester_config)
+ingest = TaskRunner(interval=ingester_config["scanInterval"],
+                    task=ingester.run_task)
 
-cacheConfig = oodsConfig["cacheCleaner"]
-cacheCleaner = CacheCleaner(cacheConfig, parser.args.verbose)
-cleaner = TaskRunner(interval=cacheConfig["scanInterval"],
-                     task=cacheCleaner.runTask)
+cache_config = oods_config["cache_cleaner"]
+cache_cleaner = CacheCleaner(logger, cache_config)
+cleaner = TaskRunner(interval=cache_config["scanInterval"],
+                     task=cache_cleaner.run_task)
 
 ingest.start()
 cleaner.start()
