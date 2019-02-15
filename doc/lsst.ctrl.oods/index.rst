@@ -7,7 +7,8 @@ lsst.ctrl.oods
 .. Add a sentence/short paragraph describing what the package is for.
 
 
-The ``ctrl_oods`` package provides [...].
+The ``ctrl_oods`` package contains the Observatory Operations Data Service
+utility, oods.py.  
 
 .. .. _lsst.ctrl.oods-using:
 
