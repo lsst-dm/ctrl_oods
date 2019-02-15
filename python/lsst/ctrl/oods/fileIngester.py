@@ -1,10 +1,10 @@
+# This file is part of ctrl_oods
 #
-# LSST Data Management System
-#
-# Copyright 2008-2019  AURA/LSST.
-#
-# This product includes software developed by the
-# LSST Project (http://www.lsst.org/).
+# Developed for the LSST Data Management System.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,20 +16,20 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the LSST License Statement and
-# the GNU General Public License along with this program.  If not,
-# see <https://www.lsstcorp.org/LegalNotices/>.
-#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
+from importlib import import_module
 
 
 class FileIngester(object):
-    """Ingest files into the butler specified in the configuration
+    """Ingest files into the butler specified in the configuration.
+    Files must be removed from the directory as part of the ingest
+    or there will be an attempt to ingest them again later.
     """
 
-    def __init__(self, config, verbose=False):
+    def __init__(self, logger, config):
         self.config = config
-        self.verbose = verbose
 
         self.scanner = DirectoryScanner(config)
 
@@ -41,20 +41,15 @@ class FileIngester(object):
         importFile = classConfig["import"]
         name = classConfig["name"]
 
-        butlerClass = self.createClass(importFile, name)
-        self.butler = butlerClass(butlerConfig["repoDirectory"])
+        mod = import_module(importFile)
+        butlerClass = getattr(mod, name)
+
+        self.butler = butlerClass(logger, butlerConfig["repoDirectory"])
 
         self.batchSize = config["batchSize"]
 
-    def runTask(self, verbose=False):
-        """scan to get the files, and ingest them in batches
+    def run_task(self):
+        """Scan to get the files, and ingest them in batches.
         """
         files = self.scanner.getAllFiles()
-        self.butler.ingest(files, self.batchSize, self.verbose)
-
-    def createClass(self, importFile, name):
-        """ create a class, given the source name and the object name
-        """
-        module = __import__(importFile, globals(), locals(), [name], 0)
-        classobj = getattr(module, name)
-        return classobj
+        self.butler.ingest(files, self.batchSize)
