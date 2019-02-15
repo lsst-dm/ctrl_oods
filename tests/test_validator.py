@@ -1,10 +1,10 @@
+# This file is part of ctrl_oods
 #
-# LSST Data Management System
-#
-# Copyright 2008-2019  AURA/LSST.
-#
-# This product includes software developed by the
-# LSST Project (http://www.lsst.org/).
+# Developed for the LSST Data Management System.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,146 +16,182 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the LSST License Statement and
-# the GNU General Public License along with this program.  If not,
-# see <https://www.lsstcorp.org/LegalNotices/>.
-#
-
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from lsst.ctrl.oods.validator import Validator
 import lsst.utils.tests
-
-
-def setup_module(module):
-    lsst.utils.tests.init()
+import logging
+import unittest
+import yaml
 
 
 class ValidatorTestCase(lsst.utils.tests.TestCase):
     """Test cache cleaning"""
 
+    def setUp(self):
+        self.logger = logging.getLogger("test_validator")
+
     def testIntervalBlock(self):
 
         # check a valid interval block
-        interval = {}
-        interval["days"] = 1
-        interval["hours"] = 1
-        interval["minutes"] = 1
-        interval["seconds"] = 1
+        interval = """test:
+                        days: 1,
+                        hours: 1,
+                        minutes: 1,
+                        seconds: 1"""
 
-        config = {}
-        config["test"] = interval
-
-        val = Validator(config)
-        val.isValid = True
-        val.checkIntervalBlock("test", "fake", config)
-        self.assertTrue(val.isValid)
+        config = yaml.load(interval)
+        val = Validator(self.logger)
+        isValid = val.checkIntervalBlock("test", "fake", config)
+        self.assertTrue(isValid)
 
         # check a invalid interval block
-        val.isValid = True
         badInterval = {}
         config = {}
 
         config["test"] = badInterval
-        val.checkIntervalBlock("test", "fake", config)
-        self.assertFalse(val.isValid)
+        isValid = val.checkIntervalBlock("test", "fake", config)
+        self.assertFalse(isValid)
 
     def testValidator(self):
 
         # create a complete, valid OODS YAML description
-        config = {}
+        configStr = """oods:
+                         ingester:
+                           directories:
+                             - data
+                           butler:
+                             class:
+                               import: lsst.ctrl.oods.gen2ButlerIngester
+                               name: Gen2ButlerIngester
+                             repoDirectory : repo
+                           batchSize: 20
+                           scanInterval:
+                             days: 0
+                             hours: 0
+                             minutes: 0
+                             seconds: 10
+                         cacheCleaner:
+                           directories:
+                             - repo/raw
+                           scanInterval:
+                             days: 0
+                             hours: 0
+                             minutes: 0
+                             seconds: 30
+                           filesOlderThan:
+                             days: 30
+                             hours: 0
+                             minutes: 0
+                             seconds: 0
+                           directoriesEmptyForMoreThan:
+                             days: 10
+                             hours: 0
+                             minutes: 0
+                             seconds: 0"""
 
-        ingester = {}
-        ingester["directories"] = ["dir"]
-        butler = {}
-        butler["class"] = {"import": "file", "name": "object"}
-        butler["repoDirectory"] = "dir"
+        config = yaml.load(configStr)
 
-        ingester["butler"] = butler
-        ingester["batchSize"] = 20
-        interval = {"days": 1, "hours": 0, "minutes": 0, "seconds": 0}
-        ingester["scanInterval"] = interval
+        val = Validator(self.logger)
+        isValid = val.verify(config)
+        self.assertTrue(isValid)
 
-        config["ingester"] = ingester
-
-        cacheCleaner = {}
-        cacheCleaner["directories"] = ["dir"]
-
-        scan = {"days": 0, "hours": 0, "minutes": 0, "seconds": 10}
-        cacheCleaner["scanInterval"] = scan
-
-        files = {"days": 0, "hours": 10, "minutes": 10, "seconds": 0}
-        cacheCleaner["filesOlderThan"] = files
-
-        dirs = {"days": 1, "hours": 10, "minutes": 0, "seconds": 0}
-        cacheCleaner["directoriesEmptyForMoreThan"] = dirs
-
-        config["cacheCleaner"] = cacheCleaner
-
-        # verify that it was parsed without error
-        val = Validator(config, True)
-        val.verify()
-        self.assertTrue(val.isValid)
-
-    def testBadYaml(self):
+    def testEmptyConfigYaml(self):
         # create bad YAML, and check to see if the errors are all
         # flagged correctly
 
         # configuration set to None
-        val = Validator(None)
-        val.verify()
+        val = Validator(self.logger)
+        isValid = val.verify(None)
+
+        self.assertFalse(isValid)
         self.verifyMissingElement(val, "ingester")
         self.verifyMissingElement(val, "cacheCleaner")
 
         # completely empty config
         config = {}
-        val = Validator(config, True)
-        val.verify()
+        val = Validator(self.logger)
+        isValid = val.verify(config)
+
+        self.assertFalse(isValid)
         self.verifyMissingElement(val, "ingester")
         self.verifyMissingElement(val, "cacheCleaner")
 
         config["some"] = "nonsense"
-        val.verify()
+        val = Validator(self.logger)
+        isValid = val.verify(config)
 
+        self.assertFalse(isValid)
         self.verifyMissingElement(val, "ingester")
         self.verifyMissingElement(val, "cacheCleaner")
 
+    def testBadIngesterBlock(self):
         # check ingester block
-        ingester = {}
-        ingester["foo"] = ["bar"]
-        config = {}
-        config["ingester"] = ingester
 
-        val = Validator(config)
-        val.verify()
+        configStr = """oods:
+                         foo: bar"""
+        config = yaml.load(configStr)
 
+        val = Validator(self.logger)
+        isValid = val.verify(config)
+
+        self.assertFalse(isValid)
+        self.verifyMissingElement(val, "ingester")
+
+        configStr = """oods:
+                         ingester:
+                            foo: bar"""
+        config = yaml.load(configStr)
+
+        val = Validator(self.logger)
+        isValid = val.verify(config)
+
+        self.assertFalse(isValid)
         self.verifyMissingElement(val, "ingester:directories")
         self.verifyMissingElement(val, "ingester:butler")
         self.verifyMissingElement(val, "ingester:batchSize")
         self.verifyMissingElement(val, "ingester:scanInterval")
         self.verifyMissingElement(val, "cacheCleaner")
 
+    def testMissingIngesterDirectory(self):
         # check ingester:directories
-        ingester["directories"] = None
-        val.verify()
+        configStr = """oods:
+                         ingester:
+                            directories:"""
+        config = yaml.load(configStr)
+        val = Validator(self.logger)
+        isValid = val.verify(config)
+
+        self.assertFalse(isValid)
         self.verifyMissingElementValue(val, "ingester:directories")
 
-        val = Validator(config, True)
-        ingester["directories"] = []
-        val.verify()
+        configStr = """oods:
+                         ingester:
+                            directories:
+                            foo: bar"""
+        config = yaml.load(configStr)
+        val = Validator(self.logger)
+        isValid = val.verify(config)
+
+        self.assertFalse(isValid)
         self.verifyMissingElementValue(val, "ingester:directories")
 
+    def testValidButlerBlock(self):
         # check ingester:butler
-        ingester["directories"] = ["dir"]
-        ingester["batchSize"] = 20
-        butler = {}
-        butler["foo"] = "bar"
-        ingester["butler"] = butler
+        configStr = """oods:
+                         ingester:
+                            directories:
+                                - dir
+                            batchSize: 20
+                            butler:
+                                foo: bar
+                            scanInterval:
+                                foo: bar"""
+        config = yaml.load(configStr)
+        val = Validator(self.logger)
+        isValid = val.verify(config)
 
-        scanInterval = {}
-        scanInterval["foo"] = "bar"
-        ingester["scanInterval"] = scanInterval
-
-        val.verify()
-
+        self.assertFalse(isValid)
         self.verifyMissingElement(val, "butler:class")
         self.verifyMissingElement(val, "butler:repoDirectory")
 
@@ -165,38 +201,160 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
         self.verifyMissingElement(val, "%s:%s" % (prefix, "minutes"))
         self.verifyMissingElement(val, "%s:%s" % (prefix, "seconds"))
 
-        scanInterval["days"] = 1
-        scanInterval["hours"] = 2
-        scanInterval["minutes"] = 3
-        scanInterval["seconds"] = 4
+    def testValidButlerClassBlock(self):
+        configStr = """oods:
+                         ingester:
+                            directories:
+                                - dir
+                            batchSize: 20
+                            butler:
+                                class:
+                                    foo: bar
+                                repoDirectory: repo
+                            scanInterval:
+                                days: 1
+                                hours: 2
+                                minutes: 3
+                                seconds: 4"""
+        config = yaml.load(configStr)
 
-        bclass = {}
-        bclass["foo"] = "bar"
-        butler["class"] = bclass
-        butler["repoDirectory"] = "repo"
+        val = Validator(self.logger)
+        isValid = val.verify(config)
 
-        val.verify()
+        self.assertFalse(isValid)
         self.verifyMissingElement(val, "butler:class:name")
         self.verifyMissingElement(val, "butler:class:import")
 
-        # check ingester:butler:class
-        bclass["import"] = "somefile"
-        bclass["name"] = "someobject"
-        val.verify()
+    def testMissingCacheCleanerBlock(self):
+        configStr = """oods:
+                         ingester:
+                            directories:
+                                - dir
+                            batchSize: 20
+                            butler:
+                                class:
+                                    import: somefile
+                                    name: someobject
+                                repoDirectory: repo
+                            scanInterval:
+                                days: 1
+                                hours: 2
+                                minutes: 3
+                                seconds: 4"""
+        config = yaml.load(configStr)
+
+        val = Validator(self.logger)
+        isValid = val.verify(config)
+
+        self.assertFalse(isValid)
         self.verifyMissingElement(val, "cacheCleaner")
         self.assertEqual(len(val.missingElements), 1)
 
         # check cacheCleaner
-        cacheCleaner = {}
-        config["cacheCleaner"] = cacheCleaner
-        val.verify()
+        configStr = """oods:
+                         ingester:
+                            directories:
+                                - dir
+                            batchSize: 20
+                            butler:
+                                class:
+                                    import: somefile
+                                    name: someobject
+                                repoDirectory: repo
+                            scanInterval:
+                                days: 1
+                                hours: 2
+                                minutes: 3
+                                seconds: 4
+                         cacheCleaner:
+                            foo: bar"""
+        config = yaml.load(configStr)
+        val = Validator(self.logger)
+        isValid = val.verify(config)
+
+        self.assertFalse(isValid)
         self.verifyMissingElement(val, "cacheCleaner:directories")
         self.verifyMissingElement(val, "cacheCleaner:scanInterval")
         self.verifyMissingElement(val, "cacheCleaner:filesOlderThan")
         self.verifyMissingElement(val, "cacheCleaner:directoriesEmptyForMoreThan")
 
-        cacheCleaner["directories"] = None
-        val.verify()
+    def testDirectoriesInCacheCleanerBlock(self):
+        configStr = """oods:
+                         ingester:
+                            directories:
+                                - dir
+                            batchSize: 20
+                            butler:
+                                class:
+                                    import: somefile
+                                    name: someobject
+                                repoDirectory: repo
+                            scanInterval:
+                                days: 1
+                                hours: 2
+                                minutes: 3
+                                seconds: 4
+                         cacheCleaner:
+                            scanInterval:
+                                days: 0
+                                hours: 0
+                                minutes: 0
+                                seconds: 10
+                            filesOlderThan:
+                                days: 30
+                                hours: 0
+                                minutes: 0
+                                seconds: 0
+                            directoriesEmptyForMoreThan:
+                                days: 1
+                                hours: 0
+                                minutes: 0
+                                seconds: 0"""
+        config = yaml.load(configStr)
+        val = Validator(self.logger)
+        isValid = val.verify(config)
+
+        self.assertFalse(isValid)
+        self.verifyMissingElement(val, "cacheCleaner:directories")
+
+        configStr = """oods:
+                         ingester:
+                            directories:
+                                - dir
+                            batchSize: 20
+                            butler:
+                                class:
+                                    import: somefile
+                                    name: someobject
+                                repoDirectory: repo
+                            scanInterval:
+                                days: 1
+                                hours: 2
+                                minutes: 3
+                                seconds: 4
+                         cacheCleaner:
+                            directories:
+                            scanInterval:
+                                days: 0
+                                hours: 0
+                                minutes: 0
+                                seconds: 10
+                            filesOlderThan:
+                                days: 30
+                                hours: 0
+                                minutes: 0
+                                seconds: 0
+                            directoriesEmptyForMoreThan:
+                                days: 1
+                                hours: 0
+                                minutes: 0
+                                seconds: 0"""
+        config = yaml.load(configStr)
+
+        val = Validator(self.logger)
+        isValid = val.verify(config)
+
+        self.assertFalse(isValid)
         self.verifyMissingElementValue(val, "cacheCleaner:directories")
 
     def verifyMissingElementValue(self, validator, name):
@@ -208,3 +366,12 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
     pass
+
+
+def setup_module(module):
+    lsst.utils.tests.init()
+
+
+if __name__ == "__main__":
+    lsst.utils.tests.init()
+    unittest.main()

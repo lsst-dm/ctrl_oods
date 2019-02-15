@@ -1,12 +1,13 @@
-.. py:currentmodule:: lsst.ctrl.oods
-
-.. _lsst.ctrl.oods:
+.. _lsst.ctrl.oods-package:
 
 ##############
 lsst.ctrl.oods
 ##############
 
-.. Paragraph that describes what this Python module does and links to related modules and frameworks.
+.. Add a sentence/short paragraph describing what the package is for.
+
+
+The ``ctrl_oods`` package provides [...].
 
 .. .. _lsst.ctrl.oods-using:
 
@@ -30,12 +31,5 @@ You can find Jira issues for this module under the `ctrl_oods <https://jira.lsst
 
 .. .. toctree::
 ..    :maxdepth: 1
-
-.. _lsst.ctrl.oods-pyapi:
-
-Python API reference
-====================
-
-.. automodapi:: lsst.ctrl.oods
-   :no-main-docstr:
-   :no-inheritance-diagram:
+      oods-cli.rst
+      oods-yml.rst

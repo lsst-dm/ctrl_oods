@@ -1,10 +1,10 @@
+# This file is part of ctrl_oods
 #
-# LSST Data Management System
-#
-# Copyright 2008-2019  AURA/LSST.
-#
-# This product includes software developed by the
-# LSST Project (http://www.lsst.org/).
+# Developed for the LSST Data Management System.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,42 +16,48 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the LSST License Statement and
-# the GNU General Public License along with this program.  If not,
-# see <https://www.lsstcorp.org/LegalNotices/>.
-#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import subprocess
+import logging
 
 
 class Gen2ButlerIngester(object):
-    """ Processes files for ingestion into a Gen2 Butler
+    """Processes files for ingestion into a Gen2 Butler.
     """
-    def __init__(self, repo):
-        self.precmd = ['ingestImages.py', repo, '--ignore-ingested', '--mode', 'move']
-        pass
+    def __init__(self, logger, repo):
+        lvls = {logging.DEBUG: 'debug',
+                logging.INFO: 'info',
+                logging.WARNING: 'warn',
+                logging.ERROR: 'error',
+                logging.CRITICAL: 'fatal'}
 
-    def ingest(self, files, batchSize, verbose=False):
-        """ ingest files in 'batchSize' increments
+        num = logger.getEffectiveLevel()
+        name = lvls[num]
+        self.precmd = ['ingestImages.py',
+                       repo,
+                       '--ignore-ingested',
+                       '--mode', 'move',
+                       '--loglevel=%s' % name]
+        self.logger = logger
+
+    def ingest(self, files, batchSize):
+        """Ingest files in 'batchSize' increments.
         """
         if len(files) == 0:
             return
 
         #
-        # since this is being handed off from to a command line, subprocess
-        # split this up into more manageable chunks such that we don't go
-        # over the line limit for subprocesses.
+        # The current method for ingest is to append files to the command
+        # line.  Since there is a character limit for command lines, this
+        # splits up the file ingestion into groups so the limit isn't reached.
         #
         if batchSize == -1:
-            if verbose:
-                print("ingesting ", files)
-            cmd = self.precmd + files
-            subprocess.call(cmd)
-            return
-        # this should calculate to just below some high water mark for
+            batchSize = len(files)
+        # This should calculate to just below some high water mark for
         # better efficiency, but splitting on batchSize will do for now.
         chunks = [files[x:x+batchSize] for x in range(0, len(files), batchSize)]
         for chunk in chunks:
-            if verbose:
-                print("ingesting ", chunk)
+            self.logger.info("ingesting ", chunk)
             cmd = self.precmd + chunk
             subprocess.call(cmd)
