@@ -40,7 +40,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                         minutes: 1,
                         seconds: 1"""
 
-        config = yaml.load(interval)
+        config = yaml.safe_load(interval)
         val = Validator(self.logger)
         isValid = val.checkIntervalBlock("test", "fake", config)
         self.assertTrue(isValid)
@@ -90,7 +90,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                              minutes: 0
                              seconds: 0"""
 
-        config = yaml.load(configStr)
+        config = yaml.safe_load(configStr)
 
         val = Validator(self.logger)
         isValid = val.verify(config)
@@ -130,7 +130,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
 
         configStr = """oods:
                          foo: bar"""
-        config = yaml.load(configStr)
+        config = yaml.safe_load(configStr)
 
         val = Validator(self.logger)
         isValid = val.verify(config)
@@ -141,7 +141,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
         configStr = """oods:
                          ingester:
                             foo: bar"""
-        config = yaml.load(configStr)
+        config = yaml.safe_load(configStr)
 
         val = Validator(self.logger)
         isValid = val.verify(config)
@@ -158,7 +158,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
         configStr = """oods:
                          ingester:
                             directories:"""
-        config = yaml.load(configStr)
+        config = yaml.safe_load(configStr)
         val = Validator(self.logger)
         isValid = val.verify(config)
 
@@ -169,7 +169,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                          ingester:
                             directories:
                             foo: bar"""
-        config = yaml.load(configStr)
+        config = yaml.safe_load(configStr)
         val = Validator(self.logger)
         isValid = val.verify(config)
 
@@ -187,7 +187,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                                 foo: bar
                             scanInterval:
                                 foo: bar"""
-        config = yaml.load(configStr)
+        config = yaml.safe_load(configStr)
         val = Validator(self.logger)
         isValid = val.verify(config)
 
@@ -216,7 +216,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                                 hours: 2
                                 minutes: 3
                                 seconds: 4"""
-        config = yaml.load(configStr)
+        config = yaml.safe_load(configStr)
 
         val = Validator(self.logger)
         isValid = val.verify(config)
@@ -241,7 +241,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                                 hours: 2
                                 minutes: 3
                                 seconds: 4"""
-        config = yaml.load(configStr)
+        config = yaml.safe_load(configStr)
 
         val = Validator(self.logger)
         isValid = val.verify(config)
@@ -268,7 +268,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                                 seconds: 4
                          cacheCleaner:
                             foo: bar"""
-        config = yaml.load(configStr)
+        config = yaml.safe_load(configStr)
         val = Validator(self.logger)
         isValid = val.verify(config)
 
@@ -310,7 +310,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                                 hours: 0
                                 minutes: 0
                                 seconds: 0"""
-        config = yaml.load(configStr)
+        config = yaml.safe_load(configStr)
         val = Validator(self.logger)
         isValid = val.verify(config)
 
@@ -349,7 +349,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                                 hours: 0
                                 minutes: 0
                                 seconds: 0"""
-        config = yaml.load(configStr)
+        config = yaml.safe_load(configStr)
 
         val = Validator(self.logger)
         isValid = val.verify(config)
