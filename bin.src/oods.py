@@ -29,7 +29,7 @@ import yaml
 import lsst.utils
 from lsst.ctrl.oods.taskRunner import TaskRunner
 from lsst.ctrl.oods.fileIngester import FileIngester
-from lsst.ctrl.oods.cache_cleaner import CacheCleaner
+from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.validator import Validator
 
 logger = logging.getLogger("ctrl_oods")
@@ -64,7 +64,7 @@ else:
     yaml_path = args.config
 
 with open(yaml_path, 'r') as f:
-    oods_config = yaml.load(f)
+    oods_config = yaml.safe_load(f)
 
 if args.validate:
     v = Validator(logger, oods_config)
@@ -84,7 +84,7 @@ ingester = FileIngester(logger, ingester_config)
 ingest = TaskRunner(interval=ingester_config["scanInterval"],
                     task=ingester.run_task)
 
-cache_config = oods_config["cache_cleaner"]
+cache_config = oods_config["cacheCleaner"]
 cache_cleaner = CacheCleaner(logger, cache_config)
 cleaner = TaskRunner(interval=cache_config["scanInterval"],
                      task=cache_cleaner.run_task)
