@@ -1,25 +1,26 @@
 #########
 ctrl_oods
 #########
-usage: oods.py [[-c config][-y config]] [-v]
+usage: oods.py [-y] [-l {DEBUG,INFO,WARN,ERROR,FATAL}] [config]
 
 Options:
 
 .. code:: bash
 
-\-c
-    config use specified OODS YAML configuration file
 \-y
     config validate YAML configuration file
-\-v
-    give verbose output
+\-h
+    show this help message and exit
+\-l [{DEBUG,INFO,WARN,ERROR,FATAL}]
+    print logging statements
+
 
 Set up and usage
 ================
 
 1) Create the Gen2 Butler repository:
 
-.. prompt:: bash
+.. code:: bash
 
  mkdir repo
  echo "lsst.obs.lsst.auxTel.AuxTelMapper" > repo/_mapper
@@ -34,9 +35,7 @@ Set up and usage
 
 .. code:: bash
 
-    nohup $CTRL_OODS_DIR/oods.py -c oods.yaml 2>&1 >oods.log
+    nohup $CTRL_OODS_DIR/bin/oods.py $CTRL_OODS_DIR/etc/oods.yaml 2>&1 >oods.log
 
 NOTE:  if you run the OODS without modifying the directory paths, it expects to scan for files in the directory in which the OODS has been invoked.
 It will scan the directory "data" and use the Gen2 Butler repository "repo" by default.
-
-
