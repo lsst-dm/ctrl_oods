@@ -6,7 +6,7 @@ setup(
     description="Observatory Operations Data Service daemon",
     package_dir={"": "python"},
     packages=find_namespace_packages(where="python"),
-    scripts=["bin/oods.py"]
+    scripts=["bin.src/oods.py"],
     license="GPL",
     project_urls={
         "Bug Tracker": "https://jira.lsstcorp.org/secure/Dashboard.jspa",
