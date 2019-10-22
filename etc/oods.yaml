@@ -6,12 +6,12 @@ defaultInterval: &interval
 
 ingester:
     directories:
-        - data
+        - /data/staging/oods
     butler:
         class:
             import : lsst.ctrl.oods.gen2ButlerIngester
             name : Gen2ButlerIngester
-        repoDirectory : repo
+        repoDirectory : /data/butler/repo
     batchSize: 20
     scanInterval:
         <<: *interval
@@ -19,7 +19,7 @@ ingester:
 
 cacheCleaner:
     directories:
-        - repo/raw
+        - /data/butler/repo/raw
     scanInterval:
         <<: *interval
         seconds: 30
