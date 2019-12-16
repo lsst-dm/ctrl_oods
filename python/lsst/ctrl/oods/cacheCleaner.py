@@ -33,7 +33,13 @@ class CacheCleaner(object):
         self.fileInterval = self.config["filesOlderThan"]
         self.emptyDirsInterval = self.config["directoriesEmptyForMoreThan"]
 
-    def run_task(self):
+    async def run_task(self, interval):
+        seconds = TimeInterval.calculateTotalSeconds(interval)
+        while True:
+            self.clean()
+            await = asyncio.sleep(seconds)
+
+    def clean(self):
         """Remove files older than a given interval, and directories
         that have been empty for a given interval.
         """

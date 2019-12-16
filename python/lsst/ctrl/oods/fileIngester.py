@@ -29,7 +29,10 @@ class FileIngester(object):
     """
 
     def __init__(self, logger, config):
+        self.logger = logger
         self.config = config
+
+        self._msg_actions = {'AT_FILE_INGEST_REQUEST', self.ingest_file}
 
         self.scanner = DirectoryScanner(config)
 
@@ -44,12 +47,63 @@ class FileIngester(object):
         mod = import_module(importFile)
         butlerClass = getattr(mod, name)
 
-        self.butler = butlerClass(logger, butlerConfig["repoDirectory"])
+        self.repo = butlerConfig["repoDirectory"]
+        self.bad_file_dir  = butlerConfig["badFileDirectory"])
+        self.butler = butlerClass(logger, self.repo)
+        self.base_broker_url = butlerConfig["baseBrokerAddr"] 
 
-        self.batchSize = config["batchSize"]
+        self.consumer = Consumer(self.base_broker_url, None, "at_publish_to_oods", self.on_message)
+        await self.consumer.start()
 
-    def run_task(self):
+        self.publisher = Publisher(self.base_broker_url)
+        await self.publisher.start()
+
+    def on_message(self, ch, method, properties, body):
+        """ Route the message to the proper handler
+        """
+        msg_type = body['MSG_TYPE']
+        LOGGER.info("TEMP: received message {body}")
+        ch.basic_ack(method.delivery_tag)
+        if msg_type in self._msg_actions:
+            handler = self._msg_actions.get(msg_type)
+            task = asyncio.create_task(handler(body))
+        else:
+            self.logger.info(f"unknown message type: {msg_type}")
+
+    async def ingest_file(self, msg):
+        camera = msg['CAMERA']
+        obsid = msg['OBSID']
+        filename = msg['FILENAME']
+        archiver = msg['ARCHIVER']
+
+        try:
+            self.butler.ingest(filename)
+            self.logger.info(f"{osbid} {filename} ingested from {camera} by {archiver}")
+        except Exception:
+            self.logger.info(f"{filename} could not be ingested.  Moving to {self.bad_file_dir}")
+            shutil.move(filename, self.bad_file_dir)
+            return
+
+        d = dict(msg)
+        d['MSG_TYPE'] = 'FILE_INGESTED_BY_OODS'
+        self.publisher.publish_message("oods_publish_to_at", d)
+        
+
+    async def run_task(self):
+        seconds = TimeInterval.calculateTotalSeconds(interval)
+        while True:
+            self.scan_ingest()
+            await asyncio.sleep(seconds)
+
+    def scan_ingest(self):
         """Scan to get the files, and ingest them in batches.
         """
         files = self.scanner.getAllFiles()
-        self.butler.ingest(files, self.batchSize)
+        for filename in files:
+            try:
+                self.butler.ingest(filename)
+            except Exception:
+                self.logger.info(f"{filename} could not be ingested.  Moving to {self.bad_file_dir}")
+                shutil.move(filename, self.bad_file_dir)
+                return
+            self.publisher.publish_message(

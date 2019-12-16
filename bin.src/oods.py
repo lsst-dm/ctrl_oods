@@ -81,16 +81,13 @@ logger.info("starting...")
 
 ingester_config = oods_config["ingester"]
 ingester = FileIngester(logger, ingester_config)
-ingest = TaskRunner(interval=ingester_config["scanInterval"],
-                    task=ingester.run_task)
+interval = ingester_config["scanInterval"]
+ingest_task = asyncio.create_task(ingester.run_task(interval))
 
 cache_config = oods_config["cacheCleaner"]
 cache_cleaner = CacheCleaner(logger, cache_config)
-cleaner = TaskRunner(interval=cache_config["scanInterval"],
-                     task=cache_cleaner.run_task)
+interval = cache_config["scanInterval"]
+cleaner_task = asyncio.create_task(cache_cleaner.run_task(interval))
 
-ingest.start()
-cleaner.start()
-
-ingest.join()
-cleaner.join()
+loop = asyncio.get_event_loop()
+loop.run_forever()
