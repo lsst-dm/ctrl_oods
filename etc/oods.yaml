@@ -7,6 +7,8 @@ defaultInterval: &interval
 ingester:
     directories:
         - /data/staging/oods
+    baseBrokerAddr: localhost/%2ftest_at
+    badFileDirectory: /data/staging/badfiles
     butler:
         class:
             import : lsst.ctrl.oods.gen2ButlerIngester
@@ -15,7 +17,7 @@ ingester:
     batchSize: 20
     scanInterval:
         <<: *interval
-        seconds: 10
+        seconds: 1
 
 cacheCleaner:
     directories:

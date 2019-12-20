@@ -20,16 +20,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from lsst.ctrl.oods.validator import Validator
 import lsst.utils.tests
-import logging
 import unittest
 import yaml
 
 
 class ValidatorTestCase(lsst.utils.tests.TestCase):
     """Test cache cleaning"""
-
-    def setUp(self):
-        self.logger = logging.getLogger("test_validator")
 
     def testIntervalBlock(self):
 
@@ -41,7 +37,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                         seconds: 1"""
 
         config = yaml.safe_load(interval)
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.checkIntervalBlock("test", "fake", config)
         self.assertTrue(isValid)
 
@@ -92,7 +88,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
 
         config = yaml.safe_load(configStr)
 
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
         self.assertTrue(isValid)
 
@@ -101,7 +97,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
         # flagged correctly
 
         # configuration set to None
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(None)
 
         self.assertFalse(isValid)
@@ -110,7 +106,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
 
         # completely empty config
         config = {}
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
@@ -118,7 +114,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
         self.verifyMissingElement(val, "cacheCleaner")
 
         config["some"] = "nonsense"
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
@@ -132,7 +128,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                          foo: bar"""
         config = yaml.safe_load(configStr)
 
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
@@ -143,7 +139,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                             foo: bar"""
         config = yaml.safe_load(configStr)
 
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
@@ -159,7 +155,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                          ingester:
                             directories:"""
         config = yaml.safe_load(configStr)
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
@@ -170,7 +166,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                             directories:
                             foo: bar"""
         config = yaml.safe_load(configStr)
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
@@ -188,7 +184,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                             scanInterval:
                                 foo: bar"""
         config = yaml.safe_load(configStr)
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
@@ -218,7 +214,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                                 seconds: 4"""
         config = yaml.safe_load(configStr)
 
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
@@ -243,7 +239,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                                 seconds: 4"""
         config = yaml.safe_load(configStr)
 
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
@@ -269,7 +265,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                          cacheCleaner:
                             foo: bar"""
         config = yaml.safe_load(configStr)
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
@@ -311,7 +307,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                                 minutes: 0
                                 seconds: 0"""
         config = yaml.safe_load(configStr)
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
@@ -351,7 +347,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                                 seconds: 0"""
         config = yaml.safe_load(configStr)
 
-        val = Validator(self.logger)
+        val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)

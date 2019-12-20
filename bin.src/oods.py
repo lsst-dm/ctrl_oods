@@ -22,72 +22,73 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
+import asyncio
 import logging
 import os
 import sys
 import yaml
 import lsst.utils
-from lsst.ctrl.oods.taskRunner import TaskRunner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.validator import Validator
 
-logger = logging.getLogger("ctrl_oods")
 
-name = os.path.basename(sys.argv[0])
+async def wait_for_ingest(config):
+    ingester_config = config["ingester"]
+    ingester = FileIngester(ingester_config)
 
-parser = argparse.ArgumentParser(prog=name,
-                                 description='''Ingests new files into a Butler''')
-parser.add_argument("config", default=None, nargs='?',
-                    help="use specified OODS YAML configuration file")
-
-parser.add_argument("-y", "--yaml-validate", action="store_true",
-                    dest="validate", default=False,
-                    help="validate YAML configuration file")
-parser.add_argument("-l", "--loglevel", nargs='?',
-                    choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL'),
-                    default='warn', help="print logging statements")
-
-args = parser.parse_args()
-lvls = {'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARN': logging.WARNING,
-        'ERROR': logging.ERROR,
-        'FATAL': logging.CRITICAL}
-
-logger.setLevel(lvls[args.loglevel.upper()])
-
-if args.config is None:
-    package = lsst.utils.getPackageDir("ctrl_oods")
-    yaml_path = os.path.join(package, "etc", "oods.yaml")
-else:
-    yaml_path = args.config
-
-with open(yaml_path, 'r') as f:
-    oods_config = yaml.safe_load(f)
-
-if args.validate:
-    v = Validator(logger, oods_config)
-    v.verify()
-    if v.isValid:
-        print("valid OODS YAML configuration file")
-        sys.exit(0)
-    print("invalid OODS YAML configuration file")
-    sys.exit(10)
+    res = await asyncio.create_task(ingester.run_task())
+    return res
 
 
-logger.info("starting...")
+async def wait_for_cleaner(config):
+    cache_config = config["cacheCleaner"]
+    cache_cleaner = CacheCleaner(cache_config)
+    res = await asyncio.create_task(cache_cleaner.run_task())
+    return res
 
 
-ingester_config = oods_config["ingester"]
-ingester = FileIngester(logger, ingester_config)
-interval = ingester_config["scanInterval"]
-ingest_task = asyncio.create_task(ingester.run_task(interval))
+async def gather_tasks(interval):
+    r = [wait_for_ingest(oods_config), wait_for_cleaner(oods_config)]
+    res = await asyncio.gather(*r, return_exceptions=True)
+    return res
 
-cache_config = oods_config["cacheCleaner"]
-cache_cleaner = CacheCleaner(logger, cache_config)
-interval = cache_config["scanInterval"]
-cleaner_task = asyncio.create_task(cache_cleaner.run_task(interval))
 
-loop = asyncio.get_event_loop()
-loop.run_forever()
+if __name__ == "__main__":
+    F = '%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s'
+    LOGGER = logging.getLogger(__name__)
+    logging.Formatter(fmt=F)
+
+    name = os.path.basename(sys.argv[0])
+
+    parser = argparse.ArgumentParser(prog=name,
+                                     description='''Ingests new files into a Butler''')
+    parser.add_argument("config", default=None, nargs='?',
+                        help="use specified OODS YAML configuration file")
+
+    parser.add_argument("-y", "--yaml-validate", action="store_true",
+                        dest="validate", default=False,
+                        help="validate YAML configuration file")
+    args = parser.parse_args()
+
+    if args.config is None:
+        package = lsst.utils.getPackageDir("ctrl_oods")
+        yaml_path = os.path.join(package, "etc", "oods.yaml")
+    else:
+        yaml_path = args.config
+
+    with open(yaml_path, 'r') as f:
+        oods_config = yaml.safe_load(f)
+
+    if args.validate:
+        v = Validator(oods_config)
+        v.verify()
+        if v.isValid:
+            print("valid OODS YAML configuration file")
+            sys.exit(0)
+        print("invalid OODS YAML configuration file")
+        sys.exit(10)
+
+    LOGGER.info("starting...")
+
+    res1, res2 = asyncio.get_event_loop().run_until_complete(gather_tasks(oods_config))

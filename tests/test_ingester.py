@@ -26,14 +26,13 @@ import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 import lsst.utils.tests
-import logging
+import asynctest
 
 
-class Gen2IngesterTestCase(lsst.utils.tests.TestCase):
+class Gen2IngesterTestCase(asynctest.TestCase):
     """Test Scanning directory"""
 
     def setUp(self):
-        self.logger = logging.getLogger("gen2IngesterTestCase")
 
         package = lsst.utils.getPackageDir("ctrl_oods")
         testFile = os.path.join(package, "tests", "etc", "ingest.yaml")
@@ -54,37 +53,25 @@ class Gen2IngesterTestCase(lsst.utils.tests.TestCase):
         repoDir = tempfile.mkdtemp()
         self.config["ingester"]["butler"]["repoDirectory"] = repoDir
 
-        destFile = os.path.join(dataDir, fitsFileName)
-        copyfile(fitsFile, destFile)
+        self.destFile1 = os.path.join(dataDir, fitsFileName)
+        copyfile(fitsFile, self.destFile1)
 
-        destFile = os.path.join(repoDir, mapperFileName)
-        copyfile(mapperPath, destFile)
+        destFile2 = os.path.join(repoDir, mapperFileName)
+        copyfile(mapperPath, destFile2)
 
-    def testIngest(self):
+    async def testIngest(self):
         scanner = DirectoryScanner(self.config["ingester"])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(self.logger, self.config["ingester"])
-        ingester.run_task()
+        ingester = FileIngester(self.config["ingester"])
 
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 0)
-
-        ingester.run_task()
-
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 0)
-
-    def testBatchSize(self):
-        scanner = DirectoryScanner(self.config["ingester"])
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 1)
-
-        self.config["ingester"]["batchSize"] = -1
-
-        ingester = FileIngester(self.logger, self.config["ingester"])
-        ingester.run_task()
+        msg = {}
+        msg['CAMERA'] = "LATISS"
+        msg['OBSID'] = "AT_C_20180920_000028"
+        msg['FILENAME'] = self.destFile1
+        msg['ARCHIVER'] = "AT"
+        await ingester.ingest_file(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)

@@ -18,15 +18,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import subprocess
-import logging
 from lsst.pipe.tasks.ingest import IngestTask
+
 
 class Gen2ButlerIngester(object):
     """Processes files for ingestion into a Gen2 Butler.
     """
-    def __init__(self, logger, repo):
-        self.logger = logger
+    def __init__(self, repo):
         self.task = IngestTask.prepareTask(repo)
 
     def ingest(self, filename):
