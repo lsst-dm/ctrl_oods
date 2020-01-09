@@ -21,7 +21,6 @@
 
 import asyncio
 import logging
-import os
 import shutil
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.dm.csc.base.consumer import Consumer
@@ -113,8 +112,6 @@ class FileIngester(object):
             d['STATUS_CODE'] = 0
             d['DESCRIPTION'] = f"OBSID {obsid}: File {filename} ingested into OODS"
             await self.publisher.publish_message("oods_publish_to_at", d)
-
-        os.remove(filename)
 
     async def run_task(self):
         # wait, to keep the object alive
