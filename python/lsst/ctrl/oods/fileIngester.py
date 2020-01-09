@@ -113,6 +113,8 @@ class FileIngester(object):
             d['DESCRIPTION'] = f"OBSID {obsid}: File {filename} ingested into OODS"
             await self.publisher.publish_message("oods_publish_to_at", d)
 
+        os.remove(filename)
+
     async def run_task(self):
         # wait, to keep the object alive
         while True:
