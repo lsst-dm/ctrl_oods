@@ -21,6 +21,7 @@
 
 import asyncio
 import logging
+import os
 import shutil
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.dm.csc.base.consumer import Consumer
