@@ -18,8 +18,16 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import asyncio
+import logging
+import shutil
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
+from lsst.dm.csc.base.consumer import Consumer
+from lsst.dm.csc.base.publisher import Publisher
 from importlib import import_module
+
+LOGGER = logging.getLogger(__name__)
 
 
 class FileIngester(object):
@@ -28,10 +36,19 @@ class FileIngester(object):
     or there will be an attempt to ingest them again later.
     """
 
-    def __init__(self, logger, config):
+    def __init__(self, config):
         self.config = config
 
+        self._msg_actions = {'AT_FILE_INGEST_REQUEST': self.ingest_file}
+
         self.scanner = DirectoryScanner(config)
+
+        if 'baseBrokerAddr' in config:
+            self.base_broker_url = config["baseBrokerAddr"]
+        else:
+            self.base_broker_url = None
+
+        self.bad_file_dir = config["badFileDirectory"]
 
         butlerConfig = config["butler"]
 
@@ -44,12 +61,59 @@ class FileIngester(object):
         mod = import_module(importFile)
         butlerClass = getattr(mod, name)
 
-        self.butler = butlerClass(logger, butlerConfig["repoDirectory"])
+        self.repo = butlerConfig["repoDirectory"]
+        self.butler = butlerClass(self.repo)
+        if self.base_broker_url is not None:
+            asyncio.create_task(self.start_comm())
 
-        self.batchSize = config["batchSize"]
+    async def start_comm(self):
+        self.consumer = Consumer(self.base_broker_url, None, "at_publish_to_oods", self.on_message)
+        self.consumer.start()
 
-    def run_task(self):
-        """Scan to get the files, and ingest them in batches.
+        self.publisher = Publisher(self.base_broker_url)
+        await self.publisher.start()
+
+    def on_message(self, ch, method, properties, body):
+        """ Route the message to the proper handler
         """
-        files = self.scanner.getAllFiles()
-        self.butler.ingest(files, self.batchSize)
+        msg_type = body['MSG_TYPE']
+        LOGGER.info("TEMP: received message {body}")
+        ch.basic_ack(method.delivery_tag)
+        if msg_type in self._msg_actions:
+            handler = self._msg_actions.get(msg_type)
+            asyncio.create_task(handler(body))
+        else:
+            LOGGER.info(f"unknown message type: {msg_type}")
+
+    async def ingest_file(self, msg):
+        camera = msg['CAMERA']
+        obsid = msg['OBSID']
+        filename = msg['FILENAME']
+        archiver = msg['ARCHIVER']
+
+        try:
+            self.butler.ingest(filename)
+            LOGGER.info(f"{obsid} {filename} ingested from {camera} by {archiver}")
+        except Exception as e:
+            err = f"{filename} could not be ingested.  Moving to {self.bad_file_dir}: {e}"
+            LOGGER.info(err)
+            shutil.move(filename, self.bad_file_dir)
+            if self.base_broker_url is not None:
+                d = dict(msg)
+                d['MSG_TYPE'] = 'IMAGE_IN_OODS'
+                d['STATUS_CODE'] = 1
+                d['DESCRIPTION'] = err
+                await self.publisher.publish_message("oods_publish_to_at", d)
+            return
+
+        if self.base_broker_url is not None:
+            d = dict(msg)
+            d['MSG_TYPE'] = 'IMAGE_IN_OODS'
+            d['STATUS_CODE'] = 0
+            d['DESCRIPTION'] = f"OBSID {obsid}: File {filename} ingested into OODS"
+            await self.publisher.publish_message("oods_publish_to_at", d)
+
+    async def run_task(self):
+        # wait, to keep the object alive
+        while True:
+            await asyncio.sleep(60)

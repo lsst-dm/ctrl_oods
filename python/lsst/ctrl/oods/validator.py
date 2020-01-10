@@ -19,21 +19,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import logging
+
+LOGGER = logging.getLogger(__name__)
+
 
 class Validator(object):
     """Validate a configuration data structure.
-    @param config: a configuration data structure
-    @param logger: python logging
     """
 
-    def __init__(self, logger):
+    def __init__(self):
         self.isValid = True
-        self.logger = logger
         self.missingElements = []
         self.missingValues = []
 
     def verify(self, config):
         """Validate a configuration, emitting messages about errors.
+        @param config: a configuration data structure
         """
         self.isValid = True
         self.missingElements = []
@@ -128,8 +130,7 @@ class Validator(object):
         """Emit a message about a missing configuration element
         @param element: missing element name
         """
-        if self.logger is not None:
-            self.logger.error("missing '%s'" % element)
+        LOGGER.error("missing '%s'" % element)
 
         # also add this name to the missing elements list.  We can use
         # this to programmatically identify missing elements.
@@ -140,8 +141,7 @@ class Validator(object):
         """Emit a message about a missing value of an  element
         @param element: element name which is missing a value
         """
-        if self.logger is not None:
-            self.logger.error("'%s' is missing a value" % element)
+        LOGGER.error("'%s' is missing a value" % element)
 
         # also add this name to the missing values list.  We can use
         # this to programmatically identify elements which are missng values.

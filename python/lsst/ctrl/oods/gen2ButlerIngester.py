@@ -18,46 +18,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import subprocess
-import logging
+from lsst.pipe.tasks.ingest import IngestTask
 
 
 class Gen2ButlerIngester(object):
     """Processes files for ingestion into a Gen2 Butler.
     """
-    def __init__(self, logger, repo):
-        lvls = {logging.DEBUG: 'debug',
-                logging.INFO: 'info',
-                logging.WARNING: 'warn',
-                logging.ERROR: 'error',
-                logging.CRITICAL: 'fatal'}
+    def __init__(self, repo):
+        self.task = IngestTask.prepareTask(repo)
 
-        num = logger.getEffectiveLevel()
-        name = lvls[num]
-        self.precmd = ['ingestImages.py',
-                       repo,
-                       '--ignore-ingested',
-                       '--mode', 'move',
-                       '--loglevel=%s' % name]
-        self.logger = logger
-
-    def ingest(self, files, batchSize):
-        """Ingest files in 'batchSize' increments.
-        """
-        if len(files) == 0:
-            return
-
-        #
-        # The current method for ingest is to append files to the command
-        # line.  Since there is a character limit for command lines, this
-        # splits up the file ingestion into groups so the limit isn't reached.
-        #
-        if batchSize == -1:
-            batchSize = len(files)
-        # This should calculate to just below some high water mark for
-        # better efficiency, but splitting on batchSize will do for now.
-        chunks = [files[x:x+batchSize] for x in range(0, len(files), batchSize)]
-        for chunk in chunks:
-            self.logger.info("ingesting ", chunk)
-            cmd = self.precmd + chunk
-            subprocess.call(cmd)
+    def ingest(self, filename):
+        self.task.ingestFiles(filename)

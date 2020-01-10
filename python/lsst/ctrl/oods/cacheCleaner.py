@@ -18,22 +18,32 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import asyncio
+import logging
 import os
 import time
 from lsst.ctrl.oods.timeInterval import TimeInterval
+
+LOGGER = logging.getLogger(__name__)
 
 
 class CacheCleaner(object):
     """Removes files and subdirectories older than a certain interval."""
 
-    def __init__(self, logger, config):
-        self.logger = logger
+    def __init__(self, config):
         self.config = config
         self.directories = self.config["directories"]
         self.fileInterval = self.config["filesOlderThan"]
         self.emptyDirsInterval = self.config["directoriesEmptyForMoreThan"]
+        scanInterval = self.config["scanInterval"]
+        self.seconds = TimeInterval.calculateTotalSeconds(scanInterval)
 
-    def run_task(self):
+    async def run_task(self):
+        while True:
+            self.clean()
+            await asyncio.sleep(self.seconds)
+
+    def clean(self):
         """Remove files older than a given interval, and directories
         that have been empty for a given interval.
         """
@@ -51,7 +61,7 @@ class CacheCleaner(object):
 
         files = self.getAllFilesOlderThan(seconds, self.directories)
         for name in files:
-            self.logger.info("removing", name)
+            LOGGER.info("removing", name)
             os.unlink(name)
 
         # remove empty directories
@@ -60,7 +70,7 @@ class CacheCleaner(object):
 
         dirs = self.getAllEmptyDirectoriesOlderThan(seconds, self.directories)
         for name in dirs:
-            self.logger.info("removing", name)
+            LOGGER.info("removing", name)
             os.rmdir(name)
 
     def getAllFilesOlderThan(self, seconds, directories):

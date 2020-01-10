@@ -26,14 +26,10 @@ import unittest
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 import lsst.utils.tests
-import logging
 
 
 class CleanerTestCase(lsst.utils.tests.TestCase):
     """Test cache cleaning"""
-
-    def setUp(self):
-        self.logger = logging.getLogger("CleanerTestCase")
 
     def testFileCleaner(self):
 
@@ -49,8 +45,15 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         interval["hours"] = 0
         interval["seconds"] = 0
 
+        scanInterval = {}
+        scanInterval["days"] = 0
+        scanInterval["minutes"] = 0
+        scanInterval["hours"] = 0
+        scanInterval["seconds"] = 3
+
         config["filesOlderThan"] = interval
         config["directoriesEmptyForMoreThan"] = interval
+        config["scanInterval"] = scanInterval
 
         # put some files into it
         (fh1, filename1) = tempfile.mkstemp(dir=dirPath)
@@ -67,8 +70,8 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         self.assertEqual(len(files), 3)
 
         # run the cleaner once
-        cleaner = CacheCleaner(self.logger, config)
-        cleaner.run_task()
+        cleaner = CacheCleaner(config)
+        cleaner.clean()
 
         # get the list of files
         files = scanner.getAllFiles()
@@ -80,7 +83,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         self.changeModificationDate(filename1)
 
         # clean up that "old" file
-        cleaner.run_task()
+        cleaner.clean()
 
         # check to see that we now have the number of files we expect
         files = scanner.getAllFiles()
@@ -91,7 +94,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         self.changeModificationDate(filename3)
 
         # clean up that "old" file
-        cleaner.run_task()
+        cleaner.clean()
 
         # check to see that we now have the number of files we expect
         files = scanner.getAllFiles()
@@ -114,8 +117,15 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         interval["minutes"] = 0
         interval["seconds"] = 0
 
+        scanInterval = {}
+        scanInterval["days"] = 0
+        scanInterval["minutes"] = 0
+        scanInterval["hours"] = 0
+        scanInterval["seconds"] = 3
+
         config["filesOlderThan"] = interval
         config["directoriesEmptyForMoreThan"] = interval
+        config["scanInterval"] = scanInterval
 
         # put some directories into it
         dirname1 = tempfile.mkdtemp(dir=dirPath)
@@ -127,8 +137,8 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         (fh2, filename2) = tempfile.mkstemp(dir=dirPath)
 
         # run the cleaner once
-        cleaner = CacheCleaner(self.logger, config)
-        cleaner.run_task()
+        cleaner = CacheCleaner(config)
+        cleaner.clean()
 
         # check to see if all the directories are still there
         self.assertTrue(os.path.exists(dirname1))
@@ -143,7 +153,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         self.changeModificationDate(dirname2)
 
         # turn off verbosity and clean up that "old" subdirectory
-        cleaner.run_task()
+        cleaner.clean()
 
         # check to see that we now have the number of subdirectories we expect
         self.assertTrue(os.path.exists(dirname1))
@@ -153,7 +163,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
 
         # change the modification date of the subdirectory with a file in it
         self.changeModificationDate(dirname1)
-        cleaner.run_task()
+        cleaner.clean()
 
         # the subdirectory should still be there because the file is newer
         self.assertTrue(os.path.exists(dirname1))
@@ -162,7 +172,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
 
         # change the modifiction date of the file to the past
         self.changeModificationDate(testFile)
-        cleaner.run_task()
+        cleaner.clean()
 
         # make sure the file was removed...and the subdirectory NOT.
         self.assertFalse(os.path.exists(testFile))
@@ -175,7 +185,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         self.changeModificationDate(dirname1)
 
         # clean up the "old" directory
-        cleaner.run_task()
+        cleaner.clean()
 
         # check to see that we now have one subdirectory left
         self.assertFalse(os.path.exists(dirname1))
@@ -183,13 +193,13 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
 
         # change the date of the last subdirectory and remove it.
         self.changeModificationDate(dirname3)
-        cleaner.run_task()
+        cleaner.clean()
         self.assertFalse(os.path.exists(dirname3))
 
         # change the date of the last file in the main directory
         self.assertTrue(os.path.exists(filename2))
         self.changeModificationDate(filename2)
-        cleaner.run_task()
+        cleaner.clean()
         self.assertFalse(os.path.exists(filename2))
 
         # close handles to old files
