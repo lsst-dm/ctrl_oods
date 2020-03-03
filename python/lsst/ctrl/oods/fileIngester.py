@@ -39,10 +39,8 @@ class FileIngester(object):
     def __init__(self, config):
         self.config = config
 
-
         FILE_INGEST_REQUEST = config["FILE_INGEST_REQUEST"]
         self._msg_actions = {FILE_INGEST_REQUEST: self.ingest_file}
-        #self._msg_actions = {'AT_FILE_INGEST_REQUEST': self.ingest_file}
 
         self.scanner = DirectoryScanner(config)
 
@@ -74,7 +72,6 @@ class FileIngester(object):
 
     async def start_comm(self):
         self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
-        #self.consumer = Consumer(self.base_broker_url, None, "at_publish_to_oods", self.on_message)
         self.consumer.start()
 
         self.publisher = Publisher(self.base_broker_url)
