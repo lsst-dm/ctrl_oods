@@ -39,7 +39,8 @@ class FileIngester(object):
     def __init__(self, config):
         self.config = config
 
-        self._msg_actions = {'AT_FILE_INGEST_REQUEST': self.ingest_file}
+        FILE_INGEST_REQUEST = config["FILE_INGEST_REQUEST"]
+        self._msg_actions = {FILE_INGEST_REQUEST: self.ingest_file}
 
         self.scanner = DirectoryScanner(config)
 
@@ -66,8 +67,11 @@ class FileIngester(object):
         if self.base_broker_url is not None:
             asyncio.create_task(self.start_comm())
 
+        self.CONSUME_QUEUE = config['CONSUME_QUEUE']
+        self.PUBLISH_QUEUE = config['PUBLISH_QUEUE']
+
     async def start_comm(self):
-        self.consumer = Consumer(self.base_broker_url, None, "at_publish_to_oods", self.on_message)
+        self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
         self.consumer.start()
 
         self.publisher = Publisher(self.base_broker_url)
@@ -103,7 +107,8 @@ class FileIngester(object):
                 d['MSG_TYPE'] = 'IMAGE_IN_OODS'
                 d['STATUS_CODE'] = 1
                 d['DESCRIPTION'] = err
-                await self.publisher.publish_message("oods_publish_to_at", d)
+                await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
+                # await self.publisher.publish_message("oods_publish_to_at", d)
             return
 
         if self.base_broker_url is not None:
@@ -111,7 +116,8 @@ class FileIngester(object):
             d['MSG_TYPE'] = 'IMAGE_IN_OODS'
             d['STATUS_CODE'] = 0
             d['DESCRIPTION'] = f"OBSID {obsid}: File {filename} ingested into OODS"
-            await self.publisher.publish_message("oods_publish_to_at", d)
+            await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
+            # await self.publisher.publish_message("oods_publish_to_at", d)
 
     async def run_task(self):
         # wait, to keep the object alive
