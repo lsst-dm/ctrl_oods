@@ -59,7 +59,7 @@ if __name__ == "__main__":
     lsstlog.usePythonLogging()
 
     LOGGER = logging.getLogger(__name__)
-    F = '%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s')
+    F = '%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s'
     logging.basicConfig(level=logging.INFO, format=(F), datefmt="%Y-%m-%d %H:%M:%S")
 
     name = os.path.basename(sys.argv[0])
