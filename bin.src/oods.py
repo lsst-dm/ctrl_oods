@@ -27,6 +27,7 @@ import logging
 import os
 import sys
 import yaml
+import lsst.log as lsstlog
 import lsst.utils
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
@@ -55,9 +56,11 @@ async def gather_tasks(interval):
 
 
 if __name__ == "__main__":
-    F = '%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s'
+    lsstlog.usePythonLogging()
+
     LOGGER = logging.getLogger(__name__)
-    logging.Formatter(fmt=F)
+    F = '%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s'
+    logging.basicConfig(level=logging.INFO, format=(F), datefmt="%Y-%m-%d %H:%M:%S")
 
     name = os.path.basename(sys.argv[0])
 
@@ -89,6 +92,6 @@ if __name__ == "__main__":
         print("invalid OODS YAML configuration file")
         sys.exit(10)
 
-    LOGGER.info("starting...")
+    LOGGER.info("***** OODS starting...")
 
     res1, res2 = asyncio.get_event_loop().run_until_complete(gather_tasks(oods_config))
