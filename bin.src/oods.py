@@ -28,30 +28,24 @@ import os
 import sys
 import yaml
 import lsst.log as lsstlog
-import lsst.utils
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.validator import Validator
 
+LOGGER = logging.getLogger(__name__)
 
-async def wait_for_ingest(config):
+
+async def gather_tasks(config):
     ingester_config = config["ingester"]
     ingester = FileIngester(ingester_config)
 
-    res = await asyncio.create_task(ingester.run_task())
-    return res
-
-
-async def wait_for_cleaner(config):
     cache_config = config["cacheCleaner"]
     cache_cleaner = CacheCleaner(cache_config)
-    res = await asyncio.create_task(cache_cleaner.run_task())
-    return res
 
-
-async def gather_tasks(interval):
-    r = [wait_for_ingest(oods_config), wait_for_cleaner(oods_config)]
+    r = [ingester.run_task(), cache_cleaner.run_task()]
+    LOGGER.info("gathering tasks")
     res = await asyncio.gather(*r, return_exceptions=True)
+    LOGGER.info("tasks gathered")
     return res
 
 
@@ -66,21 +60,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(prog=name,
                                      description='''Ingests new files into a Butler''')
-    parser.add_argument("config", default=None, nargs='?',
-                        help="use specified OODS YAML configuration file")
+    parser.add_argument("config", help="use specified OODS YAML configuration file")
 
     parser.add_argument("-y", "--yaml-validate", action="store_true",
                         dest="validate", default=False,
                         help="validate YAML configuration file")
     args = parser.parse_args()
 
-    if args.config is None:
-        package = lsst.utils.getPackageDir("ctrl_oods")
-        yaml_path = os.path.join(package, "etc", "oods.yaml")
-    else:
-        yaml_path = args.config
-
-    with open(yaml_path, 'r') as f:
+    with open(args.config, 'r') as f:
         oods_config = yaml.safe_load(f)
 
     if args.validate:

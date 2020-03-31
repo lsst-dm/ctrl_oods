@@ -61,7 +61,7 @@ class CacheCleaner(object):
 
         files = self.getAllFilesOlderThan(seconds, self.directories)
         for name in files:
-            LOGGER.info("removing", name)
+            LOGGER.info(f"removing file {name}")
             os.unlink(name)
 
         # remove empty directories
@@ -70,7 +70,7 @@ class CacheCleaner(object):
 
         dirs = self.getAllEmptyDirectoriesOlderThan(seconds, self.directories)
         for name in dirs:
-            LOGGER.info("removing", name)
+            LOGGER.info(f"removing directory {name}")
             os.rmdir(name)
 
     def getAllFilesOlderThan(self, seconds, directories):
