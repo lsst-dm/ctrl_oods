@@ -89,6 +89,15 @@ class FileIngester(object):
         else:
             LOGGER.info(f"unknown message type: {msg_type}")
 
+    def extract_cause(self, e):
+        if e.__cause__ is None:
+            return None
+        cause = self.extract_cause(e.__cause__)
+        if cause is None:
+            return f"{str(e.__cause__)}"
+        else:
+            return f"{str(e.__cause__)};  {cause}"
+
     async def ingest_file(self, msg):
         camera = msg['CAMERA']
         obsid = msg['OBSID']
@@ -99,8 +108,8 @@ class FileIngester(object):
             self.butler.ingest(filename)
             LOGGER.info(f"{obsid} {filename} ingested from {camera} by {archiver}")
         except Exception as e:
-            err = f"{filename} could not be ingested.  Moving to {self.bad_file_dir}: {e}"
-            LOGGER.info(err)
+            err = f"{filename} could not be ingested.  Moving to {self.bad_file_dir}: {self.extract_cause(e)}"
+            LOGGER.exception(err)
             shutil.move(filename, self.bad_file_dir)
             if self.base_broker_url is not None:
                 d = dict(msg)
@@ -108,7 +117,6 @@ class FileIngester(object):
                 d['STATUS_CODE'] = 1
                 d['DESCRIPTION'] = err
                 await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
-                # await self.publisher.publish_message("oods_publish_to_at", d)
             return
 
         if self.base_broker_url is not None:
@@ -117,7 +125,6 @@ class FileIngester(object):
             d['STATUS_CODE'] = 0
             d['DESCRIPTION'] = f"OBSID {obsid}: File {filename} ingested into OODS"
             await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
-            # await self.publisher.publish_message("oods_publish_to_at", d)
 
     async def run_task(self):
         # wait, to keep the object alive
