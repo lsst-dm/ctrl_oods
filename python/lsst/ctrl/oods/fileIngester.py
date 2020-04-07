@@ -22,6 +22,8 @@
 import asyncio
 import logging
 import shutil
+import os
+import os.path
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.dm.csc.base.consumer import Consumer
 from lsst.dm.csc.base.publisher import Publisher
@@ -49,6 +51,7 @@ class FileIngester(object):
         else:
             self.base_broker_url = None
 
+        self.directories = config["directories"]
         self.bad_file_dir = config["badFileDirectory"]
 
         butlerConfig = config["butler"]
@@ -98,10 +101,24 @@ class FileIngester(object):
         else:
             return f"{str(e.__cause__)};  {cause}"
 
+    def create_bad_dirname(self, original):
+        for dirname in self.directories:
+            if original.startswith(dirname):
+                # strip the original directory location, except for the date
+                newfile = original.lstrip(dirname)
+                # split into date and filename
+                head, tail = os.path.split(newfile)
+                # create subdirectory path name for self.bad_file_dir with date
+                newdir = os.path.join(self.bad_file_dir, head)
+                # create the directory, and hand the name back
+                os.makedirs(newdir, exist_ok=True)
+                return newdir
+        return None
+
     async def ingest_file(self, msg):
         camera = msg['CAMERA']
         obsid = msg['OBSID']
-        filename = msg['FILENAME']
+        filename = os.path.realpath(msg['FILENAME'])
         archiver = msg['ARCHIVER']
 
         try:
@@ -110,7 +127,9 @@ class FileIngester(object):
         except Exception as e:
             err = f"{filename} could not be ingested.  Moving to {self.bad_file_dir}: {self.extract_cause(e)}"
             LOGGER.exception(err)
-            shutil.move(filename, self.bad_file_dir)
+            bad_file_dir = self.create_bad_dirname(filename)
+            shutil.move(filename, bad_file_dir)
+
             if self.base_broker_url is not None:
                 d = dict(msg)
                 d['MSG_TYPE'] = 'IMAGE_IN_OODS'
