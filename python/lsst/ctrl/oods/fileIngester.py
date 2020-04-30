@@ -130,7 +130,7 @@ class FileIngester(object):
             bad_file_dir = self.create_bad_dirname(filename)
             try:
                 shutil.move(filename, bad_file_dir)
-            exception Exception as fmException:
+            except Exception as fmException:
                 LOGGER.info(f"Failed to move {filename} to {bad_file_dir} {fmException}")
 
             if self.base_broker_url is not None:
