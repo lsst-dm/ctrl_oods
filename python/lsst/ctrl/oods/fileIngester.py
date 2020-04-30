@@ -128,7 +128,10 @@ class FileIngester(object):
             err = f"{filename} could not be ingested.  Moving to {self.bad_file_dir}: {self.extract_cause(e)}"
             LOGGER.exception(err)
             bad_file_dir = self.create_bad_dirname(filename)
-            shutil.move(filename, bad_file_dir)
+            try:
+                shutil.move(filename, bad_file_dir)
+            exception Exception as fmException:
+                LOGGER.info(f"Failed to move {filename} to {bad_file_dir} {fmException}")
 
             if self.base_broker_url is not None:
                 d = dict(msg)
