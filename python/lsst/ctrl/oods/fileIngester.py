@@ -28,6 +28,8 @@ from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.dm.csc.base.consumer import Consumer
 from lsst.dm.csc.base.publisher import Publisher
 from importlib import import_module
+import lsst.ctrl.notify.notify as notify
+import lsst.ctrl.notify.inotifyEvent as inotifyEvent
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,13 +40,9 @@ class FileIngester(object):
     or there will be an attempt to ingest them again later.
     """
 
-    def __init__(self, config):
+    def __init__(self, parent, config):
+        self.parent = parent
         self.config = config
-
-        FILE_INGEST_REQUEST = config["FILE_INGEST_REQUEST"]
-        self._msg_actions = {FILE_INGEST_REQUEST: self.ingest_file}
-
-        self.scanner = DirectoryScanner(config)
 
         if 'baseBrokerAddr' in config:
             self.base_broker_url = config["baseBrokerAddr"]
@@ -67,30 +65,30 @@ class FileIngester(object):
 
         self.repo = butlerConfig["repoDirectory"]
         self.butler = butlerClass(self.repo)
-        if self.base_broker_url is not None:
-            asyncio.create_task(self.start_comm())
 
-        self.CONSUME_QUEUE = config['CONSUME_QUEUE']
-        self.PUBLISH_QUEUE = config['PUBLISH_QUEUE']
+        self.enabled_task = None
 
-    async def start_comm(self):
-        self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
-        self.consumer.start()
+    def enable(self):
+        self.note = notify.Notify()
+        for directory in self.directories:
+            self.note.addWatch(directory, inotify.IN_CREATE)
 
-        self.publisher = Publisher(self.base_broker_url)
-        await self.publisher.start()
+        loop = asyncio.get_running_loop()
+        self.enabled_task = loop.run_in_executor(None, read_event)
 
-    def on_message(self, ch, method, properties, body):
-        """ Route the message to the proper handler
-        """
-        msg_type = body['MSG_TYPE']
-        LOGGER.info("TEMP: received message {body}")
-        ch.basic_ack(method.delivery_tag)
-        if msg_type in self._msg_actions:
-            handler = self._msg_actions.get(msg_type)
-            asyncio.create_task(handler(body))
-        else:
-            LOGGER.info(f"unknown message type: {msg_type}")
+    def disable(self):
+        self.enabled_task.cancel()
+        self.enabled_task = None
+        for directory in self.directories:
+            self.note.rmWatch(directory)
+        self.note.close()
+        self.note = None
+
+    def read_event(self):
+        while True:
+            event = self.note.readEvent()
+            task = asyncio.create_task(self.ingest_file(event.name))
+        
 
     def extract_cause(self, e):
         if e.__cause__ is None:
@@ -115,39 +113,25 @@ class FileIngester(object):
                 return newdir
         return None
 
-    async def ingest_file(self, msg):
-        camera = msg['CAMERA']
-        obsid = msg['OBSID']
-        filename = os.path.realpath(msg['FILENAME'])
-        archiver = msg['ARCHIVER']
-
+    async def ingest_file(self, filename):
         try:
             self.butler.ingest(filename)
-            LOGGER.info(f"{obsid} {filename} ingested from {camera} by {archiver}")
+            LOGGER.info(f"{filename} ingested")
+             msg = f"OBSID {obsid}: File {filename} ingested into OODS"
+             self.parent.send_imageInOODS(filename, msg, 0)
         except Exception as e:
-            err = f"{filename} could not be ingested: {self.extract_cause(e)}"
             LOGGER.exception(err)
             bad_file_dir = self.create_bad_dirname(filename)
             try:
-                LOGGER.info(f"Moving {filename} to {self.bad_file_dir}")
+                msg = f"{filename} could not be ingested.  Moving to {bad_file_dir}: {self.extract_cause(e)}"
                 shutil.move(filename, bad_file_dir)
-            except Exception as fmException:
+            except Exception as fmExcepton:
                 LOGGER.info(f"Failed to move {filename} to {bad_file_dir} {fmException}")
 
             if self.base_broker_url is not None:
-                d = dict(msg)
-                d['MSG_TYPE'] = 'IMAGE_IN_OODS'
-                d['STATUS_CODE'] = 1
-                d['DESCRIPTION'] = err
-                await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
+                self.parent.send_imageInOODS(filename, msg, 1)
             return
 
-        if self.base_broker_url is not None:
-            d = dict(msg)
-            d['MSG_TYPE'] = 'IMAGE_IN_OODS'
-            d['STATUS_CODE'] = 0
-            d['DESCRIPTION'] = f"OBSID {obsid}: File {filename} ingested into OODS"
-            await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
 
     async def run_task(self):
         # wait, to keep the object alive
