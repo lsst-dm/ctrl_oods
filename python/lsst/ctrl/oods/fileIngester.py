@@ -84,7 +84,7 @@ class FileIngester(object):
         self.note.close()
         self.note = None
 
-    def read_event(self):
+    async def read_event(self):
         while True:
             event = self.note.readEvent()
             task = asyncio.create_task(self.ingest_file(event.name))
