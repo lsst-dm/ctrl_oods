@@ -10,13 +10,14 @@ ingester:
     PUBLISH_QUEUE: oods_publish_to_cc
     directories:
         - /data/staging/oods
-    baseBrokerAddr: localhost/%2ftest_at
+    baseBrokerAddr: localhost/%2ftest_cc
     badFileDirectory: /data/staging/badfiles
     butler:
         class:
             import : lsst.ctrl.oods.gen2ButlerIngester
             name : Gen2ButlerIngester
         repoDirectory : /data/butler/repo
+        run: raw/comcam
     batchSize: 20
     scanInterval:
         <<: *interval

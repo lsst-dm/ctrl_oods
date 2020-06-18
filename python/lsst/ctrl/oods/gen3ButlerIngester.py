@@ -28,7 +28,10 @@ from lsst.obs.base.utils import getInstrument
 class Gen3ButlerIngester(object):
     """Processes files for ingestion into a Gen3 Butler.
     """
-    def __init__(self, repo):
+    def __init__(self, butlerConfig):
+        repo = butlerConfig["repoDirectory"]
+        run = butlerConfig["run"]
+
         register = False
         # Create Butler repository.
         if not os.path.exists(os.path.join(repo, "butler.yaml")):
