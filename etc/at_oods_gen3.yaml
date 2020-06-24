@@ -14,10 +14,11 @@ ingester:
     badFileDirectory: /data/staging/badfiles
     butler:
         class:
-            import : lsst.ctrl.oods.gen2ButlerIngester
-            name : Gen2ButlerIngester
+            import : lsst.ctrl.oods.gen3ButlerIngester
+            name : Gen3ButlerIngester
         repoDirectory : /data/butler/repo
-        run: raw/LATISS
+        run: LATISS/raw
+        instrument: 
     batchSize: 20
     scanInterval:
         <<: *interval

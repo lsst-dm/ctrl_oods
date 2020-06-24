@@ -35,13 +35,10 @@ class Gen2IngesterTestCase(asynctest.TestCase):
     def setUp(self):
 
         package = lsst.utils.getPackageDir("ctrl_oods")
-        testFile = os.path.join(package, "tests", "etc", "ingest.yaml")
+        testFile = os.path.join(package, "tests", "etc", "ingest_gen2.yaml")
 
         fitsFileName = "ats_exp_0_AT_C_20180920_000028.fits.fz"
-        fitsFile = os.path.join(package, "tests", "etc", fitsFileName)
-
-        mapperFileName = "_mapper"
-        mapperPath = os.path.join(package, "tests", "etc", "_mapper")
+        fitsFile = os.path.join(package, "tests", "data", fitsFileName)
 
         self.config = None
         with open(testFile, "r") as f:
@@ -56,8 +53,9 @@ class Gen2IngesterTestCase(asynctest.TestCase):
         self.destFile1 = os.path.join(dataDir, fitsFileName)
         copyfile(fitsFile, self.destFile1)
 
-        destFile2 = os.path.join(repoDir, mapperFileName)
-        copyfile(mapperPath, destFile2)
+        destFile2 = os.path.join(repoDir, "_mapper")
+        with open(destFile2, 'w') as mapper_file:
+            mapper_file.write("lsst.obs.lsst.latiss.LatissMapper")
 
     async def testIngest(self):
         scanner = DirectoryScanner(self.config["ingester"])

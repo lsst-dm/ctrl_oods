@@ -31,32 +31,29 @@ class Gen3ButlerIngester(object):
     def __init__(self, butlerConfig):
         repo = butlerConfig["repoDirectory"]
         run = butlerConfig["run"]
+        instrument = butlerConfig["instrument"]
 
         register = False
         # Create Butler repository.
         if not os.path.exists(os.path.join(repo, "butler.yaml")):
             Butler.makeRepo(repo)
             register = True
-    
-        run = "oods_temp_placeholder"
 
         opts = dict(run=run, writeable=True)
         self.btl = Butler(repo, **opts)
 
         if register:
-           # Register an instrument.
-           instr = getInstrument("lsst.obs.lsst.LsstComCam")
-           instr.register(btl.registry)
+            # Register an instrument.
+            instr = getInstrument(instrument)
+            instr.register(self.btl.registry)
 
     def ingest(self, filename):
-        # repo = "/tmp/foobar"
-        # image = "/tmp/data/2020060500001-R22-S00-det000.fits"
 
         # Ingest image.
         cfg = RawIngestConfig()
-        cfg.transfer = "link"
+        cfg.transfer = "move"
         task = RawIngestTask(config=cfg, butler=self.btl)
         try:
-            task.run([image])
+            task.run([filename])
         except RuntimeError as ex:
             print(ex)
