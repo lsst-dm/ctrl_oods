@@ -32,85 +32,108 @@ import asynctest
 class Gen2TestCase(asynctest.TestCase):
     """Test Scanning directory"""
 
-    async def testATIngest(self):
+    def createConfig(self, config_name, fits_name, mapper):
+
         package = lsst.utils.getPackageDir("ctrl_oods")
-        testFile = os.path.join(package, "tests", "etc", "ingest_gen2.yaml")
+        testFile = os.path.join(package, "tests", "etc", config_name)
 
-        fitsFileName = "ats_exp_0_AT_C_20180920_000028.fits.fz"
-        fitsFile = os.path.join(package, "tests", "data", fitsFileName)
+        fitsFile = os.path.join(package, "tests", "data", fits_name)
 
-        self.config = None
         with open(testFile, "r") as f:
-            self.config = yaml.safe_load(f)
+            config = yaml.safe_load(f)
 
         dataDir = tempfile.mkdtemp()
-        self.config["ingester"]["directories"] = [dataDir]
+        config["ingester"]["directories"] = [dataDir]
+
+        badDir = tempfile.mkdtemp()
+        config["ingester"]["badFileDirectory"] = badDir
 
         repoDir = tempfile.mkdtemp()
-        self.config["ingester"]["butler"]["repoDirectory"] = repoDir
+        config["ingester"]["butler"]["repoDirectory"] = repoDir
 
-        self.destFile1 = os.path.join(dataDir, fitsFileName)
-        copyfile(fitsFile, self.destFile1)
+        destFile = os.path.join(dataDir, fits_name)
+        copyfile(fitsFile, destFile)
 
-        destFile2 = os.path.join(repoDir, "_mapper")
-        with open(destFile2, 'w') as mapper_file:
-            mapper_file.write("lsst.obs.lsst.latiss.LatissMapper")
+        mapperFileName = os.path.join(repoDir, "_mapper")
+        with open(mapperFileName, 'w') as mapper_file:
+            mapper_file.write(mapper)
 
-        scanner = DirectoryScanner(self.config["ingester"])
+        return config, destFile, repoDir, badDir
+
+    async def testATIngest(self):
+        fits_name = "2020032700020-det000.fits.fz"
+        config, destFile, repoDir, badDir = self.createConfig("ingest_gen2.yaml",
+                                                              fits_name,
+                                                              "lsst.obs.lsst.latiss.LatissMapper")
+
+        scanner = DirectoryScanner(config["ingester"])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(self.config["ingester"])
+        ingester = FileIngester(config["ingester"])
 
         msg = {}
         msg['CAMERA'] = "LATISS"
         msg['OBSID'] = "AT_C_20180920_000028"
-        msg['FILENAME'] = self.destFile1
+        msg['FILENAME'] = destFile
         msg['ARCHIVER'] = "AT"
         await ingester.ingest_file(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
+        bad_path = os.path.join(badDir, fits_name)
+        self.assertFalse(os.path.exists(bad_path))
+
     async def testCCIngest(self):
-        package = lsst.utils.getPackageDir("ctrl_oods")
-        testFile = os.path.join(package, "tests", "etc", "ingest_gen2.yaml")
+        fits_name = "3019053000001-R22-S00-det000.fits.fz"
+        config, destFile, repoDir, badDir = self.createConfig("ingest_gen2.yaml",
+                                                              fits_name,
+                                                              "lsst.obs.lsst.comCam.LsstComCamMapper")
 
-        fitsFileName = "3019053000001-R22-S00-det000.fits.fz"
-        fitsFile = os.path.join(package, "tests", "data", fitsFileName)
-
-        self.config = None
-        with open(testFile, "r") as f:
-            self.config = yaml.safe_load(f)
-
-        dataDir = tempfile.mkdtemp()
-        self.config["ingester"]["directories"] = [dataDir]
-
-        repoDir = tempfile.mkdtemp()
-        self.config["ingester"]["butler"]["repoDirectory"] = repoDir
-
-        self.destFile1 = os.path.join(dataDir, fitsFileName)
-        copyfile(fitsFile, self.destFile1)
-
-        destFile2 = os.path.join(repoDir, "_mapper")
-        with open(destFile2, 'w') as mapper_file:
-            mapper_file.write("lsst.obs.lsst.latiss.LatissMapper")
-
-        scanner = DirectoryScanner(self.config["ingester"])
+        scanner = DirectoryScanner(config["ingester"])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(self.config["ingester"])
+        ingester = FileIngester(config["ingester"])
 
         msg = {}
         msg['CAMERA'] = "COMCAM"
         msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = self.destFile1
+        msg['FILENAME'] = destFile
         msg['ARCHIVER'] = "CC"
         await ingester.ingest_file(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
+
+        bad_path = os.path.join(badDir, fits_name)
+        self.assertFalse(os.path.exists(bad_path))
+
+    async def testBadIngest(self):
+        fits_name = "bad.fits.fz"
+        config, destFile, repoDir, badDir = self.createConfig("ingest_gen2.yaml",
+                                                              fits_name,
+                                                              "lsst.obs.lsst.comCam.LsstComCamMapper")
+
+        scanner = DirectoryScanner(config["ingester"])
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 1)
+
+        ingester = FileIngester(config["ingester"])
+
+        msg = {}
+        msg['CAMERA'] = "COMCAM"
+        msg['OBSID'] = "CC_C_20190530_000001"
+        msg['FILENAME'] = destFile
+        msg['ARCHIVER'] = "CC"
+        await ingester.ingest_file(msg)
+
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 0)
+
+        bad_path = os.path.join(badDir, fits_name)
+        self.assertTrue(os.path.exists(bad_path))
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):

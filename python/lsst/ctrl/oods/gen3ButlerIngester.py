@@ -53,7 +53,4 @@ class Gen3ButlerIngester(object):
         cfg = RawIngestConfig()
         cfg.transfer = "move"
         task = RawIngestTask(config=cfg, butler=self.btl)
-        try:
-            task.run([filename])
-        except RuntimeError as ex:
-            print(ex)
+        task.run([filename])

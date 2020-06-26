@@ -39,6 +39,9 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         with open(configFile, "r") as f:
             config = yaml.safe_load(f)
 
+        badDir = tempfile.mkdtemp()
+        config["ingester"]["badFileDirectory"] = badDir
+
         dataDir = tempfile.mkdtemp()
         config["ingester"]["directories"] = [dataDir]
 
@@ -50,11 +53,11 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         destFile = os.path.join(dataDir, fits_name)
         copyfile(fitsFile, destFile)
 
-        return config, destFile
+        return config, destFile, badDir
 
     async def testAuxTelIngest(self):
-        config, destFile = self.createConfig("ingest_auxtel_gen3.yaml",
-                                             "ats_exp_0_AT_C_20180920_000028.fits.fz")
+        fits_name = "2020032700020-det000.fits.fz"
+        config, destFile, badDir = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
 
         scanner = DirectoryScanner(config["ingester"])
         files = scanner.getAllFiles()
@@ -72,9 +75,12 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
+        bad_path = os.path.join(badDir, fits_name)
+        self.assertFalse(os.path.exists(bad_path))
+
     async def testComCamIngest(self):
-        config, destFile = self.createConfig("ingest_comcam_gen3.yaml",
-                                             "3019053000001-R22-S00-det000.fits.fz")
+        fits_name = "3019053000001-R22-S00-det000.fits.fz"
+        config, destFile, badDir = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
         scanner = DirectoryScanner(config["ingester"])
         files = scanner.getAllFiles()
@@ -91,6 +97,32 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
+
+        bad_path = os.path.join(badDir, fits_name)
+        self.assertFalse(os.path.exists(bad_path))
+
+    async def testBadIngest(self):
+        fits_name = "bad.fits.fz"
+        config, destFile, badDir = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
+
+        scanner = DirectoryScanner(config["ingester"])
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 1)
+
+        ingester = FileIngester(config["ingester"])
+
+        msg = {}
+        msg['CAMERA'] = "COMCAM"
+        msg['OBSID'] = "CC_C_20190530_000001"
+        msg['FILENAME'] = destFile
+        msg['ARCHIVER'] = "CC"
+        await ingester.ingest_file(msg)
+
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 0)
+
+        bad_path = os.path.join(badDir, fits_name)
+        self.assertTrue(os.path.exists(bad_path))
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):

@@ -10,7 +10,7 @@ ingester:
     PUBLISH_QUEUE: oods_publish_to_at
     directories:
         - data
-    badFileDirectory: bad
+    badFileDirectory: /tmp/bad
     butler:
         class:
             import : lsst.ctrl.oods.gen2ButlerIngester

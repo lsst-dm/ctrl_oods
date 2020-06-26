@@ -5,9 +5,9 @@ defaultInterval: &interval
     seconds: 0
 
 ingester:
-    FILE_INGEST_REQUEST: AT_FILE_INGEST_REQUEST
-    CONSUME_QUEUE: at_publish_to_oods
-    PUBLISH_QUEUE: oods_publish_to_at
+    FILE_INGEST_REQUEST: CC_FILE_INGEST_REQUEST
+    CONSUME_QUEUE: cc_publish_to_oods
+    PUBLISH_QUEUE: oods_publish_to_cc
     directories:
         - data
     badFileDirectory: /tmp/bad
