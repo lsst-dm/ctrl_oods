@@ -16,7 +16,6 @@ ingester:
             import : lsst.ctrl.oods.gen3ButlerIngester
             name : Gen3ButlerIngester
         repoDirectory : repo
-        run: LATISS/raw
         instrument: lsst.obs.lsst.Latiss
     batchSize: 20
     scanInterval:

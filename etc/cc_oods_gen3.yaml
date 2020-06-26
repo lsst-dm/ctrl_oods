@@ -17,7 +17,6 @@ ingester:
             import : lsst.ctrl.oods.gen3ButlerIngester
             name : Gen3ButlerIngester
         repoDirectory : /data/butler/repo
-        run: COMCAM/raw
         instrument: lsst.obs.lsst.LsstComCam
     batchSize: 20
     scanInterval:

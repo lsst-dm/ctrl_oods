@@ -29,12 +29,12 @@ import lsst.utils.tests
 import asynctest
 
 
-class Gen3ComCamIngesterTestCase(asynctest.TestCase):
+class Gen2TestCase(asynctest.TestCase):
     """Test Scanning directory"""
 
-    async def testAuxTelIngest(self):
+    async def testATIngest(self):
         package = lsst.utils.getPackageDir("ctrl_oods")
-        testFile = os.path.join(package, "tests", "etc", "ingest_auxtel_gen3.yaml")
+        testFile = os.path.join(package, "tests", "etc", "ingest_gen2.yaml")
 
         fitsFileName = "ats_exp_0_AT_C_20180920_000028.fits.fz"
         fitsFile = os.path.join(package, "tests", "data", fitsFileName)
@@ -52,6 +52,10 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         self.destFile1 = os.path.join(dataDir, fitsFileName)
         copyfile(fitsFile, self.destFile1)
 
+        destFile2 = os.path.join(repoDir, "_mapper")
+        with open(destFile2, 'w') as mapper_file:
+            mapper_file.write("lsst.obs.lsst.latiss.LatissMapper")
+
         scanner = DirectoryScanner(self.config["ingester"])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
@@ -68,12 +72,10 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-    async def testComCamIngest(self):
+    async def testCCIngest(self):
         package = lsst.utils.getPackageDir("ctrl_oods")
-        testFile = os.path.join(package, "tests", "etc", "ingest_comcam_gen3.yaml")
+        testFile = os.path.join(package, "tests", "etc", "ingest_gen2.yaml")
 
-        # fitsFileName = "2020061900002-R22-S22-det008.fits"
-        # fitsFile = os.path.join(package, "tests", "etc", fitsFileName)
         fitsFileName = "3019053000001-R22-S00-det000.fits.fz"
         fitsFile = os.path.join(package, "tests", "data", fitsFileName)
 
@@ -90,6 +92,10 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         self.destFile1 = os.path.join(dataDir, fitsFileName)
         copyfile(fitsFile, self.destFile1)
 
+        destFile2 = os.path.join(repoDir, "_mapper")
+        with open(destFile2, 'w') as mapper_file:
+            mapper_file.write("lsst.obs.lsst.latiss.LatissMapper")
+
         scanner = DirectoryScanner(self.config["ingester"])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
@@ -98,7 +104,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         msg = {}
         msg['CAMERA'] = "COMCAM"
-        msg['OBSID'] = "CC_O_20200618_000001"
+        msg['OBSID'] = "CC_C_20190530_000001"
         msg['FILENAME'] = self.destFile1
         msg['ARCHIVER'] = "CC"
         await ingester.ingest_file(msg)

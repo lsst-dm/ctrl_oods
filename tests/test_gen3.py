@@ -29,13 +29,12 @@ import lsst.utils.tests
 import asynctest
 
 
-class Gen2IngesterTestCase(asynctest.TestCase):
+class Gen3ComCamIngesterTestCase(asynctest.TestCase):
     """Test Scanning directory"""
 
-    def setUp(self):
-
+    async def testAuxTelIngest(self):
         package = lsst.utils.getPackageDir("ctrl_oods")
-        testFile = os.path.join(package, "tests", "etc", "ingest_gen2.yaml")
+        testFile = os.path.join(package, "tests", "etc", "ingest_auxtel_gen3.yaml")
 
         fitsFileName = "ats_exp_0_AT_C_20180920_000028.fits.fz"
         fitsFile = os.path.join(package, "tests", "data", fitsFileName)
@@ -53,11 +52,6 @@ class Gen2IngesterTestCase(asynctest.TestCase):
         self.destFile1 = os.path.join(dataDir, fitsFileName)
         copyfile(fitsFile, self.destFile1)
 
-        destFile2 = os.path.join(repoDir, "_mapper")
-        with open(destFile2, 'w') as mapper_file:
-            mapper_file.write("lsst.obs.lsst.latiss.LatissMapper")
-
-    async def testIngest(self):
         scanner = DirectoryScanner(self.config["ingester"])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
@@ -69,6 +63,42 @@ class Gen2IngesterTestCase(asynctest.TestCase):
         msg['OBSID'] = "AT_C_20180920_000028"
         msg['FILENAME'] = self.destFile1
         msg['ARCHIVER'] = "AT"
+        await ingester.ingest_file(msg)
+
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 0)
+
+    async def testComCamIngest(self):
+        package = lsst.utils.getPackageDir("ctrl_oods")
+        testFile = os.path.join(package, "tests", "etc", "ingest_comcam_gen3.yaml")
+
+        fitsFileName = "3019053000001-R22-S00-det000.fits.fz"
+        fitsFile = os.path.join(package, "tests", "data", fitsFileName)
+
+        self.config = None
+        with open(testFile, "r") as f:
+            self.config = yaml.safe_load(f)
+
+        dataDir = tempfile.mkdtemp()
+        self.config["ingester"]["directories"] = [dataDir]
+
+        repoDir = tempfile.mkdtemp()
+        self.config["ingester"]["butler"]["repoDirectory"] = repoDir
+
+        self.destFile1 = os.path.join(dataDir, fitsFileName)
+        copyfile(fitsFile, self.destFile1)
+
+        scanner = DirectoryScanner(self.config["ingester"])
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 1)
+
+        ingester = FileIngester(self.config["ingester"])
+
+        msg = {}
+        msg['CAMERA'] = "COMCAM"
+        msg['OBSID'] = "CC_C_20190530_000001"
+        msg['FILENAME'] = self.destFile1
+        msg['ARCHIVER'] = "CC"
         await ingester.ingest_file(msg)
 
         files = scanner.getAllFiles()

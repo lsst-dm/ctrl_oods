@@ -10,13 +10,12 @@ ingester:
     PUBLISH_QUEUE: oods_publish_to_at
     directories:
         - data
-    badFileDirectory: bad
+    badFileDirectory: /tmp/bad
     butler:
         class:
             import : lsst.ctrl.oods.gen3ButlerIngester
             name : Gen3ButlerIngester
         repoDirectory : repo
-        run: COMCAM/raw
         instrument: lsst.obs.lsst.LsstComCam
     batchSize: 20
     scanInterval:

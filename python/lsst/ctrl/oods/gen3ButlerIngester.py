@@ -30,7 +30,6 @@ class Gen3ButlerIngester(object):
     """
     def __init__(self, butlerConfig):
         repo = butlerConfig["repoDirectory"]
-        run = butlerConfig["run"]
         instrument = butlerConfig["instrument"]
 
         register = False
@@ -39,12 +38,13 @@ class Gen3ButlerIngester(object):
             Butler.makeRepo(repo)
             register = True
 
+        instr = getInstrument(instrument)
+        run = instr.makeDefaultRawIngestRunName()
         opts = dict(run=run, writeable=True)
         self.btl = Butler(repo, **opts)
 
         if register:
             # Register an instrument.
-            instr = getInstrument(instrument)
             instr.register(self.btl.registry)
 
     def ingest(self, filename):
