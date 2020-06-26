@@ -32,36 +32,40 @@ import asynctest
 class Gen3ComCamIngesterTestCase(asynctest.TestCase):
     """Test Scanning directory"""
 
-    async def testAuxTelIngest(self):
+    def createConfig(self, config_name, fits_name):
         package = lsst.utils.getPackageDir("ctrl_oods")
-        testFile = os.path.join(package, "tests", "etc", "ingest_auxtel_gen3.yaml")
+        configFile = os.path.join(package, "tests", "etc", config_name)
 
-        fitsFileName = "ats_exp_0_AT_C_20180920_000028.fits.fz"
-        fitsFile = os.path.join(package, "tests", "data", fitsFileName)
-
-        self.config = None
-        with open(testFile, "r") as f:
-            self.config = yaml.safe_load(f)
+        with open(configFile, "r") as f:
+            config = yaml.safe_load(f)
 
         dataDir = tempfile.mkdtemp()
-        self.config["ingester"]["directories"] = [dataDir]
+        config["ingester"]["directories"] = [dataDir]
 
         repoDir = tempfile.mkdtemp()
-        self.config["ingester"]["butler"]["repoDirectory"] = repoDir
+        config["ingester"]["butler"]["repoDirectory"] = repoDir
 
-        self.destFile1 = os.path.join(dataDir, fitsFileName)
-        copyfile(fitsFile, self.destFile1)
+        fitsFile = os.path.join(package, "tests", "data", fits_name)
 
-        scanner = DirectoryScanner(self.config["ingester"])
+        destFile = os.path.join(dataDir, fits_name)
+        copyfile(fitsFile, destFile)
+
+        return config, destFile
+
+    async def testAuxTelIngest(self):
+        config, destFile = self.createConfig("ingest_auxtel_gen3.yaml",
+                                             "ats_exp_0_AT_C_20180920_000028.fits.fz")
+
+        scanner = DirectoryScanner(config["ingester"])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(self.config["ingester"])
+        ingester = FileIngester(config["ingester"])
 
         msg = {}
         msg['CAMERA'] = "LATISS"
         msg['OBSID'] = "AT_C_20180920_000028"
-        msg['FILENAME'] = self.destFile1
+        msg['FILENAME'] = destFile
         msg['ARCHIVER'] = "AT"
         await ingester.ingest_file(msg)
 
@@ -69,35 +73,19 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         self.assertEqual(len(files), 0)
 
     async def testComCamIngest(self):
-        package = lsst.utils.getPackageDir("ctrl_oods")
-        testFile = os.path.join(package, "tests", "etc", "ingest_comcam_gen3.yaml")
+        config, destFile = self.createConfig("ingest_comcam_gen3.yaml",
+                                             "3019053000001-R22-S00-det000.fits.fz")
 
-        fitsFileName = "3019053000001-R22-S00-det000.fits.fz"
-        fitsFile = os.path.join(package, "tests", "data", fitsFileName)
-
-        self.config = None
-        with open(testFile, "r") as f:
-            self.config = yaml.safe_load(f)
-
-        dataDir = tempfile.mkdtemp()
-        self.config["ingester"]["directories"] = [dataDir]
-
-        repoDir = tempfile.mkdtemp()
-        self.config["ingester"]["butler"]["repoDirectory"] = repoDir
-
-        self.destFile1 = os.path.join(dataDir, fitsFileName)
-        copyfile(fitsFile, self.destFile1)
-
-        scanner = DirectoryScanner(self.config["ingester"])
+        scanner = DirectoryScanner(config["ingester"])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(self.config["ingester"])
+        ingester = FileIngester(config["ingester"])
 
         msg = {}
         msg['CAMERA'] = "COMCAM"
         msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = self.destFile1
+        msg['FILENAME'] = destFile
         msg['ARCHIVER'] = "CC"
         await ingester.ingest_file(msg)
 
