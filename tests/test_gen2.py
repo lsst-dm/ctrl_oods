@@ -34,10 +34,10 @@ class Gen2TestCase(asynctest.TestCase):
 
     def createConfig(self, config_name, fits_name, mapper):
 
-        package = lsst.utils.getPackageDir("ctrl_oods")
-        testFile = os.path.join(package, "tests", "etc", config_name)
+        testdir = os.path.abspath(os.path.dirname(__file__))
+        testFile = os.path.join(testdir, "etc", config_name)
 
-        fitsFile = os.path.join(package, "tests", "data", fits_name)
+        fitsFile = os.path.join(testdir, "data", fits_name)
 
         with open(testFile, "r") as f:
             config = yaml.safe_load(f)

@@ -33,8 +33,8 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
     """Test Scanning directory"""
 
     def createConfig(self, config_name, fits_name):
-        package = lsst.utils.getPackageDir("ctrl_oods")
-        configFile = os.path.join(package, "tests", "etc", config_name)
+        testdir = os.path.abspath(os.path.dirname(__file__))
+        configFile = os.path.join(testdir, "etc", config_name)
 
         with open(configFile, "r") as f:
             config = yaml.safe_load(f)
@@ -48,7 +48,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         repoDir = tempfile.mkdtemp()
         config["ingester"]["butler"]["repoDirectory"] = repoDir
 
-        fitsFile = os.path.join(package, "tests", "data", fits_name)
+        fitsFile = os.path.join(testdir, "data", fits_name)
 
         destFile = os.path.join(dataDir, fits_name)
         copyfile(fitsFile, destFile)
