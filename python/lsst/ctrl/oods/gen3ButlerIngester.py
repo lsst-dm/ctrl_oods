@@ -19,7 +19,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import os
 from lsst.daf.butler import Butler
 from lsst.obs.base.ingest import RawIngestTask, RawIngestConfig
 from lsst.obs.base.utils import getInstrument
@@ -33,15 +32,16 @@ class Gen3ButlerIngester(object):
         instrument = butlerConfig["instrument"]
 
         register = False
-        # Create Butler repository.
-        if not os.path.exists(os.path.join(repo, "butler.yaml")):
-            Butler.makeRepo(repo)
+        try:
+            butlerConfig = Butler.makeRepo(repo)
             register = True
+        except FileExistsError:
+            butlerConfig = repo
 
         instr = getInstrument(instrument)
         run = instr.makeDefaultRawIngestRunName()
         opts = dict(run=run, writeable=True)
-        self.btl = Butler(repo, **opts)
+        self.btl = Butler(butlerConfig, **opts)
 
         if register:
             # Register an instrument.
