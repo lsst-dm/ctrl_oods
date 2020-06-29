@@ -66,7 +66,7 @@ class FileIngester(object):
         butlerClass = getattr(mod, name)
 
         self.repo = butlerConfig["repoDirectory"]
-        self.butler = butlerClass(self.repo)
+        self.butler = butlerClass(butlerConfig)
         if self.base_broker_url is not None:
             asyncio.create_task(self.start_comm())
 

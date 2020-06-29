@@ -24,7 +24,8 @@ from lsst.pipe.tasks.ingest import IngestTask
 class Gen2ButlerIngester(object):
     """Processes files for ingestion into a Gen2 Butler.
     """
-    def __init__(self, repo):
+    def __init__(self, butlerConfig):
+        repo = butlerConfig["repoDirectory"]
         self.task = IngestTask.prepareTask(repo)
 
     def ingest(self, filename):
