@@ -20,7 +20,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from lsst.ctrl.oods.validator import Validator
 import lsst.utils.tests
-import unittest
 import yaml
 
 
@@ -366,8 +365,3 @@ class MemoryTester(lsst.utils.tests.MemoryTestCase):
 
 def setup_module(module):
     lsst.utils.tests.init()
-
-
-if __name__ == "__main__":
-    lsst.utils.tests.init()
-    unittest.main()

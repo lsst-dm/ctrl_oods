@@ -24,12 +24,13 @@ import logging
 import pathlib
 from lsst.dm.csc.base.dm_csc import dm_csc
 from lsst.ts import salobj
-from lsst.ts.salobj import State
+from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 
 LOGGER = logging.getLogger(__name__)
 
 
-class AT_OODS_CSC(dm_csc):
+class ATOodsCsc(dm_csc):
 
     def __init__(self, schema_file, index, config_dir=None, initial_state=salobj.State.STANDBY,
                  initial_simulation_mode=0):
@@ -37,13 +38,6 @@ class AT_OODS_CSC(dm_csc):
         super().__init__("ATOODS", index=index, schema_path=schema_path,
                          config_dir=config_dir, initial_state=initial_state,
                          initial_simulation_mode=initial_simulation_mode)
-
-        domain = salobj.Domain()
-
-        salinfo = salobj.SalInfo(domain=domain, name="ATOODS", index=0)
-
-        #self.director = ATDirector(self, "ATArchiver", "atarchiver_config.yaml", "ATArchiverCSC.log")
-        #self.director.configure()
 
         self.transitioning_to_fault_evt = asyncio.Event()
         self.transitioning_to_fault_evt.clear()
@@ -64,7 +58,7 @@ class AT_OODS_CSC(dm_csc):
         cache_cleaner = CacheCleaner(cache_config)
 
         self.cleaner_task = asyncio.create_task(cache_cleaner.run_task())
-        
+
     async def stop_services(self):
         self.ingester.disable()
         self.cleaner_task.cancel()
@@ -72,8 +66,10 @@ class AT_OODS_CSC(dm_csc):
     async def do_resetFromFault(self, data):
         pass
 
-    #async def send_imageInOODS(self, camera, obsid, archiverName, statusCode, description):
     async def send_imageInOODS(self, filename, statusCode, description):
+        camera = "AT"
+        archiverName = "ATArchiver"
+        obsid = None
         LOGGER.info(f"sending {camera} {obsid} {archiverName} {statusCode}: {description}")
 
         self.evt_imageInOODS.set_put(camera=camera,

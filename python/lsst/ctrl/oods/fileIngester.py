@@ -24,9 +24,6 @@ import logging
 import shutil
 import os
 import os.path
-from lsst.ctrl.oods.directoryScanner import DirectoryScanner
-from lsst.dm.csc.base.consumer import Consumer
-from lsst.dm.csc.base.publisher import Publisher
 from importlib import import_module
 import lsst.ctrl.notify.notify as notify
 import lsst.ctrl.notify.inotifyEvent as inotifyEvent
@@ -43,11 +40,6 @@ class FileIngester(object):
     def __init__(self, parent, config):
         self.parent = parent
         self.config = config
-
-        if 'baseBrokerAddr' in config:
-            self.base_broker_url = config["baseBrokerAddr"]
-        else:
-            self.base_broker_url = None
 
         self.directories = config["directories"]
         self.bad_file_dir = config["badFileDirectory"]
@@ -68,27 +60,31 @@ class FileIngester(object):
 
         self.enabled_task = None
 
-    def enable(self):
+    async def read_event(self):
+        loop = asyncio.get_event_loop()
+        while True:
+            if self.enabled_task is None:
+                return
+            event = await loop.run_in_executor(None, self.note.readEvent)
+            if event is None:
+                return
+            asyncio.create_task(self.ingest_file(event.name))
+
+    async def enable(self):
         self.note = notify.Notify()
         for directory in self.directories:
-            self.note.addWatch(directory, inotify.IN_CREATE)
+            self.note.addWatch(directory, inotifyEvent.IN_CREATE)
 
-        loop = asyncio.get_running_loop()
-        self.enabled_task = loop.run_in_executor(None, read_event)
+        self.enabled_task = asyncio.create_task(self.read_event())
 
-    def disable(self):
+    async def disable(self):
+        self.note.cancelReadEvent()
         self.enabled_task.cancel()
-        self.enabled_task = None
+        await self.enabled_task
         for directory in self.directories:
             self.note.rmWatch(directory)
         self.note.close()
         self.note = None
-
-    async def read_event(self):
-        while True:
-            event = self.note.readEvent()
-            task = asyncio.create_task(self.ingest_file(event.name))
-        
 
     def extract_cause(self, e):
         if e.__cause__ is None:
@@ -114,24 +110,28 @@ class FileIngester(object):
         return None
 
     async def ingest_file(self, filename):
+        print(f"ingest_file called: trying to ingest {filename}")
         try:
+            print(f"trying to ingest {filename}")
             self.butler.ingest(filename)
             LOGGER.info(f"{filename} ingested")
-             msg = f"OBSID {obsid}: File {filename} ingested into OODS"
-             self.parent.send_imageInOODS(filename, msg, 0)
+            obsid = "Fill me in properly"
+            msg = f"OBSID {obsid}: File {filename} ingested into OODS"
+            print(msg)
+            if self.parent is not None:
+                self.parent.send_imageInOODS(filename, msg, 0)
         except Exception as e:
-            LOGGER.exception(err)
+            LOGGER.exception(e)
             bad_file_dir = self.create_bad_dirname(filename)
             try:
                 msg = f"{filename} could not be ingested.  Moving to {bad_file_dir}: {self.extract_cause(e)}"
                 shutil.move(filename, bad_file_dir)
-            except Exception as fmExcepton:
+            except Exception as fmException:
                 LOGGER.info(f"Failed to move {filename} to {bad_file_dir} {fmException}")
 
-            if self.base_broker_url is not None:
+            if self.parent is not None:
                 self.parent.send_imageInOODS(filename, msg, 1)
             return
-
 
     async def run_task(self):
         # wait, to keep the object alive

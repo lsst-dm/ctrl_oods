@@ -20,13 +20,18 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import tempfile
-import unittest
 from shutil import copyfile
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 import lsst.utils.tests
 import asynctest
+import asyncio
+
+
+class FakeParent:
+    def send_imageInOODS(self, filename, msgDict, errorCode):
+        pass
 
 
 class Gen2IngesterTestCase(asynctest.TestCase):
@@ -37,54 +42,107 @@ class Gen2IngesterTestCase(asynctest.TestCase):
         package = lsst.utils.getPackageDir("ctrl_oods")
         testFile = os.path.join(package, "tests", "etc", "ingest.yaml")
 
-        fitsFileName = "ats_exp_0_AT_C_20180920_000028.fits.fz"
-        fitsFile = os.path.join(package, "tests", "etc", fitsFileName)
+        self.fitsFileName = "ats_exp_0_AT_C_20180920_000028.fits.fz"
+        self.fitsFile = os.path.join(package, "tests", "etc", self.fitsFileName)
 
-        mapperFileName = "_mapper"
-        mapperPath = os.path.join(package, "tests", "etc", "_mapper")
+        self.mapperFileName = "_mapper"
+        self.mapperPath = os.path.join(package, "tests", "etc", "_mapper")
 
         self.config = None
         with open(testFile, "r") as f:
             self.config = yaml.safe_load(f)
 
-        dataDir = tempfile.mkdtemp()
-        self.config["ingester"]["directories"] = [dataDir]
+        self.dataDir = tempfile.mkdtemp()
+        print(f"looking in self.dataDir = {self.dataDir}")
+        self.config["ingester"]["directories"] = [self.dataDir]
 
-        repoDir = tempfile.mkdtemp()
-        self.config["ingester"]["butler"]["repoDirectory"] = repoDir
+        self.repoDir = tempfile.mkdtemp()
+        self.config["ingester"]["butler"]["repoDirectory"] = self.repoDir
+        self.config["ingester"]["badFileDirectory"] = tempfile.mkdtemp()
 
-        self.destFile1 = os.path.join(dataDir, fitsFileName)
-        copyfile(fitsFile, self.destFile1)
+        destFile2 = os.path.join(self.repoDir, self.mapperFileName)
+        copyfile(self.mapperPath, destFile2)
 
-        destFile2 = os.path.join(repoDir, mapperFileName)
-        copyfile(mapperPath, destFile2)
+        self.destFile1 = os.path.join(self.dataDir, self.fitsFileName)
 
-    async def testIngest(self):
+    async def ingest(self):
+
+        copyfile(self.fitsFile, self.destFile1)
         scanner = DirectoryScanner(self.config["ingester"])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(self.config["ingester"])
+        ingester = FileIngester(FakeParent(), self.config["ingester"])
 
-        msg = {}
-        msg['CAMERA'] = "LATISS"
-        msg['OBSID'] = "AT_C_20180920_000028"
-        msg['FILENAME'] = self.destFile1
-        msg['ARCHIVER'] = "AT"
-        await ingester.ingest_file(msg)
+        await ingester.ingest_file(self.destFile1)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
+        return 0
+
+    def test_ingest(self):
+        loop = asyncio.new_event_loop()
+        result = loop.run_until_complete(self.ingest())
+        self.assertEqual(result, 0)
+
+    async def ingest_task(self):
+        tempDir = tempfile.mkdtemp()
+        tempFile = os.path.join(tempDir, self.fitsFileName)
+        copyfile(self.fitsFile, tempFile)
+
+        scanner = DirectoryScanner(self.config["ingester"])
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 0)
+
+        ingester = FileIngester(None, self.config["ingester"])
+        await ingester.enable()
+
+        await asyncio.sleep(3)
+
+        self.assertEqual(len(files), 0)
+        print(f"linking:  tempFile={tempFile}, destFile1={self.destFile1}")
+        os.link(tempFile, self.destFile1)
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 1)
+
+        await asyncio.sleep(3)
+
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 0)
+        await ingester.disable()
+        return 0
+
+    async def no_test_task(self):
+        # result = loop.run_until_complete(self.ingest_task())
+        task = asyncio.create_task(self.ingest_task())
+        await task
+
+    async def bad_ingest(self, parent):
+
+        with open(self.destFile1, "w") as f:
+            f.write("bad ingest")
+        scanner = DirectoryScanner(self.config["ingester"])
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 1)
+
+        ingester = FileIngester(parent, self.config["ingester"])
+
+        await ingester.ingest_file(self.destFile1)
+
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 0)
+        return 0
+
+    def test_bad_ingest(self):
+        loop = asyncio.new_event_loop()
+        result = loop.run_until_complete(self.bad_ingest(None))
+        self.assertEqual(result, 0)
+
+    def test_bad_ingest_fake_parent(self):
+        loop = asyncio.new_event_loop()
+        result = loop.run_until_complete(self.bad_ingest(FakeParent()))
+        self.assertEqual(result, 0)
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
     pass
-
-
-def setup_module(module):
-    lsst.utils.tests.init()
-
-
-if __name__ == "__main__":
-    lsst.utils.tests.init()
-    unittest.main()

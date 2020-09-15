@@ -22,7 +22,6 @@ import os
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 import lsst.utils.tests
 import tempfile
-import unittest
 
 
 class ScanDirTestCase(lsst.utils.tests.TestCase):
@@ -70,8 +69,3 @@ class MemoryTester(lsst.utils.tests.MemoryTestCase):
 
 def setup_module(module):
     lsst.utils.tests.init()
-
-
-if __name__ == "__main__":
-    lsst.utils.tests.init()
-    unittest.main()

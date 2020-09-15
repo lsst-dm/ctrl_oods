@@ -18,7 +18,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import unittest
 from lsst.ctrl.oods.timeInterval import TimeInterval
 import lsst.utils.tests
 
@@ -44,8 +43,3 @@ class MemoryTester(lsst.utils.tests.MemoryTestCase):
 
 def setup_module(module):
     lsst.utils.tests.init()
-
-
-if __name__ == "__main__":
-    lsst.utils.tests.init()
-    unittest.main()

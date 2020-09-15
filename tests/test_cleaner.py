@@ -22,7 +22,6 @@ import datetime
 import os
 import tempfile
 import time
-import unittest
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 import lsst.utils.tests
@@ -222,8 +221,3 @@ class MemoryTester(lsst.utils.tests.MemoryTestCase):
 
 def setup_module(module):
     lsst.utils.tests.init()
-
-
-if __name__ == "__main__":
-    lsst.utils.tests.init()
-    unittest.main()
