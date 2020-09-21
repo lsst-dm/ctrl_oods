@@ -93,7 +93,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(config["ingester"])
+        ingester = FileIngester(ingesterConfig)
 
         msg = {}
         msg['CAMERA'] = "COMCAM"
