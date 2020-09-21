@@ -20,7 +20,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import tempfile
-import unittest
 from shutil import copyfile
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
@@ -33,7 +32,6 @@ class Gen2TestCase(asynctest.TestCase):
     """Test Scanning directory"""
 
     def createConfig(self, config_name, fits_name, mapper):
-
         testdir = os.path.abspath(os.path.dirname(__file__))
         testFile = os.path.join(testdir, "etc", config_name)
 
@@ -42,14 +40,19 @@ class Gen2TestCase(asynctest.TestCase):
         with open(testFile, "r") as f:
             config = yaml.safe_load(f)
 
+        ingesterConfig = config["ingester"]
         dataDir = tempfile.mkdtemp()
-        config["ingester"]["directories"] = [dataDir]
+        ingesterConfig["forwarderStagingDirectory"] = dataDir
 
         badDir = tempfile.mkdtemp()
-        config["ingester"]["badFileDirectory"] = badDir
+        butlerConfig = config["ingester"]["butlers"][0]["butler"]
+        butlerConfig["badFileDirectory"] = badDir
+
+        butlerStageDir = tempfile.mkdtemp()
+        butlerConfig["stagingDirectory"] = butlerStageDir
 
         repoDir = tempfile.mkdtemp()
-        config["ingester"]["butler"]["repoDirectory"] = repoDir
+        butlerConfig["repoDirectory"] = repoDir
 
         destFile = os.path.join(dataDir, fits_name)
         copyfile(fitsFile, destFile)
@@ -66,18 +69,20 @@ class Gen2TestCase(asynctest.TestCase):
                                                               fits_name,
                                                               "lsst.obs.lsst.latiss.LatissMapper")
 
-        scanner = DirectoryScanner(config["ingester"])
+        ingesterConfig = config["ingester"]
+        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
+        scanner = DirectoryScanner([forwarder_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(config["ingester"])
+        ingester = FileIngester(ingesterConfig)
 
         msg = {}
         msg['CAMERA'] = "LATISS"
         msg['OBSID'] = "AT_C_20180920_000028"
         msg['FILENAME'] = destFile
         msg['ARCHIVER'] = "AT"
-        await ingester.ingest_file(msg)
+        await ingester.ingest(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
@@ -91,18 +96,20 @@ class Gen2TestCase(asynctest.TestCase):
                                                               fits_name,
                                                               "lsst.obs.lsst.comCam.LsstComCamMapper")
 
-        scanner = DirectoryScanner(config["ingester"])
+        ingesterConfig = config["ingester"]
+        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
+        scanner = DirectoryScanner([forwarder_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(config["ingester"])
+        ingester = FileIngester(ingesterConfig)
 
         msg = {}
         msg['CAMERA'] = "COMCAM"
         msg['OBSID'] = "CC_C_20190530_000001"
         msg['FILENAME'] = destFile
         msg['ARCHIVER'] = "CC"
-        await ingester.ingest_file(msg)
+        await ingester.ingest(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
@@ -116,18 +123,20 @@ class Gen2TestCase(asynctest.TestCase):
                                                               fits_name,
                                                               "lsst.obs.lsst.comCam.LsstComCamMapper")
 
-        scanner = DirectoryScanner(config["ingester"])
+        ingesterConfig = config["ingester"]
+        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
+        scanner = DirectoryScanner([forwarder_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(config["ingester"])
+        ingester = FileIngester(ingesterConfig)
 
         msg = {}
         msg['CAMERA'] = "COMCAM"
         msg['OBSID'] = "CC_C_20190530_000001"
         msg['FILENAME'] = destFile
         msg['ARCHIVER'] = "CC"
-        await ingester.ingest_file(msg)
+        await ingester.ingest(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
@@ -142,8 +151,3 @@ class MemoryTester(lsst.utils.tests.MemoryTestCase):
 
 def setup_module(module):
     lsst.utils.tests.init()
-
-
-if __name__ == "__main__":
-    lsst.utils.tests.init()
-    unittest.main()

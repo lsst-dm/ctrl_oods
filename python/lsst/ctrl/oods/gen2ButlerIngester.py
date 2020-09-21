@@ -30,3 +30,6 @@ class Gen2ButlerIngester(object):
 
     def ingest(self, filename):
         self.task.ingestFiles(filename)
+
+    def getName(self):
+        return "gen2"

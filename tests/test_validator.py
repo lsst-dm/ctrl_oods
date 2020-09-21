@@ -20,7 +20,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from lsst.ctrl.oods.validator import Validator
 import lsst.utils.tests
-import unittest
 import yaml
 
 
@@ -54,13 +53,13 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
         # create a complete, valid OODS YAML description
         configStr = """oods:
                          ingester:
-                           directories:
-                             - data
-                           butler:
-                             class:
-                               import: lsst.ctrl.oods.gen2ButlerIngester
-                               name: Gen2ButlerIngester
-                             repoDirectory : repo
+                           forwarderStagingDirectory: data
+                           butlers:
+                               - butler:
+                                   class:
+                                     import: lsst.ctrl.oods.gen2ButlerIngester
+                                     name: Gen2ButlerIngester
+                                   repoDirectory : repo
                            batchSize: 20
                            scanInterval:
                              days: 0
@@ -143,44 +142,44 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
-        self.verifyMissingElement(val, "ingester:directories")
-        self.verifyMissingElement(val, "ingester:butler")
+        self.verifyMissingElement(val, "ingester:forwarderStagingDirectory")
+        self.verifyMissingElement(val, "ingester:butlers")
         self.verifyMissingElement(val, "ingester:batchSize")
         self.verifyMissingElement(val, "ingester:scanInterval")
         self.verifyMissingElement(val, "cacheCleaner")
 
     def testMissingIngesterDirectory(self):
-        # check ingester:directories
+        # check ingester:forwarderStagingDirectory
         configStr = """oods:
                          ingester:
-                            directories:"""
+                            forwarderStagingDirectory:"""
         config = yaml.safe_load(configStr)
         val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
-        self.verifyMissingElementValue(val, "ingester:directories")
+        self.verifyMissingElementValue(val, "ingester:forwarderStagingDirectory")
 
         configStr = """oods:
                          ingester:
-                            directories:
+                            forwarderStagingDirectory:
                             foo: bar"""
         config = yaml.safe_load(configStr)
         val = Validator()
         isValid = val.verify(config)
 
         self.assertFalse(isValid)
-        self.verifyMissingElementValue(val, "ingester:directories")
+        self.verifyMissingElementValue(val, "ingester:forwarderStagingDirectory")
 
     def testValidButlerBlock(self):
         # check ingester:butler
         configStr = """oods:
                          ingester:
-                            directories:
-                                - dir
+                            forwarderStagingDirectory: dir
                             batchSize: 20
-                            butler:
-                                foo: bar
+                            butlers:
+                                - butler:
+                                    foo: bar
                             scanInterval:
                                 foo: bar"""
         config = yaml.safe_load(configStr)
@@ -200,13 +199,13 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
     def testValidButlerClassBlock(self):
         configStr = """oods:
                          ingester:
-                            directories:
-                                - dir
+                            forwarderStagingDirectory: dir
                             batchSize: 20
-                            butler:
-                                class:
-                                    foo: bar
-                                repoDirectory: repo
+                            butlers:
+                                - butler:
+                                    class:
+                                        foo: bar
+                                    repoDirectory: repo
                             scanInterval:
                                 days: 1
                                 hours: 2
@@ -224,14 +223,14 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
     def testMissingCacheCleanerBlock(self):
         configStr = """oods:
                          ingester:
-                            directories:
-                                - dir
+                            forwarderStagingDirectory: dir
                             batchSize: 20
-                            butler:
-                                class:
-                                    import: somefile
-                                    name: someobject
-                                repoDirectory: repo
+                            butlers:
+                                - butler:
+                                    class:
+                                        import: somefile
+                                        name: someobject
+                                    repoDirectory: repo
                             scanInterval:
                                 days: 1
                                 hours: 2
@@ -249,8 +248,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
         # check cacheCleaner
         configStr = """oods:
                          ingester:
-                            directories:
-                                - dir
+                            forwarderStagingDirectory: dir
                             batchSize: 20
                             butler:
                                 class:
@@ -277,8 +275,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
     def testDirectoriesInCacheCleanerBlock(self):
         configStr = """oods:
                          ingester:
-                            directories:
-                                - dir
+                            forwarderStagingDirectory: dir
                             batchSize: 20
                             butler:
                                 class:
@@ -315,8 +312,7 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
 
         configStr = """oods:
                          ingester:
-                            directories:
-                                - dir
+                            forwarderStagingDirectory: dir
                             batchSize: 20
                             butler:
                                 class:
@@ -366,8 +362,3 @@ class MemoryTester(lsst.utils.tests.MemoryTestCase):
 
 def setup_module(module):
     lsst.utils.tests.init()
-
-
-if __name__ == "__main__":
-    lsst.utils.tests.init()
-    unittest.main()

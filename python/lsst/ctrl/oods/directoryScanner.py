@@ -24,17 +24,16 @@ import os
 class DirectoryScanner(object):
     """Scan directories for files
     """
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, directories):
+        self.directories = directories
 
     def getAllFiles(self):
         """Retrieve all files from a set of directories
         @param directories: list directories to scan
         @return list of files in the given directories
         """
-        directories = self.config["directories"]
         allFiles = []
-        for directory in directories:
+        for directory in self.directories:
             files = self.getFiles(directory)
             allFiles.extend(files)
         return allFiles

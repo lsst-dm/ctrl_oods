@@ -18,28 +18,34 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-from lsst.ctrl.oods.timeInterval import TimeInterval
-import lsst.utils.tests
+from importlib import import_module
 
 
-class IntervalTestCase(lsst.utils.tests.TestCase):
-    """Test cache cleaning"""
+class ButlerProxy(object):
+    def __init__(self, butlerConfig):
+        classConfig = butlerConfig["class"]
 
-    def testFileCleaner(self):
+        # create the butler
+        importFile = classConfig["import"]
+        name = classConfig["name"]
 
-        config = {}
-        config["days"] = 1
-        config["hours"] = 1
-        config["minutes"] = 1
-        config["seconds"] = 1
+        mod = import_module(importFile)
+        butlerClass = getattr(mod, name)
 
-        seconds = TimeInterval.calculateTotalSeconds(config)
-        self.assertTrue(seconds, 86400+3600+60+1)
+        self.butlerInstance = butlerClass(butlerConfig)
 
+        self.repo_dir = butlerConfig["repoDirectory"]
+        self.staging_dir = butlerConfig["stagingDirectory"]
+        self.bad_file_dir = butlerConfig["badFileDirectory"]
 
-class MemoryTester(lsst.utils.tests.MemoryTestCase):
-    pass
+    def getButler(self):
+        return self.butlerInstance
 
+    def getRepoDirectory(self):
+        return self.repo_dir
 
-def setup_module(module):
-    lsst.utils.tests.init()
+    def getStagingDirectory(self):
+        return self.staging_dir
+
+    def getBadFileDirectory(self):
+        return self.bad_file_dir
