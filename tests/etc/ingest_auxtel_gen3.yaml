@@ -8,15 +8,16 @@ ingester:
     FILE_INGEST_REQUEST: AT_FILE_INGEST_REQUEST
     CONSUME_QUEUE: at_publish_to_oods
     PUBLISH_QUEUE: oods_publish_to_at
-    directories:
-        - data
-    badFileDirectory: /tmp/bad
-    butler:
-        class:
-            import : lsst.ctrl.oods.gen3ButlerIngester
-            name : Gen3ButlerIngester
-        repoDirectory : repo
-        instrument: lsst.obs.lsst.Latiss
+    forwarderStagingDirectory: data
+    butlers:
+        - butler:
+            class:
+                import : lsst.ctrl.oods.gen3ButlerIngester
+                name : Gen3ButlerIngester
+            repoDirectory : repo
+            instrument: lsst.obs.lsst.Latiss
+            badFileDirectory: /tmp/bad
+            stagingDirectory: /tmp/staging
     batchSize: 20
     scanInterval:
         <<: *interval

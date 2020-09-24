@@ -59,26 +59,28 @@ class Validator(object):
 
         else:
             ingesterConfig = self.oodsConfig[configName]
-            if "directories" in ingesterConfig:
-                dirs = ingesterConfig["directories"]
+            if "forwarderStagingDirectory" in ingesterConfig:
+                dirs = ingesterConfig["forwarderStagingDirectory"]
                 if dirs is None:
-                    self.missingValue("ingester:directories")
+                    self.missingValue("ingester:forwarderStagingDirectory")
             else:
-                self.missingElement("ingester:directories")
-            if "butler" in ingesterConfig:
-                butlerConfig = ingesterConfig["butler"]
-                if "class" in butlerConfig:
-                    classConfig = butlerConfig["class"]
-                    if "import" not in classConfig:
-                        self.missingElement("butler:class:import")
-                    if "name" not in classConfig:
-                        self.missingElement("butler:class:name")
-                else:
-                    self.missingElement("butler:class")
-                if "repoDirectory" not in butlerConfig:
-                    self.missingElement("butler:repoDirectory")
+                self.missingElement("ingester:forwarderStagingDirectory")
+            if "butlers" in ingesterConfig:
+                butlerEntries = ingesterConfig["butlers"]
+                for entry in butlerEntries:
+                    butlerConfig = entry["butler"]
+                    if "class" in butlerConfig:
+                        classConfig = butlerConfig["class"]
+                        if "import" not in classConfig:
+                            self.missingElement("butler:class:import")
+                        if "name" not in classConfig:
+                            self.missingElement("butler:class:name")
+                    else:
+                        self.missingElement("butler:class")
+                    if "repoDirectory" not in butlerConfig:
+                        self.missingElement("butler:repoDirectory")
             else:
-                self.missingElement("ingester:butler")
+                self.missingElement("ingester:butlers")
 
             if "batchSize" not in ingesterConfig:
                 self.missingElement("ingester:batchSize")

@@ -21,7 +21,6 @@
 from lsst.ctrl.oods.taskRunner import TaskRunner
 import lsst.utils.tests
 from time import sleep
-import unittest
 
 
 class SimpleTask(object):
@@ -54,8 +53,3 @@ class MemoryTester(lsst.utils.tests.MemoryTestCase):
 
 def setup_module(module):
     lsst.utils.tests.init()
-
-
-if __name__ == "__main__":
-    lsst.utils.tests.init()
-    unittest.main()

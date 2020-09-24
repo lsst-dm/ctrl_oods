@@ -54,3 +54,6 @@ class Gen3ButlerIngester(object):
         cfg.transfer = "move"
         task = RawIngestTask(config=cfg, butler=self.btl)
         task.run([filename])
+
+    def getName(self):
+        return "gen3"

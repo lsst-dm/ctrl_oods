@@ -22,7 +22,6 @@ import os
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 import lsst.utils.tests
 import tempfile
-import unittest
 
 
 class ScanDirTestCase(lsst.utils.tests.TestCase):
@@ -32,10 +31,7 @@ class ScanDirTestCase(lsst.utils.tests.TestCase):
 
         dirPath = tempfile.mkdtemp()
 
-        config = {}
-        config["directories"] = [dirPath]
-
-        scanner = DirectoryScanner(config)
+        scanner = DirectoryScanner([dirPath])
         files = scanner.getAllFiles()
 
         self.assertEqual(len(files), 0)
@@ -70,8 +66,3 @@ class MemoryTester(lsst.utils.tests.MemoryTestCase):
 
 def setup_module(module):
     lsst.utils.tests.init()
-
-
-if __name__ == "__main__":
-    lsst.utils.tests.init()
-    unittest.main()
