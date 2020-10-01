@@ -1,0 +1,37 @@
+defaultInterval: &interval
+    days: 0
+    hours: 0
+    minutes: 0
+    seconds: 0
+
+ingester:
+    FILE_INGEST_REQUEST: AT_FILE_INGEST_REQUEST
+    CONSUME_QUEUE: at_publish_to_oods
+    PUBLISH_QUEUE: oods_publish_to_at
+    directories:
+        - /data/staging/oods
+    baseBrokerAddr: localhost/%2ftest_at
+    badFileDirectory: /data/staging/badfiles
+    butler:
+        class:
+            import : lsst.ctrl.oods.gen3ButlerIngester
+            name : Gen3ButlerIngester
+        repoDirectory : /data/butler/repo
+        instrument: 
+    batchSize: 20
+    scanInterval:
+        <<: *interval
+        seconds: 1
+
+cacheCleaner:
+    directories:
+        - /data/butler/repo/raw
+    scanInterval:
+        <<: *interval
+        seconds: 30
+    filesOlderThan:
+        <<: *interval
+        days: 30 
+    directoriesEmptyForMoreThan:
+        <<: *interval
+        days: 1

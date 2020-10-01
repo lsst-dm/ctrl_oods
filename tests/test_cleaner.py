@@ -61,7 +61,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
 
         # create a DirectoryScanner so we can keep tabs on the files
         # we put into the temp directory
-        scanner = DirectoryScanner(config)
+        scanner = DirectoryScanner([dirPath])
         files = scanner.getAllFiles()
 
         # check to make sure we have the files in there that we

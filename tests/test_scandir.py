@@ -31,10 +31,7 @@ class ScanDirTestCase(lsst.utils.tests.TestCase):
 
         dirPath = tempfile.mkdtemp()
 
-        config = {}
-        config["directories"] = [dirPath]
-
-        scanner = DirectoryScanner(config)
+        scanner = DirectoryScanner([dirPath])
         files = scanner.getAllFiles()
 
         self.assertEqual(len(files), 0)

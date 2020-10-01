@@ -27,6 +27,10 @@ import os.path
 from importlib import import_module
 import lsst.ctrl.notify.notify as notify
 import lsst.ctrl.notify.inotifyEvent as inotifyEvent
+from lsst.ctrl.oods.butlerProxy import ButlerProxy
+from lsst.ctrl.oods.directoryScanner import DirectoryScanner
+from lsst.dm.csc.base.consumer import Consumer
+from lsst.dm.csc.base.publisher import Publisher
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,28 +41,36 @@ class FileIngester(object):
     or there will be an attempt to ingest them again later.
     """
 
-    def __init__(self, parent, config):
-        self.parent = parent
+    def __init__(self, config):
+        self.SUCCESS = 0
+        self.FAILURE = 1
         self.config = config
 
-        self.directories = config["directories"]
-        self.bad_file_dir = config["badFileDirectory"]
+        self.forwarder_staging_dir = config["forwarderStagingDirectory"]
+        FILE_INGEST_REQUEST = config["FILE_INGEST_REQUEST"]
+        self._msg_actions = {FILE_INGEST_REQUEST: self.ingest}
 
-        butlerConfig = config["butler"]
+        self.scanner = DirectoryScanner([self.forwarder_staging_dir])
 
-        classConfig = butlerConfig["class"]
+        if 'baseBrokerAddr' in config:
+            self.base_broker_url = config["baseBrokerAddr"]
+        else:
+            self.base_broker_url = None
 
-        # create the butler
-        importFile = classConfig["import"]
-        name = classConfig["name"]
+        butlerConfigs = config["butlers"]
+        if len(butlerConfigs) == 0:
+            raise Exception("No Butlers configured; check configuration file")
 
-        mod = import_module(importFile)
-        butlerClass = getattr(mod, name)
+        self.butlers = []
+        for butlerConfig in butlerConfigs:
+            butler = ButlerProxy(butlerConfig["butler"])
+            self.butlers.append(butler)
 
-        self.repo = butlerConfig["repoDirectory"]
-        self.butler = butlerClass(self.repo)
+        self.CONSUME_QUEUE = config['CONSUME_QUEUE']
+        self.PUBLISH_QUEUE = config['PUBLISH_QUEUE']
 
-        self.enabled_task = None
+        if self.base_broker_url is not None:
+            asyncio.create_task(self.start_comm())
 
     async def read_event(self):
         loop = asyncio.get_event_loop()
@@ -86,6 +98,25 @@ class FileIngester(object):
         self.note.close()
         self.note = None
 
+    async def start_comm(self):
+        self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
+        self.consumer.start()
+
+        self.publisher = Publisher(self.base_broker_url)
+        await self.publisher.start()
+
+    def on_message(self, ch, method, properties, body):
+        """ Route the message to the proper handler
+        """
+        msg_type = body['MSG_TYPE']
+        LOGGER.info("TEMP: received message {body}")
+        ch.basic_ack(method.delivery_tag)
+        if msg_type in self._msg_actions:
+            handler = self._msg_actions.get(msg_type)
+            asyncio.create_task(handler(body))
+        else:
+            LOGGER.info(f"unknown message type: {msg_type}")
+
     def extract_cause(self, e):
         if e.__cause__ is None:
             return None
@@ -95,43 +126,114 @@ class FileIngester(object):
         else:
             return f"{str(e.__cause__)};  {cause}"
 
-    def create_bad_dirname(self, original):
-        for dirname in self.directories:
-            if original.startswith(dirname):
-                # strip the original directory location, except for the date
-                newfile = original.lstrip(dirname)
-                # split into date and filename
-                head, tail = os.path.split(newfile)
-                # create subdirectory path name for self.bad_file_dir with date
-                newdir = os.path.join(self.bad_file_dir, head)
-                # create the directory, and hand the name back
-                os.makedirs(newdir, exist_ok=True)
-                return newdir
-        return None
+    def create_bad_dirname(self, directory, original):
+        # strip the original directory location, except for the date
+        newfile = original.lstrip(self.forwarder_staging_dir)
 
-    async def ingest_file(self, filename):
-        print(f"ingest_file called: trying to ingest {filename}")
+        # split into date and filename
+        head, tail = os.path.split(newfile)
+
+        # create subdirectory path name for directory with date
+        newdir = os.path.join(directory, head)
+
+        # create the directory, and hand the name back
+        os.makedirs(newdir, exist_ok=True)
+
+        return newdir
+
+    def create_link_to_file(self, filename, dirname):
+        """Create a link from filename to a new file in directory dirname
+
+        Parameters
+        ----------
+        filename : `str`
+            Existing file to link to
+        dirname : `str`
+            Directory where new link will be located
+        """
+        print(f"self.forwarder_staging_dir = {self.forwarder_staging_dir}")
+        print(f"filename = {filename}")
+        print(f"dirname = {dirname}")
+        # remove the staging area portion from the filepath
+        basefile = filename.replace(self.forwarder_staging_dir, '').lstrip('/')
+        print(f"basefile = {basefile}")
+
+        # create a new full path to where the file will be linked for the OODS
+        new_file = os.path.join(dirname, basefile)
+
+        # hard link the file in the staging area
+        # create the directory path where the file will be linked for the OODS
+        new_dir = os.path.dirname(new_file)
+        os.makedirs(new_dir, exist_ok=True)
+        # hard link the file in the staging area
+        os.link(filename, new_file)
+        LOGGER.info(f"created link to {new_file}")
+
+        return new_file
+
+    def stageFiles(self, msg):
+        filename = os.path.realpath(msg['FILENAME'])
+
+        for butlerProxy in self.butlers:
+            local_staging_dir = butlerProxy.getStagingDirectory()
+            self.create_link_to_file(filename, local_staging_dir)
+
+    async def ingest(self, msg):
+
+        self.stageFiles(msg)
+
+        code = self.SUCCESS
+        description = None
+        for butler in self.butlers:
+            (status_code, status_msg) = self.ingest_file(butler, msg)
+            if status_code == self.FAILURE:
+                code = self.FAILURE
+            if description is None:
+                description = status_msg
+            else:
+                description = f"{description}; {status_msg}"
+
+        if code == self.SUCCESS and description is None:
+            LOGGER.info("Error in processing, no success message was created")
+            return
+
+        if self.base_broker_url is not None:
+            LOGGER.info(f"Sending message: {msg}")
+            d = dict(msg)
+            d['MSG_TYPE'] = 'IMAGE_IN_OODS'
+            d['STATUS_CODE'] = code
+            d['DESCRIPTION'] = description
+            await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
+
+    def ingest_file(self, butlerProxy, msg):
+        camera = msg['CAMERA']
+        obsid = msg['OBSID']
+        filename = os.path.realpath(msg['FILENAME'])
+        archiver = msg['ARCHIVER']
+
         try:
-            print(f"trying to ingest {filename}")
-            self.butler.ingest(filename)
-            LOGGER.info(f"{filename} ingested")
-            obsid = "Fill me in properly"
-            msg = f"OBSID {obsid}: File {filename} ingested into OODS"
-            print(msg)
-            if self.parent is not None:
-                self.parent.send_imageInOODS(filename, msg, 0)
+            butler = butlerProxy.getButler()
+            butler.ingest(filename)
+            LOGGER.info(f"{butler.getName()}: {obsid} {filename} ingested from {camera} by {archiver}")
         except Exception as e:
-            LOGGER.exception(e)
-            bad_file_dir = self.create_bad_dirname(filename)
+            status_code = self.FAILURE
+            status_msg = f"{butler.getName()}: {filename} could not be ingested: {self.extract_cause(e)}"
+            LOGGER.exception(status_msg)
+            bad_dir = butlerProxy.getBadFileDirectory()
+
+            bad_file_dir = self.create_bad_dirname(bad_dir, filename)
             try:
-                msg = f"{filename} could not be ingested.  Moving to {bad_file_dir}: {self.extract_cause(e)}"
+                LOGGER.info(f"Moving {filename} to {bad_file_dir}")
                 shutil.move(filename, bad_file_dir)
             except Exception as fmException:
                 LOGGER.info(f"Failed to move {filename} to {bad_file_dir} {fmException}")
 
-            if self.parent is not None:
-                self.parent.send_imageInOODS(filename, msg, 1)
-            return
+            return (status_code, status_msg)
+
+        status_code = self.SUCCESS
+        status_msg = f"{butler.getName()}: OBSID {obsid} - File {filename} ingested into OODS"
+
+        return (status_code, status_msg)
 
     async def run_task(self):
         # wait, to keep the object alive
