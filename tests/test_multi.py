@@ -46,16 +46,22 @@ class MultiComCamIngesterTestCase(asynctest.TestCase):
 
         for x in ingesterConfig["butlers"]:
             butlerConfig = x["butler"]
+            print(f"butlerConfig = {butlerConfig}")
             butlerConfig["badFileDirectory"] = tempfile.mkdtemp()
+            print(f"badFileDirectory for {butlerConfig} is {butlerConfig['badFileDirectory']}")
             butlerConfig["stagingDirectory"] = tempfile.mkdtemp()
+            print(f"stagingDirectory for {butlerConfig} is {butlerConfig['stagingDirectory']}")
             repoDir = tempfile.mkdtemp()
+            print(f"repoDir for {butlerConfig} is {repoDir}")
             butlerConfig["repoDirectory"] = repoDir
             if butlerConfig["class"]["import"] == "lsst.ctrl.oods.gen2ButlerIngester":
                 mapperFileName = os.path.join(repoDir, "_mapper")
                 with open(mapperFileName, 'w') as mapper_file:
                     mapper_file.write("lsst.obs.lsst.comCam.LsstComCamMapper")
 
-        destFile = os.path.join(dataDir, fits_name)
+        subDir = tempfile.mkdtemp(dir=dataDir)
+        destFile = os.path.join(subDir, fits_name)
+        print(f"copied file to {destFile}")
         copyfile(fitsFile, destFile)
 
         return config, destFile

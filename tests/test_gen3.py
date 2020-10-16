@@ -44,22 +44,29 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         dataDir = tempfile.mkdtemp()
         ingesterConfig["forwarderStagingDirectory"] = dataDir
 
-        badDir = tempfile.mkdtemp()
+        self.badDir = tempfile.mkdtemp()
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
-        butlerConfig["badFileDirectory"] = badDir
+        butlerConfig["badFileDirectory"] = self.badDir
         butlerConfig["stagingDirectory"] = tempfile.mkdtemp()
 
         repoDir = tempfile.mkdtemp()
         butlerConfig["repoDirectory"] = repoDir
 
-        destFile = os.path.join(dataDir, fits_name)
-        copyfile(fitsFile, destFile)
+        subDir = tempfile.mkdtemp(dir=dataDir)
+        self.destFile = os.path.join(subDir, fits_name)
+        copyfile(fitsFile, self.destFile)
 
-        return config, destFile, badDir
+        return config
+
+    def strip_prefix(self, name, prefix):
+        ret = name
+        if name.startswith(prefix):
+            ret = name[len(prefix):].lstrip('/')
+        return ret
 
     async def testAuxTelIngest(self):
         fits_name = "2020032700020-det000.fits.fz"
-        config, destFile, badDir = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
+        config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
 
         ingesterConfig = config["ingester"]
 
@@ -73,19 +80,19 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         msg = {}
         msg['CAMERA'] = "LATISS"
         msg['OBSID'] = "AT_C_20180920_000028"
-        msg['FILENAME'] = destFile
+        msg['FILENAME'] = self.destFile
         msg['ARCHIVER'] = "AT"
         await ingester.ingest(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        bad_path = os.path.join(badDir, fits_name)
+        bad_path = os.path.join(self.badDir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
     async def testComCamIngest(self):
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
-        config, destFile, badDir = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
+        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
         ingesterConfig = config["ingester"]
         forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
@@ -98,19 +105,19 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         msg = {}
         msg['CAMERA'] = "COMCAM"
         msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = destFile
+        msg['FILENAME'] = self.destFile
         msg['ARCHIVER'] = "CC"
         await ingester.ingest(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        bad_path = os.path.join(badDir, fits_name)
+        bad_path = os.path.join(self.badDir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
     async def testBadIngest(self):
         fits_name = "bad.fits.fz"
-        config, destFile, badDir = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
+        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
         ingesterConfig = config["ingester"]
         forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
@@ -123,19 +130,20 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         msg = {}
         msg['CAMERA'] = "COMCAM"
         msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = destFile
+        msg['FILENAME'] = self.destFile
         msg['ARCHIVER'] = "CC"
         await ingester.ingest(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        bad_path = os.path.join(badDir, fits_name)
+        name = self.strip_prefix(self.destFile, forwarder_staging_dir)
+        bad_path = os.path.join(self.badDir, name)
         self.assertTrue(os.path.exists(bad_path))
 
     async def testRepoExists(self):
         fits_name = "bad.fits.fz"
-        config, destFile, badDir = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
+        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
         FileIngester(config["ingester"])
         # tests the path that the previously created repo (above) exists
