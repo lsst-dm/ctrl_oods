@@ -20,6 +20,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import tempfile
+from pathlib import PurePath
 from shutil import copyfile
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
@@ -59,9 +60,8 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         return config
 
     def strip_prefix(self, name, prefix):
-        ret = name
-        if name.startswith(prefix):
-            ret = name[len(prefix):].lstrip('/')
+        p = PurePath(name)
+        ret = str(p.relative_to(prefix))
         return ret
 
     async def testAuxTelIngest(self):
