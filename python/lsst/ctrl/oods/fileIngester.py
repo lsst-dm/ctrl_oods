@@ -24,6 +24,7 @@ import logging
 import shutil
 import os
 import os.path
+from pathlib import PurePath
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.dm.csc.base.consumer import Consumer
@@ -112,9 +113,8 @@ class FileIngester(object):
         return newdir
 
     def strip_prefix(self, name, prefix):
-        ret = name
-        if name.startswith(prefix):
-            ret = name[len(prefix):].lstrip('/')
+        p = PurePath(name)
+        ret = str(p.relative_to(prefix))
         return ret
 
     def create_link_to_file(self, filename, dirname):
