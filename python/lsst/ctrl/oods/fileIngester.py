@@ -24,6 +24,7 @@ import logging
 import shutil
 import os
 import os.path
+from pathlib import PurePath
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.dm.csc.base.consumer import Consumer
@@ -80,7 +81,6 @@ class FileIngester(object):
         """ Route the message to the proper handler
         """
         msg_type = body['MSG_TYPE']
-        LOGGER.info("TEMP: received message {body}")
         ch.basic_ack(method.delivery_tag)
         if msg_type in self._msg_actions:
             handler = self._msg_actions.get(msg_type)
@@ -97,20 +97,25 @@ class FileIngester(object):
         else:
             return f"{str(e.__cause__)};  {cause}"
 
-    def create_bad_dirname(self, directory, original):
+    def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
         # strip the original directory location, except for the date
-        newfile = original.lstrip(self.forwarder_staging_dir)
+        newfile = self.strip_prefix(original, staging_dir_root)
 
-        # split into date and filename
+        # split into subdir and filename
         head, tail = os.path.split(newfile)
 
         # create subdirectory path name for directory with date
-        newdir = os.path.join(directory, head)
+        newdir = os.path.join(bad_dir_root, head)
 
         # create the directory, and hand the name back
         os.makedirs(newdir, exist_ok=True)
 
         return newdir
+
+    def strip_prefix(self, name, prefix):
+        p = PurePath(name)
+        ret = str(p.relative_to(prefix))
+        return ret
 
     def create_link_to_file(self, filename, dirname):
         """Create a link from filename to a new file in directory dirname
@@ -122,12 +127,11 @@ class FileIngester(object):
         dirname : `str`
             Directory where new link will be located
         """
-        print(f"self.forwarder_staging_dir = {self.forwarder_staging_dir}")
-        print(f"filename = {filename}")
-        print(f"dirname = {dirname}")
-        # remove the staging area portion from the filepath
-        basefile = filename.replace(self.forwarder_staging_dir, '').lstrip('/')
-        print(f"basefile = {basefile}")
+        # remove the staging area portion from the filepath; note that
+        # we don't use os.path.basename here because the file might be
+        # in a subdirectory of the staging directory.  We want to retain
+        #  that subdirectory name
+        basefile = self.strip_prefix(filename, self.forwarder_staging_dir)
 
         # create a new full path to where the file will be linked for the OODS
         new_file = os.path.join(dirname, basefile)
@@ -143,11 +147,21 @@ class FileIngester(object):
         return new_file
 
     def stageFiles(self, msg):
+        """ stage the files to their butler staging areas
+        and remove the original file
+        """
         filename = os.path.realpath(msg['FILENAME'])
 
-        for butlerProxy in self.butlers:
-            local_staging_dir = butlerProxy.getStagingDirectory()
-            self.create_link_to_file(filename, local_staging_dir)
+        try:
+            for butlerProxy in self.butlers:
+                local_staging_dir = butlerProxy.getStagingDirectory()
+                self.create_link_to_file(filename, local_staging_dir)
+        except Exception:
+            LOGGER.info(f"error staging files butler for {filename}")
+            return
+        # file has been linked to all staging areas;
+        # now we unlink the original file.
+        os.unlink(filename)
 
     async def ingest(self, msg):
 
@@ -176,10 +190,16 @@ class FileIngester(object):
             d['DESCRIPTION'] = description
             await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
 
+    def get_locally_staged_filename(self, butlerProxy, full_filename):
+        basefile = self.strip_prefix(full_filename, self.forwarder_staging_dir)
+        local_staging_dir = butlerProxy.getStagingDirectory()
+        locally_staged_filename = os.path.join(local_staging_dir, basefile)
+        return locally_staged_filename
+
     def ingest_file(self, butlerProxy, msg):
         camera = msg['CAMERA']
         obsid = msg['OBSID']
-        filename = os.path.realpath(msg['FILENAME'])
+        filename = self.get_locally_staged_filename(butlerProxy, os.path.realpath(msg['FILENAME']))
         archiver = msg['ARCHIVER']
 
         try:
@@ -191,8 +211,9 @@ class FileIngester(object):
             status_msg = f"{butler.getName()}: {filename} could not be ingested: {self.extract_cause(e)}"
             LOGGER.exception(status_msg)
             bad_dir = butlerProxy.getBadFileDirectory()
+            staging_dir = butlerProxy.getStagingDirectory()
 
-            bad_file_dir = self.create_bad_dirname(bad_dir, filename)
+            bad_file_dir = self.create_bad_dirname(bad_dir, staging_dir, filename)
             try:
                 LOGGER.info(f"Moving {filename} to {bad_file_dir}")
                 shutil.move(filename, bad_file_dir)

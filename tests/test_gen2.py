@@ -20,6 +20,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import tempfile
+from pathlib import PurePath
 from shutil import copyfile
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
@@ -41,33 +42,38 @@ class Gen2TestCase(asynctest.TestCase):
             config = yaml.safe_load(f)
 
         ingesterConfig = config["ingester"]
-        dataDir = tempfile.mkdtemp()
-        ingesterConfig["forwarderStagingDirectory"] = dataDir
+        self.forwarderStagingDirectory = tempfile.mkdtemp()
+        ingesterConfig["forwarderStagingDirectory"] = self.forwarderStagingDirectory
 
-        badDir = tempfile.mkdtemp()
         butlerConfig = config["ingester"]["butlers"][0]["butler"]
-        butlerConfig["badFileDirectory"] = badDir
 
-        butlerStageDir = tempfile.mkdtemp()
-        butlerConfig["stagingDirectory"] = butlerStageDir
+        self.badDir = tempfile.mkdtemp()
+        butlerConfig["badFileDirectory"] = self.badDir
 
-        repoDir = tempfile.mkdtemp()
-        butlerConfig["repoDirectory"] = repoDir
+        self.stagingRootDir = tempfile.mkdtemp()
+        butlerConfig["stagingDirectory"] = self.stagingRootDir
 
-        destFile = os.path.join(dataDir, fits_name)
-        copyfile(fitsFile, destFile)
+        self.repoDir = tempfile.mkdtemp()
+        butlerConfig["repoDirectory"] = self.repoDir
 
-        mapperFileName = os.path.join(repoDir, "_mapper")
+        subDir = tempfile.mkdtemp(dir=self.forwarderStagingDirectory)
+        self.destFile = os.path.join(subDir, fits_name)
+        copyfile(fitsFile, self.destFile)
+
+        mapperFileName = os.path.join(self.repoDir, "_mapper")
         with open(mapperFileName, 'w') as mapper_file:
             mapper_file.write(mapper)
 
-        return config, destFile, repoDir, badDir
+        return config
+
+    def strip_prefix(self, name, prefix):
+        p = PurePath(name)
+        ret = str(p.relative_to(prefix))
+        return ret
 
     async def testATIngest(self):
         fits_name = "2020032700020-det000.fits.fz"
-        config, destFile, repoDir, badDir = self.createConfig("ingest_gen2.yaml",
-                                                              fits_name,
-                                                              "lsst.obs.lsst.latiss.LatissMapper")
+        config = self.createConfig("ingest_gen2.yaml", fits_name, "lsst.obs.lsst.latiss.LatissMapper")
 
         ingesterConfig = config["ingester"]
         forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
@@ -80,21 +86,20 @@ class Gen2TestCase(asynctest.TestCase):
         msg = {}
         msg['CAMERA'] = "LATISS"
         msg['OBSID'] = "AT_C_20180920_000028"
-        msg['FILENAME'] = destFile
+        msg['FILENAME'] = self.destFile
         msg['ARCHIVER'] = "AT"
         await ingester.ingest(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        bad_path = os.path.join(badDir, fits_name)
+        name = self.strip_prefix(self.destFile, forwarder_staging_dir)
+        bad_path = os.path.join(self.badDir, name)
         self.assertFalse(os.path.exists(bad_path))
 
     async def testCCIngest(self):
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
-        config, destFile, repoDir, badDir = self.createConfig("ingest_gen2.yaml",
-                                                              fits_name,
-                                                              "lsst.obs.lsst.comCam.LsstComCamMapper")
+        config = self.createConfig("ingest_gen2.yaml", fits_name, "lsst.obs.lsst.comCam.LsstComCamMapper")
 
         ingesterConfig = config["ingester"]
         forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
@@ -107,21 +112,20 @@ class Gen2TestCase(asynctest.TestCase):
         msg = {}
         msg['CAMERA'] = "COMCAM"
         msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = destFile
+        msg['FILENAME'] = self.destFile
         msg['ARCHIVER'] = "CC"
         await ingester.ingest(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        bad_path = os.path.join(badDir, fits_name)
+        name = self.strip_prefix(self.destFile, forwarder_staging_dir)
+        bad_path = os.path.join(self.badDir, name)
         self.assertFalse(os.path.exists(bad_path))
 
     async def testBadIngest(self):
         fits_name = "bad.fits.fz"
-        config, destFile, repoDir, badDir = self.createConfig("ingest_gen2.yaml",
-                                                              fits_name,
-                                                              "lsst.obs.lsst.comCam.LsstComCamMapper")
+        config = self.createConfig("ingest_gen2.yaml", fits_name, "lsst.obs.lsst.comCam.LsstComCamMapper")
 
         ingesterConfig = config["ingester"]
         forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
@@ -134,14 +138,15 @@ class Gen2TestCase(asynctest.TestCase):
         msg = {}
         msg['CAMERA'] = "COMCAM"
         msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = destFile
+        msg['FILENAME'] = self.destFile
         msg['ARCHIVER'] = "CC"
         await ingester.ingest(msg)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        bad_path = os.path.join(badDir, fits_name)
+        name = self.strip_prefix(self.destFile, forwarder_staging_dir)
+        bad_path = os.path.join(self.badDir, name)
         self.assertTrue(os.path.exists(bad_path))
 
 
