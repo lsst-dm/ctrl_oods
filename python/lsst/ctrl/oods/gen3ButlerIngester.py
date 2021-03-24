@@ -51,7 +51,7 @@ class Gen3ButlerIngester(object):
 
         # Ingest image.
         cfg = RawIngestConfig()
-        cfg.transfer = "move"
+        cfg.transfer = "direct"
         task = RawIngestTask(config=cfg, butler=self.btl)
         task.run([filename])
 
