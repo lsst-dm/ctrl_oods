@@ -18,6 +18,14 @@ ingester:
             instrument: lsst.obs.lsst.Latiss
             badFileDirectory: /tmp/bad
             stagingDirectory: /tmp/staging
+            collections:
+                - LATISS/raw/all
+            scanInterval:
+                <<: *interval
+                minutes: 1
+            filesOlderThan:
+                <<: *interval
+                days: 30
     batchSize: 20
     scanInterval:
         <<: *interval

@@ -19,17 +19,28 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
+import collections
+from lsst.ctrl.oods.butlerIngester import ButlerIngester
+from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.daf.butler import Butler
 from lsst.obs.base.ingest import RawIngestTask, RawIngestConfig
 from lsst.obs.base.utils import getInstrument
+from astropy.time import Time
+from astropy.time import TimeDelta
+import astropy.units as u
 
 
-class Gen3ButlerIngester(object):
+class Gen3ButlerIngester(ButlerIngester):
     """Processes files for ingestion into a Gen3 Butler.
     """
-    def __init__(self, butlerConfig):
-        repo = butlerConfig["repoDirectory"]
-        instrument = butlerConfig["instrument"]
+    def __init__(self, config):
+        self.config = config
+        repo = self.config["repoDirectory"]
+        instrument = self.config["instrument"]
+        self.scanInterval = self.config["scanInterval"]
+        self.olderThan = self.config["filesOlderThan"]
+        self.collections = self.config["collections"]
 
         register = False
         try:
@@ -40,20 +51,51 @@ class Gen3ButlerIngester(object):
 
         instr = getInstrument(instrument)
         run = instr.makeDefaultRawIngestRunName()
-        opts = dict(run=run, writeable=True)
-        self.btl = Butler(butlerConfig, **opts)
+        opts = dict(run=run, writeable=True, collections=self.collections)
+        self.butler = Butler(butlerConfig, **opts)
 
         if register:
             # Register an instrument.
-            instr.register(self.btl.registry)
+            instr.register(self.butler.registry)
 
     def ingest(self, filename):
 
         # Ingest image.
         cfg = RawIngestConfig()
         cfg.transfer = "direct"
-        task = RawIngestTask(config=cfg, butler=self.btl)
+        task = RawIngestTask(config=cfg, butler=self.butler)
         task.run([filename])
 
     def getName(self):
         return "gen3"
+
+    async def run_task(self):
+        seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
+        while True:
+            self.clean()
+            await asyncio.sleep(seconds)
+
+    def clean(self):
+        t = Time.now()
+        interval = collections.namedtuple("Interval", self.olderThan.keys())(*self.olderThan.values())
+        td = TimeDelta(interval.days*u.d + interval.hours * u.h +
+                       interval.minutes*u.min + interval.seconds*u.s)
+        t = t - td
+
+        ref = self.butler.registry.queryDatasets(datasetType=...,
+                                                 collections=self.collections,
+                                                 where=f"ingest_date < T'{t}'")
+
+        for x in ref:
+            print(f"removing {x}")
+
+            uri = None
+            try:
+                uri = self.butler.getURI(x, collections=x.run)
+            except Exception as e:
+                print(f"butler is missing uri for {x}: {e}")
+            self.butler.pruneDatasets([x], purge=True, unstore=True)
+
+            if uri is not None:
+                uri.remove()
+        self.butler.datastore.emptyTrash()

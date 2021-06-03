@@ -70,6 +70,12 @@ class FileIngester(object):
         if self.base_broker_url is not None:
             asyncio.create_task(self.start_comm())
 
+    def getButlerTasks(self):
+        tasks = []
+        for butler in self.butlers:
+            tasks.append(butler.run_task)
+        return tasks
+
     async def start_comm(self):
         self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
         self.consumer.start()
@@ -231,3 +237,7 @@ class FileIngester(object):
         # wait, to keep the object alive
         while True:
             await asyncio.sleep(60)
+
+    def clean(self):
+        for butlerProxy in self.butlers:
+            butlerProxy.clean()

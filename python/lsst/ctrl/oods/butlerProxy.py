@@ -18,6 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 from importlib import import_module
 
 
@@ -49,3 +50,10 @@ class ButlerProxy(object):
 
     def getBadFileDirectory(self):
         return self.bad_file_dir
+
+    async def run_task(self):
+        print(f"running task for {self.butlerInstance}")
+        await self.butlerInstance.run_task()
+
+    def clean(self):
+        self.butlerInstance.clean()

@@ -18,6 +18,14 @@ ingester:
             instrument: lsst.obs.lsst.LsstComCam
             badFileDirectory: /tmp/bad
             stagingDirectory: /tmp/staging
+            collections:
+                - LSSTComCam/raw/all
+            scanInterval:
+                <<: *interval
+                seconds: 1
+            filesOlderThan:
+                <<: *interval
+                seconds: 2
     batchSize: 20
     scanInterval:
         <<: *interval

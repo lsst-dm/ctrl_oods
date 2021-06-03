@@ -18,10 +18,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import asyncio
+from lsst.ctrl.oods.butlerIngester import ButlerIngester
 from lsst.pipe.tasks.ingest import IngestTask
 
 
-class Gen2ButlerIngester(object):
+class Gen2ButlerIngester(ButlerIngester):
     """Processes files for ingestion into a Gen2 Butler.
     """
     def __init__(self, butlerConfig):
@@ -33,3 +36,7 @@ class Gen2ButlerIngester(object):
 
     def getName(self):
         return "gen2"
+
+    async def run_task(self):
+        while True:
+            await asyncio.sleep(60)
