@@ -25,7 +25,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Validator(object):
-    """Validate a configuration data structure.
+    """Validate a configuration data dictionary
     """
 
     def __init__(self):
@@ -35,7 +35,11 @@ class Validator(object):
 
     def verify(self, config):
         """Validate a configuration, emitting messages about errors.
-        @param config: a configuration data structure
+
+        Parameters
+        ----------
+        config: `dict`
+            a configuration data dictionary
         """
         self.isValid = True
         self.missingElements = []
@@ -108,9 +112,15 @@ class Validator(object):
 
     def checkIntervalBlock(self, name, configName, config):
         """Check that an Interval block is valid
-        @param name: configuration element name
-        @param configName: configuration block name
-        @param config: a configuration data structure
+
+        Parameters
+        ----------
+        name: `str`
+            configuration element name
+        configName: `str`
+            configuration block name
+        config: `dict`
+            configuration data dictionary
         """
         interval = None
         if name not in config:
@@ -130,7 +140,11 @@ class Validator(object):
 
     def missingElement(self, element):
         """Emit a message about a missing configuration element
-        @param element: missing element name
+
+        Parameters
+        ----------
+        element: `str`
+            missing element name
         """
         LOGGER.error("missing '%s'" % element)
 
@@ -141,7 +155,11 @@ class Validator(object):
 
     def missingValue(self, element):
         """Emit a message about a missing value of an  element
-        @param element: element name which is missing a value
+
+        Parameters
+        ----------
+        element: `str`
+            element name which is missing a value
         """
         LOGGER.error("'%s' is missing a value" % element)
 

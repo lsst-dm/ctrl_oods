@@ -26,17 +26,38 @@ from lsst.pipe.tasks.ingest import IngestTask
 
 class Gen2ButlerIngester(ButlerIngester):
     """Processes files for ingestion into a Gen2 Butler.
+
+    Parameters
+    ----------
+    butlerConfig: `dict`
+        dictionary containing butler configuration information
     """
     def __init__(self, butlerConfig):
         repo = butlerConfig["repoDirectory"]
         self.task = IngestTask.prepareTask(repo)
 
     def ingest(self, filename):
+        """
+
+        Parameters
+        ----------
+        filename: `str`
+            filename to ingest
+        """
         self.task.ingestFiles(filename)
 
     def getName(self):
+        """Get the name of this ingester
+
+        Returns
+        -------
+        ret: `str`
+            the name of this ingester
+        """
         return "gen2"
 
     async def run_task(self):
+        """Run task that require periodical attention
+        """
         while True:
             await asyncio.sleep(60)

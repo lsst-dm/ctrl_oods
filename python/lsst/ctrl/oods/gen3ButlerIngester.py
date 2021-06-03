@@ -33,6 +33,11 @@ import astropy.units as u
 
 class Gen3ButlerIngester(ButlerIngester):
     """Processes files for ingestion into a Gen3 Butler.
+
+    Parameters
+    ----------
+    config: `dict`
+        configuration of this butler ingester
     """
     def __init__(self, config):
         self.config = config
@@ -59,6 +64,13 @@ class Gen3ButlerIngester(ButlerIngester):
             instr.register(self.butler.registry)
 
     def ingest(self, filename):
+        """Ingest a file into a butler
+
+        Parameters
+        ----------
+        filename: `str`
+            file name of the file to ingest
+        """
 
         # Ingest image.
         cfg = RawIngestConfig()
@@ -67,25 +79,44 @@ class Gen3ButlerIngester(ButlerIngester):
         task.run([filename])
 
     def getName(self):
+        """Return the name of this ingester
+
+        Returns
+        -------
+        ret: `str`
+            name of this ingester
+        """
         return "gen3"
 
     async def run_task(self):
+        """run the clean() method at the configured interval
+        """
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
             self.clean()
             await asyncio.sleep(seconds)
 
     def clean(self):
+        """Remove all the datasets in the butler that
+        were ingested before the configured Interval
+        """
+
+        # calculate the time value which is Time.now - the
+        # "olderThan" configuration
         t = Time.now()
         interval = collections.namedtuple("Interval", self.olderThan.keys())(*self.olderThan.values())
         td = TimeDelta(interval.days*u.d + interval.hours * u.h +
                        interval.minutes*u.min + interval.seconds*u.s)
         t = t - td
 
+        # get the datasets
         ref = self.butler.registry.queryDatasets(datasetType=...,
                                                  collections=self.collections,
                                                  where=f"ingest_date < T'{t}'")
 
+        # retrieve the URI,  prune the dataset from
+        # the Butler, and if the URI was available,
+        # remove it.
         for x in ref:
             print(f"removing {x}")
 

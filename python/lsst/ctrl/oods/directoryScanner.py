@@ -23,14 +23,26 @@ import os
 
 class DirectoryScanner(object):
     """Scan directories for files
+
+    Parameters
+    ----------
+    directories: `list`
+        A list of directories to scan
     """
     def __init__(self, directories):
         self.directories = directories
 
     def getAllFiles(self):
         """Retrieve all files from a set of directories
-        @param directories: list directories to scan
-        @return list of files in the given directories
+
+        Parameters
+        ----------
+        directories: list directories to scan
+
+        Returns
+        -------
+        allFiles: `list`
+            list of all files in the given directories
         """
         allFiles = []
         for directory in self.directories:
@@ -40,8 +52,16 @@ class DirectoryScanner(object):
 
     def getFiles(self, directory):
         """Retrieve all files from a directory
-        @param directory: directory to scan
-        @return list of files in the given directory
+
+        Parameters
+        ----------
+        directory: `str`
+            directory to scan
+
+        Returns
+        -------
+        files: `list`
+            list of all files in the given directory
         """
         files = []
         for dirName, subdirs, fileList in os.walk(directory):
