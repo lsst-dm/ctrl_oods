@@ -30,6 +30,7 @@ class TimeInterval(object):
     @staticmethod
     def calculateTotalSeconds(config):
         """calculate the number of seconds represented by this configuration
+
         Parameters
         ----------
         config: `dict`
