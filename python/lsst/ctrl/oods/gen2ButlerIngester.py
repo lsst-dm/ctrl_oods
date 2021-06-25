@@ -37,7 +37,7 @@ class Gen2ButlerIngester(ButlerIngester):
         self.task = IngestTask.prepareTask(repo)
 
     def ingest(self, filename):
-        """
+        """Ingest a file into a butler
 
         Parameters
         ----------
