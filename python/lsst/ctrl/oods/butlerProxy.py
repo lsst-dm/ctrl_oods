@@ -50,25 +50,41 @@ class ButlerProxy(object):
 
     def getButler(self):
         """Return the butler being proxied
-        @returns this instance of the butler
+
+        Returns
+        -------
+        butler: `lsst.daf.butler.Butler`
+            this butler instance
         """
         return self.butlerInstance
 
     def getRepoDirectory(self):
         """Return the path of the repository directory
-        @returns the repository directory
+
+        Returns
+        -------
+        repo_dir: `str`
+            the repository directory
         """
         return self.repo_dir
 
     def getStagingDirectory(self):
         """Return the path of the staging directory
-        @returns the staging directory
+
+        Returns
+        -------
+        staging_dir: `str`
+            the staging directory
         """
         return self.staging_dir
 
     def getBadFileDirectory(self):
         """Return the path of the "bad file" directory
-        @returns the bad file directory
+
+        Returns
+        -------
+        bad_file_dir: `str`
+            the bad file directory
         """
         return self.bad_file_dir
 
