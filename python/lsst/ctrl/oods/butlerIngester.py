@@ -20,20 +20,25 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
+from abc import ABC, abstractmethod
 
 
-class ButlerIngester(object):
+class ButlerIngester(ABC):
     """Interface class for processing files for ingestion into a butler.
     """
+
+    @abstractmethod
     def ingest(self, filename):
         """Placeholder to ingest a file
+
         Parameters
         ----------
         filename: `str`
             file name to ingest
         """
-        pass
+        raise NotImplementedError()
 
+    @abstractmethod
     def getName(self):
         """Get the name of this ingester
 
@@ -42,7 +47,7 @@ class ButlerIngester(object):
         ret: `str`
             the name of this ingester
         """
-        return "not implemented"
+        raise NotImplementedError()
 
     async def run_task(self):
         """Run task that require periodical attention
@@ -50,6 +55,6 @@ class ButlerIngester(object):
         await asyncio.sleep(60)
 
     def clean(self):
-        """Perform a cleaning pass for this ingester
+        """Perform a cleaning pass for this ingester; override if necessary
         """
         pass
