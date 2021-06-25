@@ -80,7 +80,7 @@ class CacheCleaner(object):
         ----------
         seconds: `int`
             age to match files against
-        directories: `list1
+        directories: `list`
             directories to observe
 
         Returns

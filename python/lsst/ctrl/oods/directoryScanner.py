@@ -37,7 +37,8 @@ class DirectoryScanner(object):
 
         Parameters
         ----------
-        directories: list directories to scan
+        directories: `list`
+            directories to scan
 
         Returns
         -------

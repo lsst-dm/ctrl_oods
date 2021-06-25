@@ -98,14 +98,18 @@ class FileIngester(object):
         await self.publisher.start()
 
     def on_message(self, ch, method, properties, body):
-        """ Route the message to the proper handler
+        """ Route the message to the proper handler; signature is required by pika
 
         Parameters
         ----------
         ch: `Channel`
+            RabbitMQ channel to use
         method: `Method`
+            method to use
         properties: `Properties`
+            channel properties 
         body: `dict`
+            message dictionary
         """
         msg_type = body['MSG_TYPE']
         ch.basic_ack(method.delivery_tag)
@@ -143,6 +147,8 @@ class FileIngester(object):
             Root of the bad directory heirarchy
         staging_dir_root: `str`
             Root of the bad directory heirarchy
+        original: `str`
+            Original directory location
 
         Returns
         -------
@@ -165,12 +171,14 @@ class FileIngester(object):
 
     def strip_prefix(self, pathname, prefix):
         """Strip the prefix of the path
+
         Parameters
         ----------
         pathname: `str`
             Path name
         prefix: `str`
             Prefix to strip from pathname
+
         Returns
         -------
         ret: `str`
@@ -215,7 +223,7 @@ class FileIngester(object):
 
         Parameters
         ----------
-        msg: `dict1`
+        msg: `dict`
             message structure
         """
         filename = os.path.realpath(msg['FILENAME'])
@@ -276,7 +284,7 @@ class FileIngester(object):
 
         Parameters
         ----------
-        butlerProxy: `ButlerIngester`
+        butlerProxy: `ButlerProxy`
             A Butler Proxy
         full_filename: `str`
             The full name of forwarder-staged file
