@@ -98,7 +98,7 @@ class FileIngester(object):
         await self.publisher.start()
 
     def on_message(self, ch, method, properties, body):
-        """ Route the message to the proper handler; signature is required by pika
+        """ Route the message to proper handler; signature required by pika
 
         Parameters
         ----------
@@ -107,7 +107,7 @@ class FileIngester(object):
         method: `Method`
             method to use
         properties: `Properties`
-            channel properties 
+            channel properties
         body: `dict`
             message dictionary
         """
