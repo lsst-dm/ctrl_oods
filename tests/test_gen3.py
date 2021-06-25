@@ -46,7 +46,8 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         Returns
         -------
-        An OODS configuration to use for testing
+        config: `dict`
+            An OODS configuration to use for testing
         """
 
         # create a path to the configuration file
@@ -102,7 +103,8 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         Returns
         -------
-        remainder of string
+        ret: `str`
+            remainder of string
         """
         p = PurePath(name)
         ret = str(p.relative_to(prefix))
