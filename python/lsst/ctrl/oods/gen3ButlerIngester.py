@@ -110,10 +110,15 @@ class Gen3ButlerIngester(ButlerIngester):
         t = t - td
 
         # get the datasets
-        ref = self.butler.registry.queryDatasets(datasetType=...,
-                                                 collections=self.collections,
-                                                 where=f"ingest_date < T'{t}'")
+        ref = set(self.butler.registry.queryDatasets(datasetType=...,
+                                                     collections=self.collections,
+                                                     where="ingest_date < ref_date",
+                                                     bind={"ref_date": t}))
 
+        # References outside of the Butler's datastore
+        # need to be cleaned up, since the Butler will
+        # not delete those file artifacts.
+        #
         # retrieve the URI,  prune the dataset from
         # the Butler, and if the URI was available,
         # remove it.
@@ -125,8 +130,8 @@ class Gen3ButlerIngester(ButlerIngester):
                 uri = self.butler.getURI(x, collections=x.run)
             except Exception as e:
                 print(f"butler is missing uri for {x}: {e}")
-            self.butler.pruneDatasets([x], purge=True, unstore=True)
 
             if uri is not None:
                 uri.remove()
-        self.butler.datastore.emptyTrash()
+
+        self.butler.pruneDatasets(ref, purge=True, unstore=True)
