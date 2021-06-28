@@ -63,6 +63,10 @@ class Gen3ButlerIngester(ButlerIngester):
             # Register an instrument.
             instr.register(self.butler.registry)
 
+        cfg = RawIngestConfig()
+        cfg.transfer = "direct"
+        self.task = RawIngestTask(config=cfg, butler=self.butler)
+
     def ingest(self, filename):
         """Ingest a file into a butler
 
@@ -73,10 +77,7 @@ class Gen3ButlerIngester(ButlerIngester):
         """
 
         # Ingest image.
-        cfg = RawIngestConfig()
-        cfg.transfer = "direct"
-        task = RawIngestTask(config=cfg, butler=self.butler)
-        task.run([filename])
+        self.task.run([filename])
 
     def getName(self):
         """Return the name of this ingester
