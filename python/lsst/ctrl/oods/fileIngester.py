@@ -37,6 +37,11 @@ class FileIngester(object):
     """Ingest files into the butler specified in the configuration.
     Files must be removed from the directory as part of the ingest
     or there will be an attempt to ingest them again later.
+
+    Parameters
+    ----------
+    config: `dict`
+        A butler configuration dictionary
     """
 
     def __init__(self, config):
@@ -70,7 +75,22 @@ class FileIngester(object):
         if self.base_broker_url is not None:
             asyncio.create_task(self.start_comm())
 
+    def getButlerTasks(self):
+        """Get a list of all butler run_task methods
+
+        Returns
+        -------
+        tasks: `list`
+            A list containing each butler run_task method
+        """
+        tasks = []
+        for butler in self.butlers:
+            tasks.append(butler.run_task)
+        return tasks
+
     async def start_comm(self):
+        """Start communication services
+        """
         self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
         self.consumer.start()
 
@@ -78,7 +98,18 @@ class FileIngester(object):
         await self.publisher.start()
 
     def on_message(self, ch, method, properties, body):
-        """ Route the message to the proper handler
+        """ Route the message to proper handler; signature required by pika
+
+        Parameters
+        ----------
+        ch: `Channel`
+            RabbitMQ channel to use
+        method: `Method`
+            method to use
+        properties: `Properties`
+            channel properties
+        body: `dict`
+            message dictionary
         """
         msg_type = body['MSG_TYPE']
         ch.basic_ack(method.delivery_tag)
@@ -89,6 +120,13 @@ class FileIngester(object):
             LOGGER.info(f"unknown message type: {msg_type}")
 
     def extract_cause(self, e):
+        """extract the cause of an exception
+
+        Returns
+        -------
+        s: `str`
+            A string containing the cause of an exception
+        """
         if e.__cause__ is None:
             return None
         cause = self.extract_cause(e.__cause__)
@@ -98,6 +136,25 @@ class FileIngester(object):
             return f"{str(e.__cause__)};  {cause}"
 
     def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
+        """Create a full path to a directory contained in the
+        'bad directory' heirarchy; this retains the subdirectory structure
+        created where the file was staged, where the uningestable file will
+        be placed.
+
+        Parameters
+        ----------
+        bad_dir_root: `str`
+            Root of the bad directory heirarchy
+        staging_dir_root: `str`
+            Root of the bad directory heirarchy
+        original: `str`
+            Original directory location
+
+        Returns
+        -------
+        newdir: `str`
+            new directory name
+        """
         # strip the original directory location, except for the date
         newfile = self.strip_prefix(original, staging_dir_root)
 
@@ -112,8 +169,22 @@ class FileIngester(object):
 
         return newdir
 
-    def strip_prefix(self, name, prefix):
-        p = PurePath(name)
+    def strip_prefix(self, pathname, prefix):
+        """Strip the prefix of the path
+
+        Parameters
+        ----------
+        pathname: `str`
+            Path name
+        prefix: `str`
+            Prefix to strip from pathname
+
+        Returns
+        -------
+        ret: `str`
+            The remaining path
+        """
+        p = PurePath(pathname)
         ret = str(p.relative_to(prefix))
         return ret
 
@@ -149,6 +220,11 @@ class FileIngester(object):
     def stageFiles(self, msg):
         """ stage the files to their butler staging areas
         and remove the original file
+
+        Parameters
+        ----------
+        msg: `dict`
+            message structure
         """
         filename = os.path.realpath(msg['FILENAME'])
 
@@ -164,9 +240,22 @@ class FileIngester(object):
         os.unlink(filename)
 
     async def ingest(self, msg):
+        """Attempt to perform butler ingest for all butlers
 
+        Parameters
+        ----------
+        msg: `dict`
+            message container info about the ingest request.
+        """
+
+        # first move the files from the Forwarder staging area
+        # to the area where they're staged for the OODS.
         self.stageFiles(msg)
 
+        # for each butler, attempt to ingest the requested file,
+        # Success or failure is noted in a message description which
+        # is sent via RabbitMQ message back to Archiver, which will
+        # send it out via a CSC logevent.
         code = self.SUCCESS
         description = None
         for butler in self.butlers:
@@ -191,17 +280,50 @@ class FileIngester(object):
             await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
 
     def get_locally_staged_filename(self, butlerProxy, full_filename):
+        """Construct the full path to the staging area unique to a butler Proxy
+
+        Parameters
+        ----------
+        butlerProxy: `ButlerProxy`
+            A Butler Proxy
+        full_filename: `str`
+            The full name of forwarder-staged file
+
+        Returns
+        -------
+        locally_staged_filename: `str`
+            The full pathname of to the file in this butler's staging area
+        """
         basefile = self.strip_prefix(full_filename, self.forwarder_staging_dir)
         local_staging_dir = butlerProxy.getStagingDirectory()
         locally_staged_filename = os.path.join(local_staging_dir, basefile)
         return locally_staged_filename
 
     def ingest_file(self, butlerProxy, msg):
+        """Ingest the file the incoming message requests
+
+        Parameters
+        ----------
+        butlerProxy: `ButlerProxy`
+            proxy for the butler
+        msg: `dict`
+            message which indicates which file to ingest
+
+        Returns
+        -------
+        (status_code, status_msg): `int`, `str`
+            status code and message to send about what happened
+        """
+
+        # get the locally staged file name
         camera = msg['CAMERA']
         obsid = msg['OBSID']
         filename = self.get_locally_staged_filename(butlerProxy, os.path.realpath(msg['FILENAME']))
         archiver = msg['ARCHIVER']
 
+        # attempt to ingest the file;  if ingests, log that
+        # if it does not ingest, move it to a "bad file" directory
+        # and log that.
         try:
             butler = butlerProxy.getButler()
             butler.ingest(filename)
@@ -228,6 +350,14 @@ class FileIngester(object):
         return (status_code, status_msg)
 
     async def run_task(self):
+        """Keep this object alive
+        """
         # wait, to keep the object alive
         while True:
             await asyncio.sleep(60)
+
+    def clean(self):
+        """Call the clean method of all butler proxies
+        """
+        for butlerProxy in self.butlers:
+            butlerProxy.clean()

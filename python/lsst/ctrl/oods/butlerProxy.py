@@ -18,14 +18,22 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 from importlib import import_module
 
 
 class ButlerProxy(object):
+    """proxy interface to the gen2 or gen3 butler
+
+    Parameters
+    ----------
+    butlerConfig: `dict`
+        details on how to construct and configure the butler
+    """
     def __init__(self, butlerConfig):
+        # create the butler
         classConfig = butlerConfig["class"]
 
-        # create the butler
         importFile = classConfig["import"]
         name = classConfig["name"]
 
@@ -34,18 +42,58 @@ class ButlerProxy(object):
 
         self.butlerInstance = butlerClass(butlerConfig)
 
+        # load configuration info for the repository, staging,
+        # and bad file areas
         self.repo_dir = butlerConfig["repoDirectory"]
         self.staging_dir = butlerConfig["stagingDirectory"]
         self.bad_file_dir = butlerConfig["badFileDirectory"]
 
     def getButler(self):
+        """Return the butler being proxied
+
+        Returns
+        -------
+        butler: `lsst.daf.butler.Butler`
+            this butler instance
+        """
         return self.butlerInstance
 
     def getRepoDirectory(self):
+        """Return the path of the repository directory
+
+        Returns
+        -------
+        repo_dir: `str`
+            the repository directory
+        """
         return self.repo_dir
 
     def getStagingDirectory(self):
+        """Return the path of the staging directory
+
+        Returns
+        -------
+        staging_dir: `str`
+            the staging directory
+        """
         return self.staging_dir
 
     def getBadFileDirectory(self):
+        """Return the path of the "bad file" directory
+
+        Returns
+        -------
+        bad_file_dir: `str`
+            the bad file directory
+        """
         return self.bad_file_dir
+
+    async def run_task(self):
+        """Run and await the async task code for this butler
+        """
+        await self.butlerInstance.run_task()
+
+    def clean(self):
+        """Execute the clean() method for this butler
+        """
+        self.butlerInstance.clean()

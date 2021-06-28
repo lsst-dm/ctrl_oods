@@ -18,38 +18,43 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-from lsst.ctrl.oods.taskRunner import TaskRunner
-import lsst.utils.tests
-from time import sleep
+
+import asyncio
+from abc import ABC, abstractmethod
 
 
-class SimpleTask(object):
-    def __init__(self):
-        self.value = -1
+class ButlerIngester(ABC):
+    """Interface class for processing files for ingestion into a butler.
+    """
 
-    def run_task(self):
-        self.value = 1
-        return 1
+    @abstractmethod
+    def ingest(self, filename):
+        """Placeholder to ingest a file
 
+        Parameters
+        ----------
+        filename: `str`
+            file name to ingest
+        """
+        raise NotImplementedError()
 
-class TaskRunnerTestCase(lsst.utils.tests.TestCase):
-    def testRunner(self):
-        st = SimpleTask()
+    @abstractmethod
+    def getName(self):
+        """Get the name of this ingester
 
-        scanInterval = {"days": 0, "hours": 0, "minutes": 0, "seconds": 2}
+        Returns
+        -------
+        ret: `str`
+            the name of this ingester
+        """
+        raise NotImplementedError()
 
-        runner = TaskRunner(interval=scanInterval, task=st.run_task)
-        runner.start()
+    async def run_task(self):
+        """Run task that require periodical attention
+        """
+        await asyncio.sleep(60)
 
-        sleep(5)
-        runner.stop()
-        self.assertEqual(st.value, 1)
-        runner.join()
-
-
-class MemoryTester(lsst.utils.tests.MemoryTestCase):
-    pass
-
-
-def setup_module(module):
-    lsst.utils.tests.init()
+    def clean(self):
+        """Perform a cleaning pass for this ingester; override if necessary
+        """
+        pass

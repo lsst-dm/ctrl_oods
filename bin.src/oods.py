@@ -38,11 +38,12 @@ LOGGER = logging.getLogger(__name__)
 async def gather_tasks(config):
     ingester_config = config["ingester"]
     ingester = FileIngester(ingester_config)
+    butler_tasks = ingester.getButlerTasks()
 
     cache_config = config["cacheCleaner"]
     cache_cleaner = CacheCleaner(cache_config)
 
-    r = [ingester.run_task(), cache_cleaner.run_task()]
+    r = [ingester.run_task(), cache_cleaner.run_task()] + butler_tasks
     LOGGER.info("gathering tasks")
     res = await asyncio.gather(*r, return_exceptions=True)
     LOGGER.info("tasks gathered")

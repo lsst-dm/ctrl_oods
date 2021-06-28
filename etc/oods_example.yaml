@@ -19,7 +19,7 @@ ingester:
             badFileDirectory: bad
         - butler:
             collections:
-                - FARG/raw/all
+                - LATISS/raw/all
             instrument: lsst.obs.lsst.LsstComCam
             class:
                 import : lsst.ctrl.oods.gen3ButlerIngester
@@ -33,7 +33,6 @@ ingester:
             filesOlderThan:
                 <<: *interval
                 days: 30
-
     batchSize: 20
     scanInterval:
         <<: *interval

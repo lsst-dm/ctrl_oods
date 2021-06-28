@@ -75,9 +75,18 @@ class CacheCleaner(object):
 
     def getAllFilesOlderThan(self, seconds, directories):
         """Get files in directories older than 'seconds'.
-        @param seconds: age to match files against
-        @param directories: directories to observe
-        @return: all files that haven't been modified in 'seconds'
+
+        Parameters
+        ----------
+        seconds: `int`
+            age to match files against
+        directories: `list`
+            directories to observe
+
+        Returns
+        -------
+        allFiles: `list`
+            all files that haven't been modified in 'seconds'
         """
         allFiles = []
         for name in directories:
@@ -87,9 +96,18 @@ class CacheCleaner(object):
 
     def getFilesOlderThan(self, seconds, directory):
         """Get files in one directory older than 'seconds'.
-        @param seconds: age to match files against
-        @param directory: directory to observe
-        @return: all files that haven't been modified in 'seconds'
+
+        Parameters
+        ----------
+        seconds: `int`
+            age to match files against
+        directory: `str`
+            directory to observe
+
+        Returns
+        -------
+        files: `list`
+            All files that haven't been modified in 'seconds'
         """
         files = []
 
@@ -104,9 +122,18 @@ class CacheCleaner(object):
 
     def getAllEmptyDirectoriesOlderThan(self, seconds, directories):
         """Get subdirectories empty more than 'seconds' in all directories.
-        @param seconds: age to match files against
-        @param directories: directories to observe
-        @return: all subdirectories empty for more  than 'seconds'
+
+        Parameters
+        ----------
+        seconds: `int`
+            age to match files against
+        directories: `list`
+            directories to observe
+
+        Returns
+        -------
+        allDirs: `list`
+            all subdirectories empty for more  than 'seconds'
         """
         allDirs = []
         for name in directories:
@@ -119,9 +146,18 @@ class CacheCleaner(object):
         All subdirectories are checked to see if they're empty and are marked
         as older than 'seconds" if the modification time for that directory
         is at least that old.
-        @param seconds: age to match files against
-        @param directory: single directory to observe
-        @return: all subdirectories empty for more than 'seconds'
+
+        Parameters
+        ----------
+        seconds: `int`
+            age to match files against
+        directory: `str`
+            single directory to observe
+
+        Returns
+        -------
+        directories: `list`
+            all subdirectories empty for more than 'seconds'
         """
         directories = []
 
