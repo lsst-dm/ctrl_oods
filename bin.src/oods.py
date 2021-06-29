@@ -43,7 +43,7 @@ async def gather_tasks(config):
     cache_config = config["cacheCleaner"]
     cache_cleaner = CacheCleaner(cache_config)
 
-    r = [ingester.run_task(), cache_cleaner.run_task()] + butler_tasks
+    r = [ingester.run_task(), cache_cleaner.run_task()]
     for task in butler_tasks:
         r.append(task())
     LOGGER.info("gathering tasks")
