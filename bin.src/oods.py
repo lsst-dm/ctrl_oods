@@ -43,7 +43,9 @@ async def gather_tasks(config):
     cache_config = config["cacheCleaner"]
     cache_cleaner = CacheCleaner(cache_config)
 
-    r = [ingester.run_task(), cache_cleaner.run_task()] + butler_tasks
+    r = [ingester.run_task(), cache_cleaner.run_task()]
+    for task in butler_tasks:
+        r.append(task())
     LOGGER.info("gathering tasks")
     res = await asyncio.gather(*r, return_exceptions=True)
     LOGGER.info("tasks gathered")
@@ -82,4 +84,4 @@ if __name__ == "__main__":
 
     LOGGER.info("***** OODS starting...")
 
-    res1, res2 = asyncio.get_event_loop().run_until_complete(gather_tasks(oods_config))
+    asyncio.get_event_loop().run_until_complete(gather_tasks(oods_config))
