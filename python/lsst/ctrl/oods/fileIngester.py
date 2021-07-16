@@ -51,7 +51,6 @@ class FileIngester(object):
 
         self.forwarder_staging_dir = config["forwarderStagingDirectory"]
         FILE_INGEST_REQUEST = config["FILE_INGEST_REQUEST"]
-        self._msg_actions = {FILE_INGEST_REQUEST: self.ingest}
 
         self.scanner = DirectoryScanner([self.forwarder_staging_dir])
 
@@ -69,7 +68,6 @@ class FileIngester(object):
             butler = ButlerProxy(butlerConfig["butler"])
             self.butlers.append(butler)
 
-        self.CONSUME_QUEUE = config['CONSUME_QUEUE']
         self.PUBLISH_QUEUE = config['PUBLISH_QUEUE']
 
         if self.base_broker_url is not None:
@@ -91,33 +89,9 @@ class FileIngester(object):
     async def start_comm(self):
         """Start communication services
         """
-        self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
-        self.consumer.start()
 
         self.publisher = Publisher(self.base_broker_url)
         await self.publisher.start()
-
-    def on_message(self, ch, method, properties, body):
-        """ Route the message to proper handler; signature required by pika
-
-        Parameters
-        ----------
-        ch: `Channel`
-            RabbitMQ channel to use
-        method: `Method`
-            method to use
-        properties: `Properties`
-            channel properties
-        body: `dict`
-            message dictionary
-        """
-        msg_type = body['MSG_TYPE']
-        ch.basic_ack(method.delivery_tag)
-        if msg_type in self._msg_actions:
-            handler = self._msg_actions.get(msg_type)
-            asyncio.create_task(handler(body))
-        else:
-            LOGGER.info(f"unknown message type: {msg_type}")
 
     def extract_cause(self, e):
         """extract the cause of an exception
@@ -217,16 +191,15 @@ class FileIngester(object):
 
         return new_file
 
-    def stageFiles(self, msg):
+    def stageFiles(self, filename):
         """ stage the files to their butler staging areas
         and remove the original file
 
         Parameters
         ----------
-        msg: `dict`
-            message structure
+        filename: `str`
+            file to ingest
         """
-        filename = os.path.realpath(msg['FILENAME'])
 
         try:
             for butlerProxy in self.butlers:
@@ -239,18 +212,21 @@ class FileIngester(object):
         # now we unlink the original file.
         os.unlink(filename)
 
-    async def ingest(self, msg):
+    async def ingest(self, filename):
         """Attempt to perform butler ingest for all butlers
 
         Parameters
         ----------
-        msg: `dict`
-            message container info about the ingest request.
+        filename: `str`
+            file to ingest
         """
+
+        # create object containing file information
+        image_file = ImageFile(filename)
 
         # first move the files from the Forwarder staging area
         # to the area where they're staged for the OODS.
-        self.stageFiles(msg)
+        self.stageFiles(filename)
 
         # for each butler, attempt to ingest the requested file,
         # Success or failure is noted in a message description which
@@ -259,7 +235,7 @@ class FileIngester(object):
         code = self.SUCCESS
         description = None
         for butler in self.butlers:
-            (status_code, status_msg) = self.ingest_file(butler, msg)
+            (status_code, status_msg) = self.ingest_file(butler, image_file)
             if status_code == self.FAILURE:
                 code = self.FAILURE
             if description is None:
@@ -272,12 +248,29 @@ class FileIngester(object):
             return
 
         if self.base_broker_url is not None:
+            # 'ARCHIVER': 'CCArchiver'
+            # 'CAMERA': 'COMCAM'
+            # 'FILENAME': '/data/staging/comcam/oods/2021-07-09//CC_O_20210709_000012-R22S21.fits'
+            # x 'MSG_TYPE': 'IMAGE_IN_OODS'
+            # 'OBSID': 'CC_O_20210709_000012'
+            # 'RAFT': '22'
+            # 'SENSOR': '21'
+            # x 'STATUS_CODE': 0
+            # x 'DESCRIPTION': 'gen2: OBSID CC_O_20210709_000012 - File /data/lsstdata/NTS/comcam/oods/butler/staging/2021-07-09/CC_O_20210709_000012-R22S21.fits ingested into OODS; gen3: OBSID CC_O_20210709_000012 - File /data/lsstdata/NTS/comcam/oods/gen3butler/raw/2021-07-09/CC_O_20210709_000012-R22S21.fits ingested into OODS'}
+
+            msg = dict()
+            msg['ARCHIVER'] = image_file.archiver_name
+            msg['CAMERA'] = image_file.camera_name
+            msg['FILENAME'] = image_file.filename
+            msg['OBSID'] = image_file.obsid
+            msg['RAFT'] = image_file.raft
+            msg['SENSOR'] = image_file.sensor
+            msg['MSG_TYPE'] = 'IMAGE_IN_OODS'
+            msg['STATUS_CODE'] = code
+            msg['DESCRIPTION'] = description
+
             LOGGER.info(f"Sending message: {msg}")
-            d = dict(msg)
-            d['MSG_TYPE'] = 'IMAGE_IN_OODS'
-            d['STATUS_CODE'] = code
-            d['DESCRIPTION'] = description
-            await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
+            await self.publisher.publish_message(self.PUBLISH_QUEUE, msg)
 
     def get_locally_staged_filename(self, butlerProxy, full_filename):
         """Construct the full path to the staging area unique to a butler Proxy
@@ -299,15 +292,15 @@ class FileIngester(object):
         locally_staged_filename = os.path.join(local_staging_dir, basefile)
         return locally_staged_filename
 
-    def ingest_file(self, butlerProxy, msg):
+    def ingest_file(self, butlerProxy, image_file):
         """Ingest the file the incoming message requests
 
         Parameters
         ----------
         butlerProxy: `ButlerProxy`
             proxy for the butler
-        msg: `dict`
-            message which indicates which file to ingest
+        image_file: `ImageFile`
+            object that containers information about the image file
 
         Returns
         -------
@@ -316,10 +309,8 @@ class FileIngester(object):
         """
 
         # get the locally staged file name
-        camera = msg['CAMERA']
-        obsid = msg['OBSID']
-        filename = self.get_locally_staged_filename(butlerProxy, os.path.realpath(msg['FILENAME']))
-        archiver = msg['ARCHIVER']
+
+        filename = self.get_locally_staged_filename(butlerProxy, os.path.realpath(image_file.filename))
 
         # attempt to ingest the file;  if ingests, log that
         # if it does not ingest, move it to a "bad file" directory
@@ -327,7 +318,7 @@ class FileIngester(object):
         try:
             butler = butlerProxy.getButler()
             butler.ingest(filename)
-            LOGGER.info(f"{butler.getName()}: {obsid} {filename} ingested from {camera} by {archiver}")
+            LOGGER.info(f"{butler.getName()}: {image_file.obsid} {filename} ingested from {self.camera_name} by {self.archiver_name}")
         except Exception as e:
             status_code = self.FAILURE
             status_msg = f"{butler.getName()}: {filename} could not be ingested: {self.extract_cause(e)}"
@@ -345,7 +336,7 @@ class FileIngester(object):
             return (status_code, status_msg)
 
         status_code = self.SUCCESS
-        status_msg = f"{butler.getName()}: OBSID {obsid} - File {filename} ingested into OODS"
+        status_msg = f"{butler.getName()}: OBSID {image_file.obsid} - File {filename} ingested into OODS"
 
         return (status_code, status_msg)
 
@@ -353,6 +344,9 @@ class FileIngester(object):
         """Keep this object alive
         """
         # wait, to keep the object alive
+        asyncio.create_task(handler.queue_files())
+        asyncio.create_task(self.dequeue_files(handler.dequeue_file))
+
         while True:
             await asyncio.sleep(60)
 
@@ -361,3 +355,11 @@ class FileIngester(object):
         """
         for butlerProxy in self.butlers:
             butlerProxy.clean()
+
+
+
+    async def _linker(self, method):
+        while True:
+            filename = await method()
+
+            self.ingest(filename)
