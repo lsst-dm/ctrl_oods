@@ -127,13 +127,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         # create a FileIngester
         ingester = FileIngester(ingesterConfig)
 
-        # trigger the ingester by sending it a "message"
-        msg = {}
-        msg['CAMERA'] = "LATISS"
-        msg['OBSID'] = "AT_C_20180920_000028"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "AT"
-        await ingester.ingest(msg)
+        await ingester.ingest(self.destFile)
 
         # check to make sure the file was moved from the staging directory
         files = scanner.getAllFiles()
@@ -169,13 +163,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         self.assertTrue(os.path.exists(self.destFile))
         print(f"destFile = {self.destFile}")
 
-        # trigger the ingester by sending it a "message"
-        msg = {}
-        msg['CAMERA'] = "COMCAM"
-        msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "CC"
-        await ingester.ingest(msg)
+        await ingester.ingest(self.destFile)
 
         # make sure staging area is now empty
         files = scanner.getAllFiles()
@@ -231,13 +219,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         ingester = FileIngester(config["ingester"])
 
-        # trigger the ingester by sending it a "message"
-        msg = {}
-        msg['CAMERA'] = "COMCAM"
-        msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "CC"
-        await ingester.ingest(msg)
+        await ingester.ingest(self.destFile)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)

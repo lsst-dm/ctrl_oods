@@ -21,41 +21,39 @@
 
 import os
 
-LOGGER = logging.getLogger(__name__)
-
 
 class ImageFile():
     def __init__(self, filename):
         base_name = os.path.basename(filename)
-        name = basename.split('.')
+        name = base_name.split('.')
         prefix = name[0]
-        suffix = name[1]
+
         if prefix.find('-') == -1:
             # CC_O_20210709_000012_R22S21
             camera_abbrev = prefix.partition('_')[0]
             s = prefix.rpartition('_')
-            obs_id = s[0]
-            raft_sensor = s[1]
+            obsid = s[0]
+            raft_sensor = s[2]
         else:
             # CC_O_20210709_000012-R22S21
             camera_abbrev = prefix.partition('_')[0]
             s = prefix.split('-')
-            obs_id = s[0]
+            obsid = s[0]
             raft_sensor = s[1]
         raft = raft_sensor[1:3]
         sensor = raft_sensor[4:6]
 
-        if self.camera_abbrev == 'AT':
+        if camera_abbrev == 'AT':
             self.archiver = "ATArchiver"
-            self.camera_name = "LATISS"
-        elif self.camera_abbrev == 'CC':
+            self.camera = "LATISS"
+        elif camera_abbrev == 'CC':
             self.archiver = "CCArchiver"
-            self.camera_name = "COMCAM"
+            self.camera = "COMCAM"
         else:
             self.archiver = "MTArchiver"
-            self.camera_name = "ALLSKY"
+            self.camera = "ALLSKY"
 
         self.filename = filename
-        self.obs_id = obs_id
+        self.obsid = obsid
         self.raft = raft
         self.sensor = sensor

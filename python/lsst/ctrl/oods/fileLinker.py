@@ -32,11 +32,11 @@ class FileLinker():
 
         staging_dir = config["stagingDirectory"]
         self.link_dirs = config["linkToDirectories"]
-        handler = FileHandler(staging_dir)
+        file_queue = FileQueue(staging_dir)
 
-        asyncio.create_task(handler.queue_files())
+        asyncio.create_task(file_queue.queue_files())
 
-        asyncio.create_task(self._linker(handler.dequeue_file))
+        asyncio.create_task(self._linker(file_queue.dequeue_file))
 
     async def _linker(self, method):
         while True:

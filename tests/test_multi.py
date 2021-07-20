@@ -78,12 +78,7 @@ class MultiComCamIngesterTestCase(asynctest.TestCase):
 
         ingester = FileIngester(ingesterConfig)
 
-        msg = {}
-        msg['CAMERA'] = "COMCAM"
-        msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = destFile
-        msg['ARCHIVER'] = "CC"
-        await ingester.ingest(msg)
+        await ingester.ingest(destFile)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)

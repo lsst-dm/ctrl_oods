@@ -83,12 +83,7 @@ class Gen2TestCase(asynctest.TestCase):
 
         ingester = FileIngester(ingesterConfig)
 
-        msg = {}
-        msg['CAMERA'] = "LATISS"
-        msg['OBSID'] = "AT_C_20180920_000028"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "AT"
-        await ingester.ingest(msg)
+        await ingester.ingest(self.destFile)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
@@ -109,12 +104,7 @@ class Gen2TestCase(asynctest.TestCase):
 
         ingester = FileIngester(ingesterConfig)
 
-        msg = {}
-        msg['CAMERA'] = "COMCAM"
-        msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "CC"
-        await ingester.ingest(msg)
+        await ingester.ingest(self.destFile)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
@@ -135,12 +125,7 @@ class Gen2TestCase(asynctest.TestCase):
 
         ingester = FileIngester(ingesterConfig)
 
-        msg = {}
-        msg['CAMERA'] = "COMCAM"
-        msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "CC"
-        await ingester.ingest(msg)
+        await ingester.ingest(self.destFile)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)

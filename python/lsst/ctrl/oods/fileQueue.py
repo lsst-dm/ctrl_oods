@@ -28,7 +28,7 @@ import lsst.ctrl.notify.inotifyEvent as inotifyEvent
 LOGGER = logging.getLogger(__name__)
 
 
-class FileHandler(object):
+class FileQueue(object):
     """Report on files that exist or appear in an existing directory.
 
 
@@ -86,6 +86,6 @@ class FileHandler(object):
                 await self.queue.put(event.name)
 
     async def dequeue_file(self):
-        file = await self.queue.get()
+        filename = await self.queue.get()
         self.queue.task_done()
-        return file
+        return filename
