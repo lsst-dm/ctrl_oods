@@ -54,7 +54,7 @@ class MultiComCamIngesterTestCase(asynctest.TestCase):
             repoDir = tempfile.mkdtemp()
 
             butlerConfig["repoDirectory"] = repoDir
-            if butlerConfig["class"]["import"] == "lsst.ctrl.oods.gen2ButlerIngester":
+            if butlerConfig["class"]["import"] == "lsst.ctrl.oods.gen2ButlerBroker":
                 mapperFileName = os.path.join(repoDir, "_mapper")
                 with open(mapperFileName, 'w') as mapper_file:
                     mapper_file.write("lsst.obs.lsst.comCam.LsstComCamMapper")

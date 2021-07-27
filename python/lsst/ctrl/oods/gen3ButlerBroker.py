@@ -21,7 +21,7 @@
 
 import asyncio
 import collections
-from lsst.ctrl.oods.butlerIngester import ButlerIngester
+from lsst.ctrl.oods.butlerBroker import ButlerBroker
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.daf.butler import Butler
 from lsst.obs.base.ingest import RawIngestTask, RawIngestConfig
@@ -31,8 +31,8 @@ from astropy.time import TimeDelta
 import astropy.units as u
 
 
-class Gen3ButlerIngester(ButlerIngester):
-    """Processes files for ingestion into a Gen3 Butler.
+class Gen3ButlerBroker(ButlerBroker):
+    """Processes files on behalf of a Gen3 Butler.
 
     Parameters
     ----------
@@ -89,9 +89,10 @@ class Gen3ButlerIngester(ButlerIngester):
         """
         return "gen3"
 
-    async def run_task(self):
+    async def clean_task(self):
         """run the clean() method at the configured interval
         """
+        print("gen3ButlerBroker: clean_task")
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
             self.clean()
@@ -104,6 +105,7 @@ class Gen3ButlerIngester(ButlerIngester):
 
         # calculate the time value which is Time.now - the
         # "olderThan" configuration
+        print("gen3ButlerBroker: clean")
         t = Time.now()
         interval = collections.namedtuple("Interval", self.olderThan.keys())(*self.olderThan.values())
         td = TimeDelta(interval.days*u.d + interval.hours * u.h +

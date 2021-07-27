@@ -12,8 +12,8 @@ ingester:
     butlers:
         - butler:
             class:
-                import : lsst.ctrl.oods.gen2ButlerIngester
-                name : Gen2ButlerIngester
+                import : lsst.ctrl.oods.gen2ButlerBroker
+                name : Gen2ButlerBroker
             stagingDirectory: /tmp/staging
             repoDirectory : /tmp/repo
             badFileDirectory: /tmp/bad

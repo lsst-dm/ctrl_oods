@@ -12,8 +12,8 @@ ingester:
     butlers:
         - butler:
             class:
-                import : lsst.ctrl.oods.gen2ButlerIngester
-                name : Gen2ButlerIngester
+                import : lsst.ctrl.oods.gen2ButlerBroker
+                name : Gen2ButlerBroker
             stagingDirectory : staging
             repoDirectory : repo
             badFileDirectory: bad
@@ -22,8 +22,8 @@ ingester:
                 - FARG/raw/all
             instrument: lsst.obs.lsst.LsstComCam
             class:
-                import : lsst.ctrl.oods.gen3ButlerIngester
-                name : Gen3ButlerIngester
+                import : lsst.ctrl.oods.gen3ButlerBroker
+                name : Gen3ButlerBroker
             stagingDirectory : staging2
             repoDirectory : repo2
             badFileDirectory: bad2

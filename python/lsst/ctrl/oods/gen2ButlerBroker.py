@@ -20,12 +20,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
-from lsst.ctrl.oods.butlerIngester import ButlerIngester
+from lsst.ctrl.oods.butlerBroker import ButlerBroker
 from lsst.pipe.tasks.ingest import IngestTask
 
 
-class Gen2ButlerIngester(ButlerIngester):
-    """Processes files for ingestion into a Gen2 Butler.
+class Gen2ButlerBroker(ButlerBroker):
+    """Processes files on behalf of a Gen2 Butler.
 
     Parameters
     ----------
@@ -56,7 +56,7 @@ class Gen2ButlerIngester(ButlerIngester):
         """
         return "gen2"
 
-    async def run_task(self):
+    async def cleaner_task(self):
         """Run task that require periodical attention
         """
         while True:

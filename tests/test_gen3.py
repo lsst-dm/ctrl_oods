@@ -152,11 +152,11 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
         ingester = FileIngester(ingesterConfig)
-        butler_tasks = ingester.getButlerTasks()
+        clean_tasks = ingester.getButlerCleanTasks()
 
         task_list = []
-        for butler_task in butler_tasks:
-            task = asyncio.create_task(butler_task())
+        for clean_task in clean_tasks:
+            task = asyncio.create_task(clean_task())
             task_list.append(task)
 
         # check to see that the file is there before ingestion

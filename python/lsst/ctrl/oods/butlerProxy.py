@@ -88,10 +88,10 @@ class ButlerProxy(object):
         """
         return self.bad_file_dir
 
-    async def run_task(self):
+    async def clean_task(self):
         """Run and await the async task code for this butler
         """
-        await self.butlerInstance.run_task()
+        await self.butlerInstance.clean_task()
 
     def clean(self):
         """Execute the clean() method for this butler

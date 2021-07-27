@@ -22,7 +22,7 @@
 import asyncio
 import logging
 import os
-from lsst.ctrl.oods.fileHandler import FileHandler
+from lsst.ctrl.oods.fileQueue import FileQueue
 
 LOGGER = logging.getLogger(__name__)
 

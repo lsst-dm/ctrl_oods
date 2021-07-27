@@ -75,7 +75,7 @@ class FileIngester(object):
     def getStagingDirectory(self):
         return self.forwarder_staging_dir
 
-    def getButlerTasks(self):
+    def getButlerCleanTasks(self):
         """Get a list of all butler run_task methods
 
         Returns
@@ -85,7 +85,7 @@ class FileIngester(object):
         """
         tasks = []
         for butler in self.butlers:
-            tasks.append(butler.run_task)
+            tasks.append(butler.clean_task)
         return tasks
 
     async def start_comm(self):
