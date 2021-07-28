@@ -27,7 +27,7 @@ import os.path
 from pathlib import PurePath
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.imageFile import ImageFile
-from lsst.ctrl.oods.directoryScanner import DirectoryScanner
+from lsst.ctrl.oods.fileQueue import FileQueue
 from lsst.dm.csc.base.publisher import Publisher
 
 LOGGER = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ class FileIngester(object):
 
         self.forwarder_staging_dir = config["forwarderStagingDirectory"]
 
-        self.scanner = DirectoryScanner([self.forwarder_staging_dir])
+        self.fileQueue = FileQueue(self.forwarder_staging_dir)
 
         if 'baseBrokerAddr' in config:
             self.base_broker_url = config["baseBrokerAddr"]
@@ -337,8 +337,12 @@ class FileIngester(object):
         """Keep this object alive
         """
         # wait, to keep the object alive
-        asyncio.create_task(self.handler.queue_files())
-        asyncio.create_task(self.dequeue_files(self.handler.dequeue_file))
+        asyncio.create_task(self.fileQueue.queue_files())
+        asyncio.create_task(self.dequeue_files(self.fileQueue.dequeue_file))
+
+        tasks = self.getButlerCleanTasks()
+        for task in tasks:
+            asyncio.create_task(task())
 
         while True:
             await asyncio.sleep(60)
