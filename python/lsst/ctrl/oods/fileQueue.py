@@ -42,7 +42,7 @@ class FileQueue(object):
         self.note = notify.Notify()
         self.dir_path = dir_path
 
-        self.note.addWatch(self.dir_path, inotifyEvent.IN_CLOSE_WRITE)
+        self.note.addWatch(self.dir_path, inotifyEvent.IN_CREATE)  # symlink detection
         self.queue = asyncio.Queue()
 
     async def queue_files(self):
