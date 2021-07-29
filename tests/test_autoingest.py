@@ -29,6 +29,7 @@ from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 import lsst.utils.tests
 import asynctest
+import utils
 
 
 class AutoIngestTestCase(asynctest.TestCase):
@@ -69,27 +70,32 @@ class AutoIngestTestCase(asynctest.TestCase):
         # at the temporary directories created for his test
 
         ingesterConfig = config["ingester"]
-        self.forwarderStagingDir = tempfile.mkdtemp()
-        ingesterConfig["forwarderStagingDirectory"] = self.forwarderStagingDir
-        print(f"forwarderStagingDirectory = {self.forwarderStagingDir}")
+        self.forwarderDir = tempfile.mkdtemp()
+        ingesterConfig["forwarderStagingDirectory"] = self.forwarderDir
 
         self.badDir = tempfile.mkdtemp()
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
         butlerConfig["badFileDirectory"] = self.badDir
-        self.stagingDirectory = tempfile.mkdtemp()
-        butlerConfig["stagingDirectory"] = self.stagingDirectory
-        print(f"stagingDirectory = {self.stagingDirectory}")
+        self.stagingDir = tempfile.mkdtemp()
+        butlerConfig["stagingDirectory"] = self.stagingDir
 
-        repoDir = tempfile.mkdtemp()
-        butlerConfig["repoDirectory"] = repoDir
+        self.repoDir = tempfile.mkdtemp()
+        butlerConfig["repoDirectory"] = self.repoDir
 
         # copy the FITS file to it's test location
 
-        subDir = tempfile.mkdtemp(dir=self.forwarderStagingDir)
-        self.destFile = os.path.join(subDir, fits_name)
+        self.subDir = tempfile.mkdtemp(dir=self.forwarderDir)
+        self.destFile = os.path.join(self.subDir, fits_name)
         copyfile(fitsFile, self.destFile)
 
         return config
+
+    def tearDown(self):
+        utils.removeEntries(self.forwarderDir)
+        utils.removeEntries(self.badDir)
+        utils.removeEntries(self.stagingDir)
+        utils.removeEntries(self.repoDir)
+        utils.removeEntries(self.subDir)
 
     def strip_prefix(self, name, prefix):
         """strip prefix from name
@@ -174,8 +180,8 @@ class AutoIngestTestCase(asynctest.TestCase):
         # moved to the OODS staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = self.strip_prefix(self.destFile, self.forwarderStagingDir)
-        file_to_ingest = os.path.join(self.stagingDirectory, name)
+        name = self.strip_prefix(self.destFile, self.forwarderDir)
+        file_to_ingest = os.path.join(self.stagingDir, name)
         self.assertTrue(os.path.exists(file_to_ingest))
 
         # this file should now not exist

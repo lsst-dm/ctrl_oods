@@ -29,26 +29,44 @@ from lsst.ctrl.oods.fileQueue import FileQueue
 class FileQueueTestCase(asynctest.TestCase):
     """Test FileQueue object"""
 
-    async def testFileQueue(self):
-        tmp_dir = tempfile.mkdtemp()
-        fd, tmp_file = tempfile.mkstemp()
-        with open(tmp_file, 'w') as f:
+    def setUp(self):
+
+        self.tmp_dir = tempfile.mkdtemp()
+        fd, self.tmp_file = tempfile.mkstemp()
+        with open(self.tmp_file, 'w') as f:
             f.write("filequeue test")
         os.close(fd)
 
-        print(f"tmp_dir = {tmp_dir}")
-        print(f"tmp_file = {tmp_file}")
+    def tearDown(self):
+        os.unlink(self.tmp_file)
+        os.rmdir(self.tmp_dir)
 
-        fileq = FileQueue(tmp_dir)
-
-        self.assertTrue(os.path.exists(tmp_file))
-        self.assertTrue(os.path.exists(tmp_dir))
-        os.link(tmp_file, os.path.join(tmp_dir, os.path.basename(tmp_file)))
+    async def testFileQueue(self):
+        fileq = FileQueue(self.tmp_dir)
 
         queue_task = asyncio.create_task(fileq.queue_files())
 
+        await asyncio.sleep(1)
+
+        os.link(self.tmp_file, os.path.join(self.tmp_dir, os.path.basename(self.tmp_file)))
+
         ret_file = await fileq.dequeue_file()
 
-        self.assertEqual(os.path.basename(tmp_file), os.path.basename(ret_file))
+        self.assertEqual(os.path.basename(self.tmp_file), os.path.basename(ret_file))
+        os.unlink(ret_file)
+
+        queue_task.cancel()
+
+    async def testFileQueue2(self):
+        fileq = FileQueue(self.tmp_dir)
+
+        queue_task = asyncio.create_task(fileq.queue_files())
+
+        os.link(self.tmp_file, os.path.join(self.tmp_dir, os.path.basename(self.tmp_file)))
+
+        ret_file = await fileq.dequeue_file()
+
+        self.assertEqual(os.path.basename(self.tmp_file), os.path.basename(ret_file))
+        os.unlink(ret_file)
 
         queue_task.cancel()

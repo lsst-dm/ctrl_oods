@@ -27,6 +27,7 @@ from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 import lsst.utils.tests
 import asynctest
+import utils
 
 
 class Gen2TestCase(asynctest.TestCase):
@@ -56,8 +57,8 @@ class Gen2TestCase(asynctest.TestCase):
         self.repoDir = tempfile.mkdtemp()
         butlerConfig["repoDirectory"] = self.repoDir
 
-        subDir = tempfile.mkdtemp(dir=self.forwarderStagingDirectory)
-        self.destFile = os.path.join(subDir, fits_name)
+        self.subDir = tempfile.mkdtemp(dir=self.forwarderStagingDirectory)
+        self.destFile = os.path.join(self.subDir, fits_name)
         copyfile(fitsFile, self.destFile)
 
         mapperFileName = os.path.join(self.repoDir, "_mapper")
@@ -65,6 +66,13 @@ class Gen2TestCase(asynctest.TestCase):
             mapper_file.write(mapper)
 
         return config
+
+    def tearDown(self):
+        utils.removeEntries(self.forwarderStagingDirectory)
+        utils.removeEntries(self.badDir)
+        utils.removeEntries(self.stagingRootDir)
+        utils.removeEntries(self.repoDir)
+        utils.removeEntries(self.subDir)
 
     def strip_prefix(self, name, prefix):
         p = PurePath(name)

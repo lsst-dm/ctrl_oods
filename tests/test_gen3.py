@@ -29,6 +29,7 @@ from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 import lsst.utils.tests
 import asynctest
+import utils
 
 
 class Gen3ComCamIngesterTestCase(asynctest.TestCase):
@@ -80,16 +81,38 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         butlerConfig["stagingDirectory"] = self.stagingDirectory
         print(f"stagingDirectory = {self.stagingDirectory}")
 
-        repoDir = tempfile.mkdtemp()
-        butlerConfig["repoDirectory"] = repoDir
+        self.repoDir = tempfile.mkdtemp()
+        butlerConfig["repoDirectory"] = self.repoDir
 
         # copy the FITS file to it's test location
 
-        subDir = tempfile.mkdtemp(dir=self.forwarderStagingDir)
-        self.destFile = os.path.join(subDir, fits_name)
+        self.subDir = tempfile.mkdtemp(dir=self.forwarderStagingDir)
+        self.destFile = os.path.join(self.subDir, fits_name)
         copyfile(fitsFile, self.destFile)
 
         return config
+
+    def removeEntries(self, directory):
+        if os.path.exists(directory) is False:
+            return
+        if os.path.isdir(directory) is False:
+            os.unlink(directory)
+            return
+        with os.scandir(directory) as entries:
+            for ent in entries:
+                if os.path.isdir(ent):
+                    self.removeEntries(ent)
+                else:
+                    os.remove(ent)
+        os.rmdir(directory)
+
+    def tearDown(self):
+        utils.removeEntries(self.destFile)
+        utils.removeEntries(self.forwarderStagingDir)
+        utils.removeEntries(self.badDir)
+        utils.removeEntries(self.stagingDirectory)
+        utils.removeEntries(self.repoDir)
+        utils.removeEntries(self.subDir)
 
     def strip_prefix(self, name, prefix):
         """strip prefix from name

@@ -26,12 +26,14 @@ from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 import lsst.utils.tests
 import asynctest
+import utils
 
 
 class MultiComCamIngesterTestCase(asynctest.TestCase):
     """Test Scanning directory"""
 
     def createConfig(self, config_name, fits_name):
+        self.multi_dirs = []
         testdir = os.path.abspath(os.path.dirname(__file__))
         configFile = os.path.join(testdir, "etc", config_name)
 
@@ -41,30 +43,41 @@ class MultiComCamIngesterTestCase(asynctest.TestCase):
             config = yaml.safe_load(f)
 
         ingesterConfig = config["ingester"]
-        dataDir = tempfile.mkdtemp()
-        ingesterConfig["forwarderStagingDirectory"] = dataDir
+        self.dataDir = tempfile.mkdtemp()
+        ingesterConfig["forwarderStagingDirectory"] = self.dataDir
 
         for x in ingesterConfig["butlers"]:
             butlerConfig = x["butler"]
 
-            butlerConfig["badFileDirectory"] = tempfile.mkdtemp()
+            self.badDir = tempfile.mkdtemp()
+            butlerConfig["badFileDirectory"] = self.badDir
 
-            butlerConfig["stagingDirectory"] = tempfile.mkdtemp()
+            self.stagingRootDir = tempfile.mkdtemp()
+            butlerConfig["stagingDirectory"] = self.stagingRootDir
 
-            repoDir = tempfile.mkdtemp()
+            self.repoDir = tempfile.mkdtemp()
 
-            butlerConfig["repoDirectory"] = repoDir
+            butlerConfig["repoDirectory"] = self.repoDir
             if butlerConfig["class"]["import"] == "lsst.ctrl.oods.gen2ButlerBroker":
-                mapperFileName = os.path.join(repoDir, "_mapper")
+                mapperFileName = os.path.join(self.repoDir, "_mapper")
                 with open(mapperFileName, 'w') as mapper_file:
                     mapper_file.write("lsst.obs.lsst.comCam.LsstComCamMapper")
+            self.multi_dirs.append(self.badDir)
+            self.multi_dirs.append(self.stagingRootDir)
+            self.multi_dirs.append(self.repoDir)
 
-        subDir = tempfile.mkdtemp(dir=dataDir)
-        destFile = os.path.join(subDir, fits_name)
+        self.subDir = tempfile.mkdtemp(dir=self.dataDir)
+        destFile = os.path.join(self.subDir, fits_name)
 
         copyfile(fitsFile, destFile)
 
         return config, destFile
+
+    def tearDown(self):
+        utils.removeEntries(self.dataDir)
+        utils.removeEntries(self.subDir)
+        for md in self.multi_dirs:
+            utils.removeEntries(md)
 
     async def testComCamIngest(self):
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
