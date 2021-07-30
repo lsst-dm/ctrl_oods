@@ -343,7 +343,7 @@ class FileIngester(object):
         task = asyncio.create_task(self.fileQueue.queue_files())
         task_list.append(task)
 
-        task = asyncio.create_task(self.dequeue_and_ingest_files(self.fileQueue.dequeue_file))
+        task = asyncio.create_task(self.dequeue_and_ingest_files())
         task_list.append(task)
 
         cleanTasks = self.getButlerCleanTasks()
@@ -353,9 +353,7 @@ class FileIngester(object):
 
         return task_list
 
-    async def dequeue_and_ingest_files(self, method):
+    async def dequeue_and_ingest_files(self):
         while True:
-            print("waiting to dequeue a file")
-            filename = await method()
-            print(f"file dequeued: {filename}")
+            filename = await self.fileQueue.dequeue_file()
             await self.ingest(filename)

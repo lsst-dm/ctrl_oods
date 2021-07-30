@@ -121,7 +121,7 @@ class AsyncIngestTestCase(asynctest.TestCase):
     async def testAsyncIngest(self):
         """test ingesting an auxtel file using all the async tasks
         """
-        fits_name = "AT_O_20210728_000025-R00S00.fits"
+        fits_name = "2020032700020-det000.fits.fz"
         config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
 
         # setup directory to scan for files in the forwarder staging directory
@@ -149,7 +149,7 @@ class AsyncIngestTestCase(asynctest.TestCase):
         bad_path = os.path.join(self.badDir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
-        # check to be sure the file ended up landing in the butler "staging" directory
+        # check to be sure file ended up landing in butler "staging" directory
         staging_sub_dir = self.strip_prefix(self.subDir, forwarder_staging_dir)
         stage_path = os.path.join(self.stagingDirectory, staging_sub_dir, fits_name)
 
