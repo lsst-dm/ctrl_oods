@@ -67,6 +67,8 @@ class FileIngester(object):
             butler = ButlerProxy(butlerConfig["butler"])
             self.butlers.append(butler)
 
+        self.tasks = []
+
         self.PUBLISH_QUEUE = config['PUBLISH_QUEUE']
 
         if self.base_broker_url is not None:
@@ -336,25 +338,24 @@ class FileIngester(object):
     async def run_task(self):
         """Keep this object alive
         """
-        # wait, to keep the object alive
-        asyncio.create_task(self.fileQueue.queue_files())
-        asyncio.create_task(self.dequeue_files(self.fileQueue.dequeue_file))
+        task_list = []
 
-        tasks = self.getButlerCleanTasks()
-        for task in tasks:
-            asyncio.create_task(task())
+        task = asyncio.create_task(self.fileQueue.queue_files())
+        task_list.append(task)
 
+        task = asyncio.create_task(self.dequeue_and_ingest_files(self.fileQueue.dequeue_file))
+        task_list.append(task)
+
+        cleanTasks = self.getButlerCleanTasks()
+        for cleanTask in cleanTasks:
+            task = asyncio.create_task(cleanTask())
+            task_list.append(task)
+
+        return task_list
+
+    async def dequeue_and_ingest_files(self, method):
         while True:
-            await asyncio.sleep(60)
-
-    def clean(self):
-        """Call the clean method of all butler proxies
-        """
-        for butlerProxy in self.butlers:
-            butlerProxy.clean()
-
-    async def dequeue_files(self, method):
-        while True:
+            print("waiting to dequeue a file")
             filename = await method()
-
-            self.ingest(filename)
+            print(f"file dequeued: {filename}")
+            await self.ingest(filename)

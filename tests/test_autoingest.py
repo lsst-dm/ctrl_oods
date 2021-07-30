@@ -135,7 +135,7 @@ class AutoIngestTestCase(asynctest.TestCase):
 
         await ingester.ingest(self.destFile)
 
-        # check to make sure the file was moved from the staging directory
+        # check to make sure file was moved from forwarder staging directory
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
@@ -171,13 +171,13 @@ class AutoIngestTestCase(asynctest.TestCase):
 
         await ingester.ingest(self.destFile)
 
-        # make sure staging area is now empty
+        # make sure forwarder staging area is now empty
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         # Check to see that the file was ingested.
-        # Recall that files start in teh forwarder staging area, and are
-        # moved to the OODS staging area before ingestion. On "direct"
+        # Recall that files start in the forwarder staging area, and are
+        # moved to the butler staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
         name = self.strip_prefix(self.destFile, self.forwarderDir)

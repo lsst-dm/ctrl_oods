@@ -92,20 +92,6 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         return config
 
-    def removeEntries(self, directory):
-        if os.path.exists(directory) is False:
-            return
-        if os.path.isdir(directory) is False:
-            os.unlink(directory)
-            return
-        with os.scandir(directory) as entries:
-            for ent in entries:
-                if os.path.isdir(ent):
-                    self.removeEntries(ent)
-                else:
-                    os.remove(ent)
-        os.rmdir(directory)
-
     def tearDown(self):
         utils.removeEntries(self.destFile)
         utils.removeEntries(self.forwarderStagingDir)
@@ -208,7 +194,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         # throwing an acception
         task_list.append(asyncio.create_task(self.interrupt_me()))
 
-        # kick off all the tasks, until one (the "interrupt_me" task)
+        # gather all the tasks, until one (the "interrupt_me" task)
         # throws an exception
         try:
             await asyncio.gather(*task_list)

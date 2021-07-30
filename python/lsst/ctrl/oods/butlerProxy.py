@@ -58,16 +58,6 @@ class ButlerProxy(object):
         """
         return self.butlerInstance
 
-    def getRepoDirectory(self):
-        """Return the path of the repository directory
-
-        Returns
-        -------
-        repo_dir: `str`
-            the repository directory
-        """
-        return self.repo_dir
-
     def getStagingDirectory(self):
         """Return the path of the staging directory
 
@@ -92,8 +82,3 @@ class ButlerProxy(object):
         """Run and await the async task code for this butler
         """
         await self.butlerInstance.clean_task()
-
-    def clean(self):
-        """Execute the clean() method for this butler
-        """
-        self.butlerInstance.clean()
