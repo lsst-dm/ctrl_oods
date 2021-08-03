@@ -57,7 +57,7 @@ class FileQueueTestCase(asynctest.TestCase):
 
         queue_task.cancel()
 
-    async def testFileQueue2(self):
+    async def testNoSleepFileQueue(self):
         fileq = FileQueue(self.tmp_dir)
 
         queue_task = asyncio.create_task(fileq.queue_files())

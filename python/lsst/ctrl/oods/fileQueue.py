@@ -22,8 +22,6 @@
 import asyncio
 import logging
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
-import lsst.ctrl.notify.notify as notify
-import lsst.ctrl.notify.inotifyEvent as inotifyEvent
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,11 +36,10 @@ class FileQueue(object):
         A file directory to watch
     """
 
-    def __init__(self, dir_path):
-        self.note = notify.Notify()
+    def __init__(self, dir_path, scanInterval=1):
         self.dir_path = dir_path
+        self.scanInterval = scanInterval
 
-        self.note.addWatch(self.dir_path, inotifyEvent.IN_CREATE)  # symlink detection
         self.queue = asyncio.Queue()
 
     async def queue_files(self):
@@ -51,39 +48,13 @@ class FileQueue(object):
         """
         # scan for all files currently in this directory
         scanner = DirectoryScanner([self.dir_path])
-        all_files = scanner.getAllFiles()
-
-        # There's a race condition, in which a file
-        # (or files) could be added to the directory,
-        # be picked up by DirectoryScanner before
-        # before notify object could be read, resulting
-        # in a duplicate file. To prevent that, the Notify
-        # object is read until all current events are depleted
-        # and added to the list of files to queue.
-        #
-        # Attempt to read an event.  If the file does not
-        # exist in the list, add it. Do this until we
-        # run out of events. Note that it's done this way
-        # because there's no method call to check to see
-        # if an entry already exists in the queue.
-        #
-        while True:
-            event = await self.note.readEvent(0)
-            if event is None:
-                break
-            if event.name not in all_files:
-                all_files.append(event.name)
 
         # now, add all the currently known files to the queue
-        for file in all_files:
-            await self.queue.put(file)
-
-        # continously read events, blocking until we
-        # get one, and add the file to the queue.
         while True:
-            event = await self.note.readEvent()
-            if event is not None:
-                await self.queue.put(event.name)
+            all_files = scanner.getAllFiles()
+            for filename in all_files:
+                await self.queue.put(filename)
+            await asyncio.sleep(self.scanInterval)
 
     async def dequeue_file(self):
         filename = await self.queue.get()
