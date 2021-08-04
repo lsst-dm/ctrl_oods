@@ -37,12 +37,14 @@ class Gen2ButlerBroker(ButlerBroker):
     butlerConfig: `dict`
         dictionary containing butler configuration information
     """
-    def __init__(self, butlerConfig):
+    def __init__(self, butlerConfig, publisher, publisher_queue):
         self.repo_dir = butlerConfig["repoDirectory"]
         self.task = IngestTask.prepareTask(self.repo_dir)
 
         self.staging_dir = butlerConfig["stagingDirectory"]
         self.bad_file_dir = butlerConfig["badFileDirectory"]
+        self.publisher = publisher
+        self.publisher_queue = publisher_queue
 
     def ingest(self, file_list):
         """Ingest a list of files into a butler

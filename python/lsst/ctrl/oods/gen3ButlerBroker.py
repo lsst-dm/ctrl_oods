@@ -25,6 +25,7 @@ import logging
 import shutil
 from lsst.ctrl.oods.butlerBroker import ButlerBroker
 from lsst.ctrl.oods.timeInterval import TimeInterval
+from lsst.ctrl.oods.imageFile import ImageFile
 from lsst.daf.butler import Butler
 from lsst.obs.base.ingest import RawIngestTask, RawIngestConfig
 from lsst.obs.base.utils import getInstrument
@@ -43,8 +44,11 @@ class Gen3ButlerBroker(ButlerBroker):
     config: `dict`
         configuration of this butler ingester
     """
-    def __init__(self, config):
+    def __init__(self, config, publisher, publisher_queue):
         self.config = config
+        self.publisher = publisher
+        self.publisher_queue = publisher_queue
+
         repo = self.config["repoDirectory"]
         instrument = self.config["instrument"]
         self.scanInterval = self.config["scanInterval"]
@@ -79,23 +83,51 @@ class Gen3ButlerBroker(ButlerBroker):
                                   on_ingest_failure=self.on_ingest_failure,
                                   on_metadata_failure=self.on_metadata_failure)
 
+    def transmitStatus(self, filename, code, description):
+        if self.publisher is None:
+            return
+        image_file = ImageFile(filename)
+        msg = dict()
+        msg['ARCHIVER'] = image_file.archiver
+        msg['CAMERA'] = image_file.camera
+        msg['FILENAME'] = image_file.filename
+        msg['OBSID'] = image_file.obsid
+        msg['RAFT'] = image_file.raft
+        msg['SENSOR'] = image_file.sensor
+        msg['MSG_TYPE'] = 'IMAGE_IN_OODS'
+        msg['STATUS_CODE'] = code
+        msg['DESCRIPTION'] = description
+
+        LOGGER.info(f"WOULD SEND: Sending message: {msg}")
+        # task = asyncio.create_task(
+        # self.publisher.publish_message(self.publisher_queue, msg))
+
     def on_success(self, datasets):
-        print(f"on success called")
         # datasets is a list of lsst.daf.butler.core.fileDataset.FileDataset
-        # dataset is a list of lsst.daf.butler.core._butlerUri.file.ButlerFileURI
+        # dataset is a lsst.daf.butler.core._butlerUri.file.ButlerFileURI
         for dataset in datasets:
-            print(f"dataset: type= {type(dataset.path)} path= {dataset.path.ospath}")
+            LOGGER.info(f"{dataset.path.ospath} file ingested")
+            self.transmit_status(dataset.path.ospath, code=0, description="file ingested")
 
     def on_ingest_failure(self, datasets, exc):
-        print("on_ingest_failure called")
-        self.move_to_bad_dir(datasets.path)
+        self.move_to_bad_dir(datasets)
+        for dataset in datasets:
+            LOGGER.info(f"{dataset.path.ospath} ingest failure")
+            cause = self.extract_cause(exc)
+            self.transmit_status(dataset.path.ospath, code=1, description=f"ingest failure: {cause}")
 
     def on_metadata_failure(self, datasets, exc):
-        print("on_metadata_failure called")
-        self.move_to_bad_dir(datasets.path)
-        print("moved {datasets.path} to bad dir")
+        self.move_to_bad_dir(datasets)
+        for dataset in datasets:
+            LOGGER.info(f"{dataset.path.ospath} metadata failure")
+            cause = self.extract_cause(exc)
+            self.transmit_status(dataset.path.ospath, code=2, description=f"metadata failure: {cause}")
 
-    def move_to_bad_dir(self, filename):
+    def move_to_bad_dir(self, datasets):
+        for dataset in datasets:
+            self.move_file_to_bad_dir(dataset.path.ospath)
+
+    def move_file_to_bad_dir(self, filename):
         bad_dir = self.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
         try:
             shutil.move(filename, bad_dir)
