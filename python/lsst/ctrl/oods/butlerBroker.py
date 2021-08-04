@@ -20,6 +20,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
+import os
+import os.path
+from pathlib import PurePath
 from abc import ABC, abstractmethod
 
 
@@ -27,14 +30,17 @@ class ButlerBroker(ABC):
     """Interface class for processing files for a butler.
     """
 
+    SUCCESS = 0
+    FAILURE = 1
+
     @abstractmethod
-    def ingest(self, filename):
+    def ingest(self, file_list):
         """Placeholder to ingest a file
 
         Parameters
         ----------
-        filename: `str`
-            file name to ingest
+        file_list: `list`
+            list of files to ingest
         """
         raise NotImplementedError()
 
@@ -58,3 +64,72 @@ class ButlerBroker(ABC):
         """Perform a cleaning pass for this ingester; override if necessary
         """
         pass
+
+    def strip_prefix(self, pathname, prefix):
+        """Strip the prefix of the path
+
+        Parameters
+        ----------
+        pathname: `str`
+            Path name
+        prefix: `str`
+            Prefix to strip from pathname
+
+        Returns
+        -------
+        ret: `str`
+            The remaining path
+        """
+        p = PurePath(pathname)
+        ret = str(p.relative_to(prefix))
+        return ret
+
+    def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
+        """Create a full path to a directory contained in the
+        'bad directory' heirarchy; this retains the subdirectory structure
+        created where the file was staged, where the uningestable file will
+        be placed.
+
+        Parameters
+        ----------
+        bad_dir_root: `str`
+            Root of the bad directory heirarchy
+        staging_dir_root: `str`
+            Root of the bad directory heirarchy
+        original: `str`
+            Original directory location
+
+        Returns
+        -------
+        newdir: `str`
+            new directory name
+        """
+        # strip the original directory location, except for the date
+        newfile = self.strip_prefix(original, staging_dir_root)
+
+        # split into subdir and filename
+        head, tail = os.path.split(newfile)
+
+        # create subdirectory path name for directory with date
+        newdir = os.path.join(bad_dir_root, head)
+
+        # create the directory, and hand the name back
+        os.makedirs(newdir, exist_ok=True)
+
+        return newdir
+
+    def extract_cause(self, e):
+        """extract the cause of an exception
+
+        Returns
+        -------
+        s: `str`
+            A string containing the cause of an exception
+        """
+        if e.__cause__ is None:
+            return None
+        cause = self.extract_cause(e.__cause__)
+        if cause is None:
+            return f"{str(e.__cause__)}"
+        else:
+            return f"{str(e.__cause__)};  {cause}"

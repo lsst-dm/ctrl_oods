@@ -50,7 +50,9 @@ class FileQueueTestCase(asynctest.TestCase):
 
         os.link(self.tmp_file, os.path.join(self.tmp_dir, os.path.basename(self.tmp_file)))
 
-        ret_file = await fileq.dequeue_file()
+        file_list = await fileq.dequeue_files()
+        self.assertEqual(len(file_list), 1)
+        ret_file = file_list[0]
 
         self.assertEqual(os.path.basename(self.tmp_file), os.path.basename(ret_file))
         os.unlink(ret_file)
@@ -64,7 +66,9 @@ class FileQueueTestCase(asynctest.TestCase):
 
         os.link(self.tmp_file, os.path.join(self.tmp_dir, os.path.basename(self.tmp_file)))
 
-        ret_file = await fileq.dequeue_file()
+        file_list = await fileq.dequeue_files()
+        self.assertEqual(len(file_list), 1)
+        ret_file = file_list[0]
 
         self.assertEqual(os.path.basename(self.tmp_file), os.path.basename(ret_file))
         os.unlink(ret_file)

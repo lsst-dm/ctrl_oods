@@ -51,12 +51,12 @@ class FileQueue(object):
 
         # now, add all the currently known files to the queue
         while True:
-            all_files = scanner.getAllFiles()
-            for filename in all_files:
-                await self.queue.put(filename)
+            file_list = scanner.getAllFiles()
+            if len(file_list) != 0:
+                await self.queue.put(file_list)
             await asyncio.sleep(self.scanInterval)
 
-    async def dequeue_file(self):
-        filename = await self.queue.get()
+    async def dequeue_files(self):
+        file_list = await self.queue.get()
         self.queue.task_done()
-        return filename
+        return file_list

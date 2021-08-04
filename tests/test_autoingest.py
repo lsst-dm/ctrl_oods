@@ -133,7 +133,7 @@ class AutoIngestTestCase(asynctest.TestCase):
         # create a FileIngester
         ingester = FileIngester(ingesterConfig)
 
-        await ingester.ingest(self.destFile)
+        await ingester.ingest([self.destFile])
 
         # check to make sure file was moved from forwarder staging directory
         files = scanner.getAllFiles()
@@ -169,7 +169,7 @@ class AutoIngestTestCase(asynctest.TestCase):
         self.assertTrue(os.path.exists(self.destFile))
         print(f"destFile = {self.destFile}")
 
-        await ingester.ingest(self.destFile)
+        await ingester.ingest([self.destFile])
 
         # make sure forwarder staging area is now empty
         files = scanner.getAllFiles()
@@ -225,7 +225,7 @@ class AutoIngestTestCase(asynctest.TestCase):
 
         ingester = FileIngester(config["ingester"])
 
-        await ingester.ingest(self.destFile)
+        await ingester.ingest([self.destFile])
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)

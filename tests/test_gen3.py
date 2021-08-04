@@ -119,7 +119,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         ret = str(p.relative_to(prefix))
         return ret
 
-    async def testAuxTelIngest(self):
+    async def _testAuxTelIngest(self):
         """test ingesting an auxtel file
         """
         fits_name = "2020032700020-det000.fits.fz"
@@ -136,7 +136,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         # create a FileIngester
         ingester = FileIngester(ingesterConfig)
 
-        await ingester.ingest(self.destFile)
+        await ingester.ingest([self.destFile])
 
         # check to make sure the file was moved from the staging directory
         files = scanner.getAllFiles()
@@ -172,7 +172,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         self.assertTrue(os.path.exists(self.destFile))
         print(f"destFile = {self.destFile}")
 
-        await ingester.ingest(self.destFile)
+        await ingester.ingest([self.destFile])
 
         # make sure staging area is now empty
         files = scanner.getAllFiles()
@@ -215,7 +215,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         bad_path = os.path.join(self.badDir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
-    async def testBadIngest(self):
+    async def _testBadIngest(self):
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
@@ -228,7 +228,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         ingester = FileIngester(config["ingester"])
 
-        await ingester.ingest(self.destFile)
+        await ingester.ingest([self.destFile])
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
@@ -237,7 +237,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         bad_path = os.path.join(self.badDir, name)
         self.assertTrue(os.path.exists(bad_path))
 
-    async def testRepoExists(self):
+    async def _testRepoExists(self):
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 

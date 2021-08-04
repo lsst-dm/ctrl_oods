@@ -79,7 +79,7 @@ class Gen2TestCase(asynctest.TestCase):
         ret = str(p.relative_to(prefix))
         return ret
 
-    async def testATIngest(self):
+    async def _testATIngest(self):
         fits_name = "2020032700020-det000.fits.fz"
         config = self.createConfig("ingest_gen2.yaml", fits_name, "lsst.obs.lsst.latiss.LatissMapper")
 
@@ -91,7 +91,7 @@ class Gen2TestCase(asynctest.TestCase):
 
         ingester = FileIngester(ingesterConfig)
 
-        await ingester.ingest(self.destFile)
+        await ingester.ingest([self.destFile])
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
@@ -100,7 +100,7 @@ class Gen2TestCase(asynctest.TestCase):
         bad_path = os.path.join(self.badDir, name)
         self.assertFalse(os.path.exists(bad_path))
 
-    async def testCCIngest(self):
+    async def _testCCIngest(self):
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
         config = self.createConfig("ingest_gen2.yaml", fits_name, "lsst.obs.lsst.comCam.LsstComCamMapper")
 
@@ -112,7 +112,7 @@ class Gen2TestCase(asynctest.TestCase):
 
         ingester = FileIngester(ingesterConfig)
 
-        await ingester.ingest(self.destFile)
+        await ingester.ingest([self.destFile])
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
@@ -133,7 +133,7 @@ class Gen2TestCase(asynctest.TestCase):
 
         ingester = FileIngester(ingesterConfig)
 
-        await ingester.ingest(self.destFile)
+        await ingester.ingest([self.destFile])
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)

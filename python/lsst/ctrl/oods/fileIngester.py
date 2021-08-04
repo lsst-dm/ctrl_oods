@@ -195,7 +195,14 @@ class FileIngester(object):
 
         return new_file
 
-    def stageFiles(self, filename):
+    def stageFiles(self, file_list):
+        new_file_list = []
+        for filename in file_list:
+            new_file = self.stageFile(filename)
+            new_file_list.append(new_file)
+        return new_file_list
+
+    def stageFile(self, filename):
         """ stage the files to their butler staging areas
         and remove the original file
 
@@ -208,15 +215,16 @@ class FileIngester(object):
         try:
             for butlerProxy in self.butlers:
                 local_staging_dir = butlerProxy.getStagingDirectory()
-                self.create_link_to_file(filename, local_staging_dir)
+                new_file = self.create_link_to_file(filename, local_staging_dir)
         except Exception:
             LOGGER.info(f"error staging files butler for {filename}")
-            return
+            return None
         # file has been linked to all staging areas;
         # now we unlink the original file.
         os.unlink(filename)
+        return new_file
 
-    async def ingest(self, filename):
+    async def ingest(self, file_list):
         """Attempt to perform butler ingest for all butlers
 
         Parameters
@@ -226,11 +234,42 @@ class FileIngester(object):
         """
 
         # create object containing file information
-        image_file = ImageFile(filename)
+        image_file_list = []
+        for filename in file_list:
+            image_file_list.append(ImageFile(filename))
 
         # first move the files from the Forwarder staging area
         # to the area where they're staged for the OODS.
-        self.stageFiles(filename)
+        new_file_list = self.stageFiles(file_list)
+
+        # for each butler, attempt to ingest the requested file,
+        # Success or failure is noted in a message description which
+        # is sent via RabbitMQ message back to Archiver, which will
+        # send it out via a CSC logevent.
+        description = None
+        try: 
+            for butler in self.butlers:
+                self.ingest_file(butler, image_file_list)
+        except Exception as e:
+            print("Exception thrown")
+            print(f"Exception: {e}")
+
+    async def ingest_old(self, file_list):
+        """Attempt to perform butler ingest for all butlers
+
+        Parameters
+        ----------
+        filename: `str`
+            file to ingest
+
+        # create object containing file information
+        image_file_list = []
+        for filename  in file_list:
+            image_file_list.append(ImageFile(filename))
+
+        # first move the files from the Forwarder staging area
+        # to the area where they're staged for the OODS.
+        new_file_list = self.stageFiles(file_list)
 
         # for each butler, attempt to ingest the requested file,
         # Success or failure is noted in a message description which
@@ -239,7 +278,7 @@ class FileIngester(object):
         code = self.SUCCESS
         description = None
         for butler in self.butlers:
-            (status_code, status_msg) = self.ingest_file(butler, image_file)
+            (status_code, status_msg) = self.ingest_file(butler, image_file_list)
             if status_code == self.FAILURE:
                 code = self.FAILURE
             if description is None:
@@ -265,6 +304,8 @@ class FileIngester(object):
 
             LOGGER.info(f"Sending message: {msg}")
             await self.publisher.publish_message(self.PUBLISH_QUEUE, msg)
+        """
+        pass
 
     def get_locally_staged_filename(self, butlerProxy, full_filename):
         """Construct the full path to the staging area unique to a butler Proxy
@@ -286,15 +327,15 @@ class FileIngester(object):
         locally_staged_filename = os.path.join(local_staging_dir, basefile)
         return locally_staged_filename
 
-    def ingest_file(self, butlerProxy, image):
+    def ingest_file(self, butlerProxy, image_list):
         """Ingest the file the incoming message requests
 
         Parameters
         ----------
         butlerProxy: `ButlerProxy`
             proxy for the butler
-        image: `ImageFile`
-            object that containers information about the image file
+        image_list: `list`
+            list that contains information about the image files
 
         Returns
         -------
@@ -302,38 +343,17 @@ class FileIngester(object):
             status code and message to send about what happened
         """
 
+        file_list = []
         # get the locally staged file name
-
-        filename = self.get_locally_staged_filename(butlerProxy, os.path.realpath(image.filename))
+        for image in image_list:
+            filename = self.get_locally_staged_filename(butlerProxy, os.path.realpath(image.filename))
+            file_list.append(filename)
 
         # attempt to ingest the file;  if ingests, log that
         # if it does not ingest, move it to a "bad file" directory
         # and log that.
-        try:
-            butler = butlerProxy.getButler()
-            butler.ingest(filename)
-            LOGGER.info(f"{butler.getName()}: {image.obsid} {filename} \
-                        ingested from {image.camera} by {image.archiver}")
-        except Exception as e:
-            status_code = self.FAILURE
-            status_msg = f"{butler.getName()}: {filename} could not be ingested: {self.extract_cause(e)}"
-            LOGGER.exception(status_msg)
-            bad_dir = butlerProxy.getBadFileDirectory()
-            staging_dir = butlerProxy.getStagingDirectory()
-
-            bad_file_dir = self.create_bad_dirname(bad_dir, staging_dir, filename)
-            try:
-                LOGGER.info(f"Moving {filename} to {bad_file_dir}")
-                shutil.move(filename, bad_file_dir)
-            except Exception as fmException:
-                LOGGER.info(f"Failed to move {filename} to {bad_file_dir} {fmException}")
-
-            return (status_code, status_msg)
-
-        status_code = self.SUCCESS
-        status_msg = f"{butler.getName()}: OBSID {image.obsid} - File {filename} ingested into OODS"
-
-        return (status_code, status_msg)
+        butlerProxy.ingest(file_list)
+        print("Completed")
 
     async def run_task(self):
         """Keep this object alive
@@ -355,5 +375,5 @@ class FileIngester(object):
 
     async def dequeue_and_ingest_files(self):
         while True:
-            filename = await self.fileQueue.dequeue_file()
-            await self.ingest(filename)
+            file_list = await self.fileQueue.dequeue_files()
+            await self.ingest(file_list)
