@@ -20,6 +20,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ImageData():
@@ -27,14 +30,29 @@ class ImageData():
     extract: obs_id, raft, name_in_raft, instrument
     map to: obs_id, raft, sensor, camera, and add archiver
     """
-    def __init__(self, refs):
-        print(f"imagedata refs: {refs}")
-        for ref in refs:
-            print(f"...imagedata type = {type(ref.dataId)} ref.dataId = {ref.dataId}")
-            for x in ref.dataId:
-                print(f">>> {x} = {ref.dataId[x]}")
-            if ref.dataId.hasRecords:
-                for x in ref.dataId.records:
-                    print(f"<<< record {x} = {ref.dataId.records[x]}")
-                
-        
+    def __init__(self, dataset):
+        """Initiailize the object using DatasetRef
+        """
+        self.info = {"camera": "", "archiver": "", "raft": "", "sensor": "", "obsid": ""}
+        try:
+            self.info["filename"] = os.path.basename(dataset.path.ospath)
+        except Exception as e:
+            LOGGER.info(f"Failed to extract filename for {dataset}: {e}")
+            return
+
+        try:
+            refs = dataset.refs
+            ref = refs[0]  # TODO: eech...should be a better way to do this
+            if ref.dataId.hasRecords is False:
+                LOGGER.info(f"Failed to extract data for {dataset}; no records")
+                return
+            records = ref.dataId.records
+            self.info["camera"] = records['instrument'].name
+            self.info["raft"] = records['detector'].raft
+            self.info["sensor"] = records['detector'].name_in_raft
+            self.info["obsid"] = records['exposure'].obs_id
+        except Exception as e:
+            LOGGER.info(f"Failed to extract data for {dataset}: {e}")
+
+    def __repr__(self) -> str:
+        return str(self.info)

@@ -25,7 +25,7 @@ import logging
 import shutil
 from lsst.ctrl.oods.butlerBroker import ButlerBroker
 from lsst.ctrl.oods.timeInterval import TimeInterval
-from lsst.ctrl.oods.imageFile import ImageFile
+from lsst.ctrl.oods.imageData import ImageData
 from lsst.daf.butler import Butler
 from lsst.obs.base.ingest import RawIngestTask, RawIngestConfig
 from lsst.obs.base.utils import getInstrument
@@ -83,53 +83,59 @@ class Gen3ButlerBroker(ButlerBroker):
                                   on_ingest_failure=self.on_ingest_failure,
                                   on_metadata_failure=self.on_metadata_failure)
 
-    def transmitStatus(self, filename, code, description):
+    def undef_metadata(self, filename):
+        # note that we could attempt to get all the info we need from
+        # the file name, since as of this writing conventions are in place
+        # for regularly named files;  however, we can't guarantee that will
+        # always be the case.
+        info = dict()
+        info['FILENAME'] = filename
+        info['ARCHIVER'] = "unknown"
+        info['CAMERA'] = "unknown"
+        info['FILENAME'] = "unknown"
+        info['OBSID'] = "unknown"
+        info['RAFT'] = "unknown"
+        info['SENSOR'] = "unknown"
+        return info
+
+    def transmit_status(self, metadata, code, description):
         if self.publisher is None:
             return
-        image_file = ImageFile(filename)
-        msg = dict()
-        msg['ARCHIVER'] = image_file.archiver
-        msg['CAMERA'] = image_file.camera
-        msg['FILENAME'] = image_file.filename
-        msg['OBSID'] = image_file.obsid
-        msg['RAFT'] = image_file.raft
-        msg['SENSOR'] = image_file.sensor
+        msg = dict(metadata.info)
         msg['MSG_TYPE'] = 'IMAGE_IN_OODS'
         msg['STATUS_CODE'] = code
         msg['DESCRIPTION'] = description
-
-        LOGGER.info(f"WOULD SEND: Sending message: {msg}")
-        # task = asyncio.create_task(
-        # self.publisher.publish_message(self.publisher_queue, msg))
+        asyncio.create_task(self.publisher.publish_message(self.publisher_queue, msg))
 
     def on_success(self, datasets):
+        print("on_success")
         # datasets is a list of lsst.daf.butler.core.fileDataset.FileDataset
         # dataset is a lsst.daf.butler.core._butlerUri.file.ButlerFileURI
         for dataset in datasets:
             LOGGER.info(f"{dataset.path.ospath} file ingested")
-            self.transmit_status(dataset.path.ospath, code=0, description="file ingested")
+            image_data = ImageData(dataset)
+            self.transmit_status(image_data.info, code=0, description="file ingested")
 
-    def on_ingest_failure(self, datasets, exc):
-        self.move_to_bad_dir(datasets)
-        for dataset in datasets:
-            LOGGER.info(f"{dataset.path.ospath} ingest failure")
-            cause = self.extract_cause(exc)
-            self.transmit_status(dataset.path.ospath, code=1, description=f"ingest failure: {cause}")
+    def on_ingest_failure(self, filename, exc):
+        print("on_ingest_failure")
+        self.move_file_to_bad_dir(filename)
+        cause = self.extract_cause(exc)
+        info = self.undef_data(filename)
+        self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
 
-    def on_metadata_failure(self, datasets, exc):
-        self.move_to_bad_dir(datasets)
-        for dataset in datasets:
-            LOGGER.info(f"{dataset.path.ospath} metadata failure")
-            cause = self.extract_cause(exc)
-            self.transmit_status(dataset.path.ospath, code=2, description=f"metadata failure: {cause}")
+    def on_metadata_failure(self, filename, exc):
+        print("on_metadata_failure")
+        self.move_file_to_bad_dir(filename)
 
-    def move_to_bad_dir(self, datasets):
-        for dataset in datasets:
-            self.move_file_to_bad_dir(dataset.path.ospath)
+        cause = self.extract_cause(exc)
+        info = self.undef_data(filename)
+        self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
 
     def move_file_to_bad_dir(self, filename):
+        print("mftdr")
         bad_dir = self.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
         try:
+            print(f"mftdr: {filename} {bad_dir}")
             shutil.move(filename, bad_dir)
         except Exception as fmException:
             LOGGER.info(f"Failed to move {filename} to {self.bad_dir} {fmException}")
