@@ -4,6 +4,9 @@ defaultInterval: &interval
     minutes: 0
     seconds: 0
 
+archiver:
+    name: "ATArchiver"
+
 ingester:
     FILE_INGEST_REQUEST: AT_FILE_INGEST_REQUEST
     CONSUME_QUEUE: at_publish_to_oods

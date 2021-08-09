@@ -33,7 +33,7 @@ class ImageData():
     def __init__(self, dataset):
         """Initiailize the object using DatasetRef
         """
-        self.info = {"camera": "", "archiver": "", "raft": "", "sensor": "", "obsid": ""}
+        self.info = {"camera": "", "raft": "", "sensor": "", "obsid": ""}
         try:
             self.info["filename"] = os.path.basename(dataset.path.ospath)
         except Exception as e:
@@ -46,11 +46,18 @@ class ImageData():
             if ref.dataId.hasRecords is False:
                 LOGGER.info(f"Failed to extract data for {dataset}; no records")
                 return
+
             records = ref.dataId.records
-            self.info["camera"] = records['instrument'].name
-            self.info["raft"] = records['detector'].raft
-            self.info["sensor"] = records['detector'].name_in_raft
-            self.info["obsid"] = records['exposure'].obs_id
+
+            instrument = records['instrument'].toDict()
+            self.info["camera"] = instrument["name"]
+
+            detector = records['detector'].toDict()
+            self.info["raft"] = detector["raft"]
+            self.info["sensor"] = detector["name_in_raft"]
+
+            exposure = records['exposure'].toDict()
+            self.info["obsid"] = exposure["obs_id"]
         except Exception as e:
             LOGGER.info(f"Failed to extract data for {dataset}: {e}")
 

@@ -22,10 +22,12 @@
 import asyncio
 import collections
 import logging
+import os
 import shutil
 from lsst.ctrl.oods.butlerBroker import ButlerBroker
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.imageData import ImageData
+from lsst.ctrl.oods.archiverName import ArchiverName
 from lsst.daf.butler import Butler
 from lsst.obs.base.ingest import RawIngestTask, RawIngestConfig
 from lsst.obs.base.utils import getInstrument
@@ -45,6 +47,7 @@ class Gen3ButlerBroker(ButlerBroker):
         configuration of this butler ingester
     """
     def __init__(self, config, publisher, publisher_queue):
+        self.archiver_name = ArchiverName().archiver_name
         self.config = config
         self.publisher = publisher
         self.publisher_queue = publisher_queue
@@ -89,22 +92,22 @@ class Gen3ButlerBroker(ButlerBroker):
         # for regularly named files;  however, we can't guarantee that will
         # always be the case.
         info = dict()
-        info['FILENAME'] = filename
-        info['ARCHIVER'] = "unknown"
-        info['CAMERA'] = "unknown"
-        info['FILENAME'] = "unknown"
-        info['OBSID'] = "unknown"
-        info['RAFT'] = "unknown"
-        info['SENSOR'] = "unknown"
+        info['FILENAME'] = os.path.basename(filename)
+        info['CAMERA'] = ''
+        info['OBSID'] = ''
+        info['RAFT'] = ''
+        info['SENSOR'] = ''
         return info
 
     def transmit_status(self, metadata, code, description):
-        if self.publisher is None:
-            return
-        msg = dict(metadata.info)
+        msg = dict(metadata)
         msg['MSG_TYPE'] = 'IMAGE_IN_OODS'
+        msg['ARCHIVER'] = self.archiver_name
         msg['STATUS_CODE'] = code
         msg['DESCRIPTION'] = description
+        print(f"msg: {msg}, code: {code}, description: {description}")
+        if self.publisher is None:
+            return
         asyncio.create_task(self.publisher.publish_message(self.publisher_queue, msg))
 
     def on_success(self, datasets):
@@ -118,24 +121,24 @@ class Gen3ButlerBroker(ButlerBroker):
 
     def on_ingest_failure(self, filename, exc):
         print("on_ingest_failure")
-        self.move_file_to_bad_dir(filename)
+        real_file = filename.ospath
+        self.move_file_to_bad_dir(real_file)
         cause = self.extract_cause(exc)
-        info = self.undef_data(filename)
+        info = self.undef_metadata(real_file)
         self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
 
     def on_metadata_failure(self, filename, exc):
         print("on_metadata_failure")
-        self.move_file_to_bad_dir(filename)
+        real_file = filename.ospath
+        self.move_file_to_bad_dir(real_file)
 
         cause = self.extract_cause(exc)
-        info = self.undef_data(filename)
+        info = self.undef_metadata(real_file)
         self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
 
     def move_file_to_bad_dir(self, filename):
-        print("mftdr")
         bad_dir = self.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
         try:
-            print(f"mftdr: {filename} {bad_dir}")
             shutil.move(filename, bad_dir)
         except Exception as fmException:
             LOGGER.info(f"Failed to move {filename} to {self.bad_dir} {fmException}")
@@ -169,7 +172,6 @@ class Gen3ButlerBroker(ButlerBroker):
     async def clean_task(self):
         """run the clean() method at the configured interval
         """
-        print("gen3ButlerBroker: clean_task")
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
             self.clean()
@@ -182,7 +184,6 @@ class Gen3ButlerBroker(ButlerBroker):
 
         # calculate the time value which is Time.now - the
         # "olderThan" configuration
-        print("gen3ButlerBroker: clean")
         t = Time.now()
         interval = collections.namedtuple("Interval", self.olderThan.keys())(*self.olderThan.values())
         td = TimeDelta(interval.days*u.d + interval.hours * u.h +
