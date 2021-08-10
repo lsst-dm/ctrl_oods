@@ -87,10 +87,17 @@ class Gen3ButlerBroker(ButlerBroker):
                                   on_metadata_failure=self.on_metadata_failure)
 
     def undef_metadata(self, filename):
-        # note that we could attempt to get all the info we need from
-        # the file name, since as of this writing conventions are in place
-        # for regularly named files;  however, we can't guarantee that will
-        # always be the case.
+        """Return a sparsely initialized metadata dictionary
+        Parameters
+        ----------
+        filename: `str`
+            name of the file specified by ingest
+
+        Returns
+        -------
+        info: `dict`
+            Dictionary containing file name, and uninitialized elements
+        """
         info = dict()
         info['FILENAME'] = os.path.basename(filename)
         info['CAMERA'] = ''
@@ -100,27 +107,53 @@ class Gen3ButlerBroker(ButlerBroker):
         return info
 
     def transmit_status(self, metadata, code, description):
+        """Transmit a message with given metadata, status code and description
+
+        Parameters
+        ----------
+        metadata: `dict`
+            dictionary containing meta data about the image
+        code: `int`
+            status code
+        description: `str`
+            description of the ingestion status
+        """
         msg = dict(metadata)
         msg['MSG_TYPE'] = 'IMAGE_IN_OODS'
         msg['ARCHIVER'] = self.archiver_name
         msg['STATUS_CODE'] = code
         msg['DESCRIPTION'] = description
-        print(f"msg: {msg}, code: {code}, description: {description}")
+        LOGGER.info(f"msg: {msg}, code: {code}, description: {description}")
         if self.publisher is None:
             return
         asyncio.create_task(self.publisher.publish_message(self.publisher_queue, msg))
 
     def on_success(self, datasets):
-        print("on_success")
-        # datasets is a list of lsst.daf.butler.core.fileDataset.FileDataset
-        # dataset is a lsst.daf.butler.core._butlerUri.file.ButlerFileURI
+        """Callback used on successful ingest. Used to transmit
+        successful data ingestion status
+
+        Parameters
+        ----------
+        datasets: `list`
+            list of DatasetRefs
+        """
         for dataset in datasets:
             LOGGER.info(f"{dataset.path.ospath} file ingested")
             image_data = ImageData(dataset)
             self.transmit_status(image_data.info, code=0, description="file ingested")
 
     def on_ingest_failure(self, filename, exc):
-        print("on_ingest_failure")
+        """Callback used on ingest failure. Used to transmit
+        unsuccessful data ingestion status
+
+        Parameters
+        ----------
+        filename: `ButlerURI`
+            ButlerURI that failed in ingest
+        exc: `Exception`
+            Exception which explains what happened
+
+        """
         real_file = filename.ospath
         self.move_file_to_bad_dir(real_file)
         cause = self.extract_cause(exc)
@@ -128,7 +161,16 @@ class Gen3ButlerBroker(ButlerBroker):
         self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
 
     def on_metadata_failure(self, filename, exc):
-        print("on_metadata_failure")
+        """Callback used on metadata extraction failure. Used to transmit
+        unsuccessful data ingestion status
+
+        Parameters
+        ----------
+        filename: `ButlerURI`
+            ButlerURI that failed in ingest
+        exc: `Exception`
+            Exception which explains what happened
+        """
         real_file = filename.ospath
         self.move_file_to_bad_dir(real_file)
 

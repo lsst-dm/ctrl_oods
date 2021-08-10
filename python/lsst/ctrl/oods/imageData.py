@@ -26,9 +26,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ImageData():
-    """TODO:
-    extract: obs_id, raft, name_in_raft, instrument
-    map to: obs_id, raft, sensor, camera, and add archiver
+    """Encapsulate information extracted from an DatasetRef
     """
     def __init__(self, dataset):
         """Initiailize the object using DatasetRef
@@ -42,7 +40,7 @@ class ImageData():
 
         try:
             refs = dataset.refs
-            ref = refs[0]  # TODO: eech...should be a better way to do this
+            ref = refs[0]  # OODS only gets a single element in the list
             if ref.dataId.hasRecords is False:
                 LOGGER.info(f"Failed to extract data for {dataset}; no records")
                 return

@@ -23,6 +23,12 @@ import os
 
 
 def removeEntries(directory):
+    """Remove given directory and all entries below it
+    Parameters
+    ----------
+    dictectory: `str`
+        directory to remove
+    """
     if os.path.exists(directory) is False:
         return
     if os.path.isdir(directory) is False:
