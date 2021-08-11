@@ -19,42 +19,28 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import asyncio
-from abc import ABC, abstractmethod
+
+class Singleton(type):
+    def __init__(cls, name, bases, dic):
+        cls.__single_instance = None
+        super().__init__(name, bases, dic)
+
+    def __call__(cls, *args, **kwargs):
+        if cls.__single_instance:
+            return cls.__single_instance
+        single_obj = cls.__new__(cls)
+        single_obj.__init__(*args, **kwargs)
+        cls.__single_instance = single_obj
+        return single_obj
 
 
-class ButlerIngester(ABC):
-    """Interface class for processing files for ingestion into a butler.
+class ArchiverName(metaclass=Singleton):
+    """Singleton class to store the archiver name
     """
+    def __init__(self):
+        self.archiver_name = "unknown"
 
-    @abstractmethod
-    def ingest(self, filename):
-        """Placeholder to ingest a file
-
-        Parameters
-        ----------
-        filename: `str`
-            file name to ingest
+    def setName(self, archiver_name):
+        """Set the name of the archiver
         """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def getName(self):
-        """Get the name of this ingester
-
-        Returns
-        -------
-        ret: `str`
-            the name of this ingester
-        """
-        raise NotImplementedError()
-
-    async def run_task(self):
-        """Run task that require periodical attention
-        """
-        await asyncio.sleep(60)
-
-    def clean(self):
-        """Perform a cleaning pass for this ingester; override if necessary
-        """
-        pass
+        self.archiver_name = archiver_name

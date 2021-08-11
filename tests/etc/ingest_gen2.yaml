@@ -4,6 +4,9 @@ defaultInterval: &interval
     minutes: 0
     seconds: 0
 
+archiver:
+    name: "ATArchiver"
+
 ingester:
     FILE_INGEST_REQUEST: AT_FILE_INGEST_REQUEST
     CONSUME_QUEUE: at_publish_to_oods
@@ -12,8 +15,8 @@ ingester:
     butlers:
         - butler:
             class:
-                import : lsst.ctrl.oods.gen2ButlerIngester
-                name : Gen2ButlerIngester
+                import : lsst.ctrl.oods.gen2ButlerBroker
+                name : Gen2ButlerBroker
             stagingDirectory: /tmp/staging
             repoDirectory : /tmp/repo
             badFileDirectory: /tmp/bad

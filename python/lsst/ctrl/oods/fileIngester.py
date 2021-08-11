@@ -21,13 +21,11 @@
 
 import asyncio
 import logging
-import shutil
 import os
 import os.path
-from pathlib import PurePath
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
-from lsst.ctrl.oods.directoryScanner import DirectoryScanner
-from lsst.dm.csc.base.consumer import Consumer
+from lsst.ctrl.oods.fileQueue import FileQueue
+from lsst.ctrl.oods.utils import Utils
 from lsst.dm.csc.base.publisher import Publisher
 
 LOGGER = logging.getLogger(__name__)
@@ -50,10 +48,8 @@ class FileIngester(object):
         self.config = config
 
         self.forwarder_staging_dir = config["forwarderStagingDirectory"]
-        FILE_INGEST_REQUEST = config["FILE_INGEST_REQUEST"]
-        self._msg_actions = {FILE_INGEST_REQUEST: self.ingest}
 
-        self.scanner = DirectoryScanner([self.forwarder_staging_dir])
+        self.fileQueue = FileQueue(self.forwarder_staging_dir)
 
         if 'baseBrokerAddr' in config:
             self.base_broker_url = config["baseBrokerAddr"]
@@ -64,18 +60,29 @@ class FileIngester(object):
         if len(butlerConfigs) == 0:
             raise Exception("No Butlers configured; check configuration file")
 
-        self.butlers = []
-        for butlerConfig in butlerConfigs:
-            butler = ButlerProxy(butlerConfig["butler"])
-            self.butlers.append(butler)
-
-        self.CONSUME_QUEUE = config['CONSUME_QUEUE']
-        self.PUBLISH_QUEUE = config['PUBLISH_QUEUE']
-
-        if self.base_broker_url is not None:
+        if self.base_broker_url is None:
+            self.publisher = None
+        else:
             asyncio.create_task(self.start_comm())
 
-    def getButlerTasks(self):
+        if 'PUBLISH_QUEUE' in config:
+            self.publish_queue = config['PUBLISH_QUEUE']
+        else:
+            self.publish_queue = None
+
+        self.butlers = []
+        for butlerConfig in butlerConfigs:
+            butler = ButlerProxy(butlerConfig["butler"], self.publisher, self.publish_queue)
+            self.butlers.append(butler)
+
+        self.tasks = []
+
+    def getStagingDirectory(self):
+        """Return the directory where the external service stages files
+        """
+        return self.forwarder_staging_dir
+
+    def getButlerCleanTasks(self):
         """Get a list of all butler run_task methods
 
         Returns
@@ -85,39 +92,15 @@ class FileIngester(object):
         """
         tasks = []
         for butler in self.butlers:
-            tasks.append(butler.run_task)
+            tasks.append(butler.clean_task)
         return tasks
 
     async def start_comm(self):
         """Start communication services
         """
-        self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
-        self.consumer.start()
 
         self.publisher = Publisher(self.base_broker_url)
         await self.publisher.start()
-
-    def on_message(self, ch, method, properties, body):
-        """ Route the message to proper handler; signature required by pika
-
-        Parameters
-        ----------
-        ch: `Channel`
-            RabbitMQ channel to use
-        method: `Method`
-            method to use
-        properties: `Properties`
-            channel properties
-        body: `dict`
-            message dictionary
-        """
-        msg_type = body['MSG_TYPE']
-        ch.basic_ack(method.delivery_tag)
-        if msg_type in self._msg_actions:
-            handler = self._msg_actions.get(msg_type)
-            asyncio.create_task(handler(body))
-        else:
-            LOGGER.info(f"unknown message type: {msg_type}")
 
     def extract_cause(self, e):
         """extract the cause of an exception
@@ -156,7 +139,7 @@ class FileIngester(object):
             new directory name
         """
         # strip the original directory location, except for the date
-        newfile = self.strip_prefix(original, staging_dir_root)
+        newfile = Utils.strip_prefix(original, staging_dir_root)
 
         # split into subdir and filename
         head, tail = os.path.split(newfile)
@@ -168,25 +151,6 @@ class FileIngester(object):
         os.makedirs(newdir, exist_ok=True)
 
         return newdir
-
-    def strip_prefix(self, pathname, prefix):
-        """Strip the prefix of the path
-
-        Parameters
-        ----------
-        pathname: `str`
-            Path name
-        prefix: `str`
-            Prefix to strip from pathname
-
-        Returns
-        -------
-        ret: `str`
-            The remaining path
-        """
-        p = PurePath(pathname)
-        ret = str(p.relative_to(prefix))
-        return ret
 
     def create_link_to_file(self, filename, dirname):
         """Create a link from filename to a new file in directory dirname
@@ -202,7 +166,8 @@ class FileIngester(object):
         # we don't use os.path.basename here because the file might be
         # in a subdirectory of the staging directory.  We want to retain
         #  that subdirectory name
-        basefile = self.strip_prefix(filename, self.forwarder_staging_dir)
+
+        basefile = Utils.strip_prefix(filename, self.forwarder_staging_dir)
 
         # create a new full path to where the file will be linked for the OODS
         new_file = os.path.join(dirname, basefile)
@@ -217,67 +182,48 @@ class FileIngester(object):
 
         return new_file
 
-    def stageFiles(self, msg):
-        """ stage the files to their butler staging areas
-        and remove the original file
-
-        Parameters
-        ----------
-        msg: `dict`
-            message structure
+    def stageFiles(self, file_list):
+        """Stage all files from the initial directory to directories
+        specific to each butler.
         """
-        filename = os.path.realpath(msg['FILENAME'])
+        files = {}
+        for butlerProxy in self.butlers:
+            files[butlerProxy] = []
+        for filename in file_list:
+            try:
+                for butlerProxy in self.butlers:
+                    local_staging_dir = butlerProxy.getStagingDirectory()
+                    newfile = self.create_link_to_file(filename, local_staging_dir)
+                    files[butlerProxy].append(newfile)
+            except Exception:
+                LOGGER.info(f"error staging files butler for {filename}")
+                continue
+            os.unlink(filename)
+        return files
 
-        try:
-            for butlerProxy in self.butlers:
-                local_staging_dir = butlerProxy.getStagingDirectory()
-                self.create_link_to_file(filename, local_staging_dir)
-        except Exception:
-            LOGGER.info(f"error staging files butler for {filename}")
-            return
-        # file has been linked to all staging areas;
-        # now we unlink the original file.
-        os.unlink(filename)
-
-    async def ingest(self, msg):
+    async def ingest(self, file_list):
         """Attempt to perform butler ingest for all butlers
 
         Parameters
         ----------
-        msg: `dict`
-            message container info about the ingest request.
+        filename: `str`
+            file to ingest
         """
 
         # first move the files from the Forwarder staging area
         # to the area where they're staged for the OODS.
-        self.stageFiles(msg)
+        butler_file_lists = self.stageFiles(file_list)
 
         # for each butler, attempt to ingest the requested file,
         # Success or failure is noted in a message description which
         # is sent via RabbitMQ message back to Archiver, which will
         # send it out via a CSC logevent.
-        code = self.SUCCESS
-        description = None
-        for butler in self.butlers:
-            (status_code, status_msg) = self.ingest_file(butler, msg)
-            if status_code == self.FAILURE:
-                code = self.FAILURE
-            if description is None:
-                description = status_msg
-            else:
-                description = f"{description}; {status_msg}"
-
-        if code == self.SUCCESS and description is None:
-            LOGGER.info("Error in processing, no success message was created")
-            return
-
-        if self.base_broker_url is not None:
-            LOGGER.info(f"Sending message: {msg}")
-            d = dict(msg)
-            d['MSG_TYPE'] = 'IMAGE_IN_OODS'
-            d['STATUS_CODE'] = code
-            d['DESCRIPTION'] = description
-            await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
+        try:
+            for butler in self.butlers:
+                butler.ingest(butler_file_lists[butler])
+        except Exception as e:
+            print("Exception thrown")
+            print(f"Exception: {e}")
 
     def get_locally_staged_filename(self, butlerProxy, full_filename):
         """Construct the full path to the staging area unique to a butler Proxy
@@ -294,20 +240,20 @@ class FileIngester(object):
         locally_staged_filename: `str`
             The full pathname of to the file in this butler's staging area
         """
-        basefile = self.strip_prefix(full_filename, self.forwarder_staging_dir)
+        basefile = Utils.strip_prefix(full_filename, self.forwarder_staging_dir)
         local_staging_dir = butlerProxy.getStagingDirectory()
         locally_staged_filename = os.path.join(local_staging_dir, basefile)
         return locally_staged_filename
 
-    def ingest_file(self, butlerProxy, msg):
+    def ingest_files(self, butlerProxy, file_list):
         """Ingest the file the incoming message requests
 
         Parameters
         ----------
         butlerProxy: `ButlerProxy`
             proxy for the butler
-        msg: `dict`
-            message which indicates which file to ingest
+        file_list: `list`
+            list that contains information about the image files
 
         Returns
         -------
@@ -315,49 +261,31 @@ class FileIngester(object):
             status code and message to send about what happened
         """
 
-        # get the locally staged file name
-        camera = msg['CAMERA']
-        obsid = msg['OBSID']
-        filename = self.get_locally_staged_filename(butlerProxy, os.path.realpath(msg['FILENAME']))
-        archiver = msg['ARCHIVER']
-
         # attempt to ingest the file;  if ingests, log that
         # if it does not ingest, move it to a "bad file" directory
         # and log that.
-        try:
-            butler = butlerProxy.getButler()
-            butler.ingest(filename)
-            LOGGER.info(f"{butler.getName()}: {obsid} {filename} ingested from {camera} by {archiver}")
-        except Exception as e:
-            status_code = self.FAILURE
-            status_msg = f"{butler.getName()}: {filename} could not be ingested: {self.extract_cause(e)}"
-            LOGGER.exception(status_msg)
-            bad_dir = butlerProxy.getBadFileDirectory()
-            staging_dir = butlerProxy.getStagingDirectory()
-
-            bad_file_dir = self.create_bad_dirname(bad_dir, staging_dir, filename)
-            try:
-                LOGGER.info(f"Moving {filename} to {bad_file_dir}")
-                shutil.move(filename, bad_file_dir)
-            except Exception as fmException:
-                LOGGER.info(f"Failed to move {filename} to {bad_file_dir} {fmException}")
-
-            return (status_code, status_msg)
-
-        status_code = self.SUCCESS
-        status_msg = f"{butler.getName()}: OBSID {obsid} - File {filename} ingested into OODS"
-
-        return (status_code, status_msg)
+        butlerProxy.ingest(file_list)
+        print("Completed")
 
     async def run_task(self):
         """Keep this object alive
         """
-        # wait, to keep the object alive
-        while True:
-            await asyncio.sleep(60)
+        task_list = []
 
-    def clean(self):
-        """Call the clean method of all butler proxies
-        """
-        for butlerProxy in self.butlers:
-            butlerProxy.clean()
+        task = asyncio.create_task(self.fileQueue.queue_files())
+        task_list.append(task)
+
+        task = asyncio.create_task(self.dequeue_and_ingest_files())
+        task_list.append(task)
+
+        cleanTasks = self.getButlerCleanTasks()
+        for cleanTask in cleanTasks:
+            task = asyncio.create_task(cleanTask())
+            task_list.append(task)
+
+        return task_list
+
+    async def dequeue_and_ingest_files(self):
+        while True:
+            file_list = await self.fileQueue.dequeue_files()
+            await self.ingest(file_list)

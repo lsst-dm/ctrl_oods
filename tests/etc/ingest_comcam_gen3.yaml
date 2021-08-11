@@ -4,6 +4,9 @@ defaultInterval: &interval
     minutes: 0
     seconds: 0
 
+archiver:
+    name: "CCArchiver"
+
 ingester:
     FILE_INGEST_REQUEST: CC_FILE_INGEST_REQUEST
     CONSUME_QUEUE: cc_publish_to_oods
@@ -12,8 +15,8 @@ ingester:
     butlers:
         - butler:
             class:
-                import : lsst.ctrl.oods.gen3ButlerIngester
-                name : Gen3ButlerIngester
+                import : lsst.ctrl.oods.gen3ButlerBroker
+                name : Gen3ButlerBroker
             repoDirectory : repo
             instrument: lsst.obs.lsst.LsstComCam
             badFileDirectory: /tmp/bad

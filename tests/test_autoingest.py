@@ -26,12 +26,13 @@ import shutil
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.archiverName import ArchiverName
 from lsst.ctrl.oods.utils import Utils
 import lsst.utils.tests
 import asynctest
 
 
-class Gen3ComCamIngesterTestCase(asynctest.TestCase):
+class AutoIngestTestCase(asynctest.TestCase):
     """Test Gen3 Butler Ingest"""
 
     def createConfig(self, config_name, fits_name):
@@ -68,38 +69,41 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         # and alter the forwarder staging directory to point
         # at the temporary directories created for his test
 
+        name = config['archiver']['name']
+        archiver_name = ArchiverName()
+        archiver_name.setName(name)
+
         ingesterConfig = config["ingester"]
-        self.forwarderStagingDir = tempfile.mkdtemp()
-        ingesterConfig["forwarderStagingDirectory"] = self.forwarderStagingDir
-        print(f"forwarderStagingDirectory = {self.forwarderStagingDir}")
+        self.forwarderDir = tempfile.mkdtemp()
+        ingesterConfig["forwarderStagingDirectory"] = self.forwarderDir
 
         self.badDir = tempfile.mkdtemp()
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
         butlerConfig["badFileDirectory"] = self.badDir
-        self.stagingDirectory = tempfile.mkdtemp()
-        butlerConfig["stagingDirectory"] = self.stagingDirectory
-        print(f"stagingDirectory = {self.stagingDirectory}")
+        self.stagingDir = tempfile.mkdtemp()
+        butlerConfig["stagingDirectory"] = self.stagingDir
 
         self.repoDir = tempfile.mkdtemp()
         butlerConfig["repoDirectory"] = self.repoDir
 
         # copy the FITS file to it's test location
 
-        self.subDir = tempfile.mkdtemp(dir=self.forwarderStagingDir)
+        self.subDir = tempfile.mkdtemp(dir=self.forwarderDir)
         self.destFile = os.path.join(self.subDir, fits_name)
         shutil.copyfile(fitsFile, self.destFile)
 
         return config
 
     def tearDown(self):
-        shutil.rmtree(self.destFile, ignore_errors=True)
-        shutil.rmtree(self.forwarderStagingDir, ignore_errors=True)
+        """Remove directories created by createConfig
+        """
+        shutil.rmtree(self.forwarderDir, ignore_errors=True)
         shutil.rmtree(self.badDir, ignore_errors=True)
-        shutil.rmtree(self.stagingDirectory, ignore_errors=True)
+        shutil.rmtree(self.stagingDir, ignore_errors=True)
         shutil.rmtree(self.repoDir, ignore_errors=True)
         shutil.rmtree(self.subDir, ignore_errors=True)
 
-    async def _testAuxTelIngest(self):
+    async def testAuxTelIngest(self):
         """test ingesting an auxtel file
         """
         fits_name = "2020032700020-det000.fits.fz"
@@ -118,7 +122,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         await ingester.ingest([self.destFile])
 
-        # check to make sure the file was moved from the staging directory
+        # check to make sure file was moved from forwarder staging directory
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
@@ -127,6 +131,8 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         self.assertFalse(os.path.exists(bad_path))
 
     async def testComCamIngest(self):
+        """test ingesting an ComCam file
+        """
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
@@ -154,17 +160,17 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         await ingester.ingest([self.destFile])
 
-        # make sure staging area is now empty
+        # make sure forwarder staging area is now empty
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         # Check to see that the file was ingested.
-        # Recall that files start in teh forwarder staging area, and are
-        # moved to the OODS staging area before ingestion. On "direct"
+        # Recall that files start in the forwarder staging area, and are
+        # moved to the butler staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = Utils.strip_prefix(self.destFile, self.forwarderStagingDir)
-        file_to_ingest = os.path.join(self.stagingDirectory, name)
+        name = Utils.strip_prefix(self.destFile, self.forwarderDir)
+        file_to_ingest = os.path.join(self.stagingDir, name)
         self.assertTrue(os.path.exists(file_to_ingest))
 
         # this file should now not exist
@@ -174,7 +180,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         # throwing an acception
         task_list.append(asyncio.create_task(self.interrupt_me()))
 
-        # gather all the tasks, until one (the "interrupt_me" task)
+        # kick off all the tasks, until one (the "interrupt_me" task)
         # throws an exception
         try:
             await asyncio.gather(*task_list)
@@ -195,7 +201,9 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         bad_path = os.path.join(self.badDir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
-    async def _testBadIngest(self):
+    async def testBadIngest(self):
+        """test ingesting a bad file
+        """
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
@@ -217,7 +225,9 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         bad_path = os.path.join(self.badDir, name)
         self.assertTrue(os.path.exists(bad_path))
 
-    async def _testRepoExists(self):
+    async def testRepoExists(self):
+        """test that a repository exists
+        """
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
@@ -226,6 +236,8 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         FileIngester(config["ingester"])
 
     async def interrupt_me(self):
+        """Used to interrupt asyncio.gather() so that test can be halted
+        """
         await asyncio.sleep(20)
         raise RuntimeError("I'm interrupting")
 

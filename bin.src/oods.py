@@ -31,6 +31,7 @@ import lsst.log as lsstlog
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.validator import Validator
+from lsst.ctrl.oods.archiverName import ArchiverName
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,14 +39,12 @@ LOGGER = logging.getLogger(__name__)
 async def gather_tasks(config):
     ingester_config = config["ingester"]
     ingester = FileIngester(ingester_config)
-    butler_tasks = ingester.getButlerTasks()
 
     cache_config = config["cacheCleaner"]
     cache_cleaner = CacheCleaner(cache_config)
 
     r = [ingester.run_task(), cache_cleaner.run_task()]
-    for task in butler_tasks:
-        r.append(task())
+
     LOGGER.info("gathering tasks")
     res = await asyncio.gather(*r, return_exceptions=True)
     LOGGER.info("tasks gathered")
@@ -83,5 +82,13 @@ if __name__ == "__main__":
         sys.exit(10)
 
     LOGGER.info("***** OODS starting...")
+
+    try:
+        name = oods_config["archiver"]["name"]
+    except KeyError:
+        name = "unknown"
+
+    archiver_name = ArchiverName()
+    archiver_name.setName(name)
 
     asyncio.get_event_loop().run_until_complete(gather_tasks(oods_config))

@@ -31,8 +31,8 @@ import lsst.utils.tests
 import asynctest
 
 
-class Gen3ComCamIngesterTestCase(asynctest.TestCase):
-    """Test Gen3 Butler Ingest"""
+class AsyncIngestTestCase(asynctest.TestCase):
+    """Test full async ingest"""
 
     def createConfig(self, config_name, fits_name):
         """create a standard configuration file, using temporary directories
@@ -71,14 +71,12 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         ingesterConfig = config["ingester"]
         self.forwarderStagingDir = tempfile.mkdtemp()
         ingesterConfig["forwarderStagingDirectory"] = self.forwarderStagingDir
-        print(f"forwarderStagingDirectory = {self.forwarderStagingDir}")
 
         self.badDir = tempfile.mkdtemp()
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
         butlerConfig["badFileDirectory"] = self.badDir
         self.stagingDirectory = tempfile.mkdtemp()
         butlerConfig["stagingDirectory"] = self.stagingDirectory
-        print(f"stagingDirectory = {self.stagingDirectory}")
 
         self.repoDir = tempfile.mkdtemp()
         butlerConfig["repoDirectory"] = self.repoDir
@@ -92,6 +90,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         return config
 
     def tearDown(self):
+        """ clean up after each test """
         shutil.rmtree(self.destFile, ignore_errors=True)
         shutil.rmtree(self.forwarderStagingDir, ignore_errors=True)
         shutil.rmtree(self.badDir, ignore_errors=True)
@@ -99,8 +98,8 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         shutil.rmtree(self.repoDir, ignore_errors=True)
         shutil.rmtree(self.subDir, ignore_errors=True)
 
-    async def _testAuxTelIngest(self):
-        """test ingesting an auxtel file
+    async def testAsyncIngest(self):
+        """test ingesting an auxtel file using all the async tasks
         """
         fits_name = "2020032700020-det000.fits.fz"
         config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
@@ -116,9 +115,13 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         # create a FileIngester
         ingester = FileIngester(ingesterConfig)
 
-        await ingester.ingest([self.destFile])
+        # start all the ingester tasks
+        task_list = await ingester.run_task()
 
-        # check to make sure the file was moved from the staging directory
+        # allow the other async tasks to run
+        await asyncio.sleep(2)
+
+        # check to make sure file was moved from forwarder staging directory
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
@@ -126,107 +129,28 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         bad_path = os.path.join(self.badDir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
-    async def testComCamIngest(self):
-        fits_name = "3019053000001-R22-S00-det000.fits.fz"
-        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
+        # check to be sure file ended up landing in butler "staging" directory
+        staging_sub_dir = Utils.strip_prefix(self.subDir, forwarder_staging_dir)
+        stage_path = os.path.join(self.stagingDirectory, staging_sub_dir, fits_name)
 
-        # setup directory to scan for files in the forwarder staging directory
-        # and ensure one file is there
-        ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 1)
-
-        # create the file ingester, get all tasks associated with it, and
-        # create the tasks
-        ingester = FileIngester(ingesterConfig)
-        clean_tasks = ingester.getButlerCleanTasks()
-
-        task_list = []
-        for clean_task in clean_tasks:
-            task = asyncio.create_task(clean_task())
-            task_list.append(task)
-
-        # check to see that the file is there before ingestion
-        self.assertTrue(os.path.exists(self.destFile))
-        print(f"destFile = {self.destFile}")
-
-        await ingester.ingest([self.destFile])
-
-        # make sure staging area is now empty
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 0)
-
-        # Check to see that the file was ingested.
-        # Recall that files start in teh forwarder staging area, and are
-        # moved to the OODS staging area before ingestion. On "direct"
-        # ingestion, this is where the file is located.  This is a check
-        # to be sure that happened.
-        name = Utils.strip_prefix(self.destFile, self.forwarderStagingDir)
-        file_to_ingest = os.path.join(self.stagingDirectory, name)
-        self.assertTrue(os.path.exists(file_to_ingest))
-
-        # this file should now not exist
-        self.assertFalse(os.path.exists(self.destFile))
+        self.assertTrue(os.path.exists(stage_path))
 
         # add one more task, whose sole purpose is to interrupt the others by
         # throwing an acception
         task_list.append(asyncio.create_task(self.interrupt_me()))
 
         # gather all the tasks, until one (the "interrupt_me" task)
-        # throws an exception
+        # throws an exception, at which point, we can clean up the rest
+        # of the running tasks.
         try:
             await asyncio.gather(*task_list)
         except Exception:
             for task in task_list:
                 task.cancel()
 
-        # that should have been enough time to run the "real" tasks,
-        # which performed the ingestion, and the clean up task, which
-        # was set to clean it up right away.  (That "clean up" time
-        # is set in the config file loaded for this FileIngester).
-        # And, when "cleaned up", the file that was originally there
-        # is now gone.  Check for that.
-        self.assertFalse(os.path.exists(file_to_ingest))
-
-        # check to be sure that the file wasn't "bad" (and
-        # therefore, not ingested)
-        bad_path = os.path.join(self.badDir, fits_name)
-        self.assertFalse(os.path.exists(bad_path))
-
-    async def _testBadIngest(self):
-        fits_name = "bad.fits.fz"
-        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
-
-        # setup directory to scan for files in the forwarder staging directory
-        ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 1)
-
-        ingester = FileIngester(config["ingester"])
-
-        await ingester.ingest([self.destFile])
-
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 0)
-
-        name = Utils.strip_prefix(self.destFile, forwarder_staging_dir)
-        bad_path = os.path.join(self.badDir, name)
-        self.assertTrue(os.path.exists(bad_path))
-
-    async def _testRepoExists(self):
-        fits_name = "bad.fits.fz"
-        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
-
-        FileIngester(config["ingester"])
-        # tests the path that the previously created repo (above) exists
-        FileIngester(config["ingester"])
-
     async def interrupt_me(self):
-        await asyncio.sleep(20)
+        """ This method throws an exception after 10 seconds"""
+        await asyncio.sleep(10)
         raise RuntimeError("I'm interrupting")
 
 

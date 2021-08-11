@@ -57,8 +57,8 @@ class ValidatorTestCase(lsst.utils.tests.TestCase):
                            butlers:
                                - butler:
                                    class:
-                                     import: lsst.ctrl.oods.gen2ButlerIngester
-                                     name: Gen2ButlerIngester
+                                     import: lsst.ctrl.oods.gen2ButlerBroker
+                                     name: Gen2ButlerBroker
                                    repoDirectory : repo
                            batchSize: 20
                            scanInterval:
