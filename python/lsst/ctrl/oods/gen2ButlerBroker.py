@@ -36,6 +36,10 @@ class Gen2ButlerBroker(ButlerBroker):
     ----------
     butlerConfig: `dict`
         dictionary containing butler configuration information
+    publisher: `Publisher`
+        RabbitMQ publisher
+    publisher_queue: `str`
+        The queue used to publish messages
     """
     def __init__(self, butlerConfig, publisher, publisher_queue):
         self.repo_dir = butlerConfig["repoDirectory"]
@@ -61,10 +65,17 @@ class Gen2ButlerBroker(ButlerBroker):
             status_message = f"gen2: error ingesting: {self.extract_cause(e)}"
             for filename in file_list:
                 self.move_to_bad_dir(filename)
-            return (status_code, status_message)
-        return(self.SUCCESS, "gen2: files ingested")
+            return status_code, status_message
+        return self.SUCCESS, "gen2: files ingested"
 
     def move_to_bad_dir(self, filename):
+        """Move file to the broker's "bad file" directory
+
+        Parameters
+        ----------
+        filename: `str`
+            name of the file to be moved
+        """
         if os.path.exists(filename) is False:
             return
         bad_dir = self.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)

@@ -29,6 +29,10 @@ class ButlerProxy(object):
     ----------
     butlerConfig: `dict`
         details on how to construct and configure the butler
+    publisher: `Publisher`
+        RabbitMQ publisher
+    publisher_queue: `str`
+        The queue used to publish messages
     """
     def __init__(self, butlerConfig, publisher=None, publisher_queue=None):
         # create the butler
@@ -81,6 +85,13 @@ class ButlerProxy(object):
         return self.bad_file_dir
 
     def ingest(self, file_list):
+        """Bulk ingest of a list of files
+
+        Parameters
+        ----------
+        file_list: `list`
+            A list of file names
+        """
         self.butlerInstance.ingest(file_list)
 
     async def clean_task(self):

@@ -45,6 +45,10 @@ class Gen3ButlerBroker(ButlerBroker):
     ----------
     config: `dict`
         configuration of this butler ingester
+    publisher: `Publisher`
+        RabbitMQ publisher
+    publisher_queue: `str`
+        The queue used to publish messages
     """
     def __init__(self, config, publisher, publisher_queue):
         self.archiver_name = ArchiverName().archiver_name
@@ -58,7 +62,6 @@ class Gen3ButlerBroker(ButlerBroker):
         self.olderThan = self.config["filesOlderThan"]
         self.collections = self.config["collections"]
 
-        self.repo_dir = self.config["repoDirectory"]
         self.staging_dir = self.config["stagingDirectory"]
         self.bad_file_dir = self.config["badFileDirectory"]
 
@@ -88,6 +91,7 @@ class Gen3ButlerBroker(ButlerBroker):
 
     def undef_metadata(self, filename):
         """Return a sparsely initialized metadata dictionary
+
         Parameters
         ----------
         filename: `str`
@@ -140,7 +144,7 @@ class Gen3ButlerBroker(ButlerBroker):
         for dataset in datasets:
             LOGGER.info(f"{dataset.path.ospath} file ingested")
             image_data = ImageData(dataset)
-            self.transmit_status(image_data.info, code=0, description="file ingested")
+            self.transmit_status(image_data.info(), code=0, description="file ingested")
 
     def on_ingest_failure(self, filename, exc):
         """Callback used on ingest failure. Used to transmit

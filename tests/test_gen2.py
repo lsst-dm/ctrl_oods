@@ -20,14 +20,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import tempfile
-from pathlib import PurePath
-from shutil import copyfile
+import shutil
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.utils import Utils
 import lsst.utils.tests
 import asynctest
-import utils
 
 
 class Gen2TestCase(asynctest.TestCase):
@@ -59,7 +58,7 @@ class Gen2TestCase(asynctest.TestCase):
 
         self.subDir = tempfile.mkdtemp(dir=self.forwarderStagingDirectory)
         self.destFile = os.path.join(self.subDir, fits_name)
-        copyfile(fitsFile, self.destFile)
+        shutil.copyfile(fitsFile, self.destFile)
 
         mapperFileName = os.path.join(self.repoDir, "_mapper")
         with open(mapperFileName, 'w') as mapper_file:
@@ -68,16 +67,11 @@ class Gen2TestCase(asynctest.TestCase):
         return config
 
     def tearDown(self):
-        utils.removeEntries(self.forwarderStagingDirectory)
-        utils.removeEntries(self.badDir)
-        utils.removeEntries(self.stagingRootDir)
-        utils.removeEntries(self.repoDir)
-        utils.removeEntries(self.subDir)
-
-    def strip_prefix(self, name, prefix):
-        p = PurePath(name)
-        ret = str(p.relative_to(prefix))
-        return ret
+        shutil.rmtree(self.forwarderStagingDirectory, ignore_errors=True)
+        shutil.rmtree(self.badDir, ignore_errors=True)
+        shutil.rmtree(self.stagingRootDir, ignore_errors=True)
+        shutil.rmtree(self.repoDir, ignore_errors=True)
+        shutil.rmtree(self.subDir, ignore_errors=True)
 
     async def _testATIngest(self):
         fits_name = "2020032700020-det000.fits.fz"
@@ -96,7 +90,7 @@ class Gen2TestCase(asynctest.TestCase):
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        name = self.strip_prefix(self.destFile, forwarder_staging_dir)
+        name = Utils.strip_prefix(self.destFile, forwarder_staging_dir)
         bad_path = os.path.join(self.badDir, name)
         self.assertFalse(os.path.exists(bad_path))
 
@@ -117,7 +111,7 @@ class Gen2TestCase(asynctest.TestCase):
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        name = self.strip_prefix(self.destFile, forwarder_staging_dir)
+        name = Utils.strip_prefix(self.destFile, forwarder_staging_dir)
         bad_path = os.path.join(self.badDir, name)
         self.assertFalse(os.path.exists(bad_path))
 
@@ -138,7 +132,7 @@ class Gen2TestCase(asynctest.TestCase):
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        name = self.strip_prefix(self.destFile, forwarder_staging_dir)
+        name = Utils.strip_prefix(self.destFile, forwarder_staging_dir)
         bad_path = os.path.join(self.badDir, name)
         self.assertTrue(os.path.exists(bad_path))
 

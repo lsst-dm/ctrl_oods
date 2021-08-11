@@ -29,11 +29,12 @@ LOGGER = logging.getLogger(__name__)
 class FileQueue(object):
     """Report on files that exist or appear in an existing directory.
 
-
     Parameters
     ----------
     dir_path: `str`
         A file directory to watch
+    scanInterval: `int`
+        The number of seconds to wait between directory scans
     """
 
     def __init__(self, dir_path, scanInterval=1):

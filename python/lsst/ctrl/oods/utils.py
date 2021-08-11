@@ -19,25 +19,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import os
+from pathlib import PurePath
 
 
-def removeEntries(directory):
-    """Remove given directory and all entries below it
-    Parameters
-    ----------
-    dictectory: `str`
-        directory to remove
+class Utils:
+    """representation of a time interval from a configuration
     """
-    if os.path.exists(directory) is False:
-        return
-    if os.path.isdir(directory) is False:
-        os.unlink(directory)
-        return
-    with os.scandir(directory) as entries:
-        for ent in entries:
-            if os.path.isdir(ent):
-                removeEntries(ent)
-            else:
-                os.unlink(ent)
-    os.rmdir(directory)
+
+    @staticmethod
+    def strip_prefix(pathname, prefix):
+        """Strip the prefix of the path
+
+        Parameters
+        ----------
+        pathname: `str`
+            Path name
+        prefix: `str`
+            Prefix to strip from pathname
+
+        Returns
+        -------
+        ret: `str`
+            The remaining path
+        """
+        p = PurePath(pathname)
+        ret = str(p.relative_to(prefix))
+        return ret

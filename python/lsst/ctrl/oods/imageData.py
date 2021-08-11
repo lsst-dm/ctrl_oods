@@ -25,11 +25,16 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-class ImageData():
+class ImageData:
     """Encapsulate information extracted from an DatasetRef
     """
     def __init__(self, dataset):
         """Initiailize the object using DatasetRef
+
+        Parameters
+        ----------
+        dataset: `DatasetRef`
+            The DatasetRef to extract information from
         """
         self.info = {"camera": "", "raft": "", "sensor": "", "obsid": ""}
         try:
@@ -41,7 +46,7 @@ class ImageData():
         try:
             refs = dataset.refs
             ref = refs[0]  # OODS only gets a single element in the list
-            if ref.dataId.hasRecords is False:
+            if ref.dataId.hasRecords() is False:
                 LOGGER.info(f"Failed to extract data for {dataset}; no records")
                 return
 
@@ -58,6 +63,10 @@ class ImageData():
             self.info["obsid"] = exposure["obs_id"]
         except Exception as e:
             LOGGER.info(f"Failed to extract data for {dataset}: {e}")
+
+    @property
+    def info(self):
+        return self.info
 
     def __repr__(self) -> str:
         return str(self.info)

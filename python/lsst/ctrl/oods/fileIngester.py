@@ -23,9 +23,9 @@ import asyncio
 import logging
 import os
 import os.path
-from pathlib import PurePath
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.fileQueue import FileQueue
+from lsst.ctrl.oods.utils import Utils
 from lsst.dm.csc.base.publisher import Publisher
 
 LOGGER = logging.getLogger(__name__)
@@ -78,6 +78,8 @@ class FileIngester(object):
         self.tasks = []
 
     def getStagingDirectory(self):
+        """Return the directory where the external service stages files
+        """
         return self.forwarder_staging_dir
 
     def getButlerCleanTasks(self):
@@ -137,7 +139,7 @@ class FileIngester(object):
             new directory name
         """
         # strip the original directory location, except for the date
-        newfile = self.strip_prefix(original, staging_dir_root)
+        newfile = Utils.strip_prefix(original, staging_dir_root)
 
         # split into subdir and filename
         head, tail = os.path.split(newfile)
@@ -149,25 +151,6 @@ class FileIngester(object):
         os.makedirs(newdir, exist_ok=True)
 
         return newdir
-
-    def strip_prefix(self, pathname, prefix):
-        """Strip the prefix of the path
-
-        Parameters
-        ----------
-        pathname: `str`
-            Path name
-        prefix: `str`
-            Prefix to strip from pathname
-
-        Returns
-        -------
-        ret: `str`
-            The remaining path
-        """
-        p = PurePath(pathname)
-        ret = str(p.relative_to(prefix))
-        return ret
 
     def create_link_to_file(self, filename, dirname):
         """Create a link from filename to a new file in directory dirname
@@ -183,7 +166,8 @@ class FileIngester(object):
         # we don't use os.path.basename here because the file might be
         # in a subdirectory of the staging directory.  We want to retain
         #  that subdirectory name
-        basefile = self.strip_prefix(filename, self.forwarder_staging_dir)
+
+        basefile = Utils.strip_prefix(filename, self.forwarder_staging_dir)
 
         # create a new full path to where the file will be linked for the OODS
         new_file = os.path.join(dirname, basefile)
@@ -199,6 +183,9 @@ class FileIngester(object):
         return new_file
 
     def stageFiles(self, file_list):
+        """Stage all files from the initial directory to directories
+        specific to each butler.
+        """
         files = {}
         for butlerProxy in self.butlers:
             files[butlerProxy] = []
@@ -253,7 +240,7 @@ class FileIngester(object):
         locally_staged_filename: `str`
             The full pathname of to the file in this butler's staging area
         """
-        basefile = self.strip_prefix(full_filename, self.forwarder_staging_dir)
+        basefile = Utils.strip_prefix(full_filename, self.forwarder_staging_dir)
         local_staging_dir = butlerProxy.getStagingDirectory()
         locally_staged_filename = os.path.join(local_staging_dir, basefile)
         return locally_staged_filename

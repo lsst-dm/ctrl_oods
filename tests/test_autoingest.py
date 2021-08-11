@@ -22,15 +22,14 @@
 import asyncio
 import os
 import tempfile
-from pathlib import PurePath
-from shutil import copyfile
+import shutil
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.archiverName import ArchiverName
+from lsst.ctrl.oods.utils import Utils
 import lsst.utils.tests
 import asynctest
-import utils
 
 
 class AutoIngestTestCase(asynctest.TestCase):
@@ -91,37 +90,18 @@ class AutoIngestTestCase(asynctest.TestCase):
 
         self.subDir = tempfile.mkdtemp(dir=self.forwarderDir)
         self.destFile = os.path.join(self.subDir, fits_name)
-        copyfile(fitsFile, self.destFile)
+        shutil.copyfile(fitsFile, self.destFile)
 
         return config
 
     def tearDown(self):
         """Remove directories created by createConfig
         """
-        utils.removeEntries(self.forwarderDir)
-        utils.removeEntries(self.badDir)
-        utils.removeEntries(self.stagingDir)
-        utils.removeEntries(self.repoDir)
-        utils.removeEntries(self.subDir)
-
-    def strip_prefix(self, name, prefix):
-        """strip prefix from name
-
-        Parameters
-        ----------
-        name: `str`
-           path of a file
-        prefix: `str`
-           prefix to strip
-
-        Returns
-        -------
-        ret: `str`
-            remainder of string
-        """
-        p = PurePath(name)
-        ret = str(p.relative_to(prefix))
-        return ret
+        shutil.rmtree(self.forwarderDir, ignore_errors=True)
+        shutil.rmtree(self.badDir, ignore_errors=True)
+        shutil.rmtree(self.stagingDir, ignore_errors=True)
+        shutil.rmtree(self.repoDir, ignore_errors=True)
+        shutil.rmtree(self.subDir, ignore_errors=True)
 
     async def testAuxTelIngest(self):
         """test ingesting an auxtel file
@@ -189,7 +169,7 @@ class AutoIngestTestCase(asynctest.TestCase):
         # moved to the butler staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = self.strip_prefix(self.destFile, self.forwarderDir)
+        name = Utils.strip_prefix(self.destFile, self.forwarderDir)
         file_to_ingest = os.path.join(self.stagingDir, name)
         self.assertTrue(os.path.exists(file_to_ingest))
 
@@ -241,7 +221,7 @@ class AutoIngestTestCase(asynctest.TestCase):
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        name = self.strip_prefix(self.destFile, forwarder_staging_dir)
+        name = Utils.strip_prefix(self.destFile, forwarder_staging_dir)
         bad_path = os.path.join(self.badDir, name)
         self.assertTrue(os.path.exists(bad_path))
 

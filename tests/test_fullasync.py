@@ -22,14 +22,13 @@
 import asyncio
 import os
 import tempfile
-from pathlib import PurePath
-from shutil import copyfile
+import shutil
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.utils import Utils
 import lsst.utils.tests
 import asynctest
-import utils
 
 
 class AsyncIngestTestCase(asynctest.TestCase):
@@ -86,37 +85,18 @@ class AsyncIngestTestCase(asynctest.TestCase):
 
         self.subDir = tempfile.mkdtemp(dir=self.forwarderStagingDir)
         self.destFile = os.path.join(self.subDir, fits_name)
-        copyfile(fitsFile, self.destFile)
+        shutil.copyfile(fitsFile, self.destFile)
 
         return config
 
     def tearDown(self):
         """ clean up after each test """
-        utils.removeEntries(self.destFile)
-        utils.removeEntries(self.forwarderStagingDir)
-        utils.removeEntries(self.badDir)
-        utils.removeEntries(self.stagingDirectory)
-        utils.removeEntries(self.repoDir)
-        utils.removeEntries(self.subDir)
-
-    def strip_prefix(self, name, prefix):
-        """strip prefix from name
-
-        Parameters
-        ----------
-        name: `str`
-           path of a file
-        prefix: `str`
-           prefix to strip
-
-        Returns
-        -------
-        ret: `str`
-            remainder of string
-        """
-        p = PurePath(name)
-        ret = str(p.relative_to(prefix))
-        return ret
+        shutil.rmtree(self.destFile, ignore_errors=True)
+        shutil.rmtree(self.forwarderStagingDir, ignore_errors=True)
+        shutil.rmtree(self.badDir, ignore_errors=True)
+        shutil.rmtree(self.stagingDirectory, ignore_errors=True)
+        shutil.rmtree(self.repoDir, ignore_errors=True)
+        shutil.rmtree(self.subDir, ignore_errors=True)
 
     async def testAsyncIngest(self):
         """test ingesting an auxtel file using all the async tasks
@@ -150,7 +130,7 @@ class AsyncIngestTestCase(asynctest.TestCase):
         self.assertFalse(os.path.exists(bad_path))
 
         # check to be sure file ended up landing in butler "staging" directory
-        staging_sub_dir = self.strip_prefix(self.subDir, forwarder_staging_dir)
+        staging_sub_dir = Utils.strip_prefix(self.subDir, forwarder_staging_dir)
         stage_path = os.path.join(self.stagingDirectory, staging_sub_dir, fits_name)
 
         self.assertTrue(os.path.exists(stage_path))

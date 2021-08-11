@@ -22,7 +22,7 @@
 import asyncio
 import os
 import os.path
-from pathlib import PurePath
+from lsst.ctrl.oods.utils import Utils
 from abc import ABC, abstractmethod
 
 
@@ -65,37 +65,18 @@ class ButlerBroker(ABC):
         """
         pass
 
-    def strip_prefix(self, pathname, prefix):
-        """Strip the prefix of the path
-
-        Parameters
-        ----------
-        pathname: `str`
-            Path name
-        prefix: `str`
-            Prefix to strip from pathname
-
-        Returns
-        -------
-        ret: `str`
-            The remaining path
-        """
-        p = PurePath(pathname)
-        ret = str(p.relative_to(prefix))
-        return ret
-
     def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
         """Create a full path to a directory contained in the
-        'bad directory' heirarchy; this retains the subdirectory structure
+        'bad directory' hierarchy; this retains the subdirectory structure
         created where the file was staged, where the uningestable file will
         be placed.
 
         Parameters
         ----------
         bad_dir_root: `str`
-            Root of the bad directory heirarchy
+            Root of the bad directory hierarchy
         staging_dir_root: `str`
-            Root of the bad directory heirarchy
+            Root of the bad directory hierarchy
         original: `str`
             Original directory location
 
@@ -105,7 +86,7 @@ class ButlerBroker(ABC):
             new directory name
         """
         # strip the original directory location, except for the date
-        newfile = self.strip_prefix(original, staging_dir_root)
+        newfile = Utils.strip_prefix(original, staging_dir_root)
 
         # split into subdir and filename
         head, tail = os.path.split(newfile)

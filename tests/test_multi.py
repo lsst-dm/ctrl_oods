@@ -20,17 +20,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import tempfile
-from shutil import copyfile
+import shutil
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 import lsst.utils.tests
 import asynctest
-import utils
 
 
 class MultiComCamIngesterTestCase(asynctest.TestCase):
-    """Test Scanning directory"""
+    """Test multiple butler ingest
+    """
 
     def createConfig(self, config_name, fits_name):
         self.multi_dirs = []
@@ -69,17 +69,19 @@ class MultiComCamIngesterTestCase(asynctest.TestCase):
         self.subDir = tempfile.mkdtemp(dir=self.dataDir)
         destFile = os.path.join(self.subDir, fits_name)
 
-        copyfile(fitsFile, destFile)
+        shutil.copyfile(fitsFile, destFile)
 
         return config, destFile
 
     def tearDown(self):
-        utils.removeEntries(self.dataDir)
-        utils.removeEntries(self.subDir)
+        shutil.rmtree(self.dataDir, ignore_errors=True)
+        shutil.rmtree(self.subDir, ignore_errors=True)
         for md in self.multi_dirs:
-            utils.removeEntries(md)
+            shutil.rmtree(md, ignore_errors=True)
 
     async def testComCamIngest(self):
+        """Test that a ComCam file can be ingested into multiple butlers
+        """
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
         config, destFile = self.createConfig("cc_oods_multi.yaml", fits_name)
 

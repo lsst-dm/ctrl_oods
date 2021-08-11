@@ -83,10 +83,12 @@ if __name__ == "__main__":
 
     LOGGER.info("***** OODS starting...")
 
-    if "archiver" in oods_config:
+    try:
         name = oods_config["archiver"]["name"]
-    else:
+    except KeyError:
         name = "unknown"
+
     archiver_name = ArchiverName()
     archiver_name.setName(name)
+
     asyncio.get_event_loop().run_until_complete(gather_tasks(oods_config))

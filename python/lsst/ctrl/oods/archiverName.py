@@ -35,8 +35,12 @@ class Singleton(type):
 
 
 class ArchiverName(metaclass=Singleton):
+    """Singleton class to store the archiver name
+    """
     def __init__(self):
         self.archiver_name = "unknown"
 
     def setName(self, archiver_name):
+        """Set the name of the archiver
+        """
         self.archiver_name = archiver_name
