@@ -47,10 +47,8 @@ class Gen3ButlerIngester(ButlerIngester):
         self.olderThan = self.config["filesOlderThan"]
         self.collections = self.config["collections"]
 
-        register = False
         try:
             butlerConfig = Butler.makeRepo(repo)
-            register = True
         except FileExistsError:
             butlerConfig = repo
 
@@ -59,9 +57,8 @@ class Gen3ButlerIngester(ButlerIngester):
         opts = dict(run=run, writeable=True, collections=self.collections)
         self.butler = Butler(butlerConfig, **opts)
 
-        if register:
-            # Register an instrument.
-            instr.register(self.butler.registry)
+        # Register an instrument.
+        instr.register(self.butler.registry)
 
         cfg = RawIngestConfig()
         cfg.transfer = "direct"
