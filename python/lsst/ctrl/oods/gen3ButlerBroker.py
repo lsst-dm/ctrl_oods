@@ -65,10 +65,8 @@ class Gen3ButlerBroker(ButlerBroker):
         self.staging_dir = self.config["stagingDirectory"]
         self.bad_file_dir = self.config["badFileDirectory"]
 
-        register = False
         try:
             butlerConfig = Butler.makeRepo(repo)
-            register = True
         except FileExistsError:
             butlerConfig = repo
 
@@ -77,9 +75,8 @@ class Gen3ButlerBroker(ButlerBroker):
         opts = dict(run=run, writeable=True, collections=self.collections)
         self.butler = Butler(butlerConfig, **opts)
 
-        if register:
-            # Register an instrument.
-            instr.register(self.butler.registry)
+        # Register an instrument.
+        instr.register(self.butler.registry)
 
         cfg = RawIngestConfig()
         cfg.transfer = "direct"
