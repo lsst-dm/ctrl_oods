@@ -42,7 +42,7 @@ class FileIngester(object):
         A butler configuration dictionary
     """
 
-    def __init__(self, config):
+    def __init__(self, csc, config):
         self.SUCCESS = 0
         self.FAILURE = 1
         self.config = config
@@ -51,28 +51,13 @@ class FileIngester(object):
 
         self.fileQueue = FileQueue(self.forwarder_staging_dir)
 
-        if 'baseBrokerAddr' in config:
-            self.base_broker_url = config["baseBrokerAddr"]
-        else:
-            self.base_broker_url = None
-
         butlerConfigs = config["butlers"]
         if len(butlerConfigs) == 0:
             raise Exception("No Butlers configured; check configuration file")
 
-        if self.base_broker_url is None:
-            self.publisher = None
-        else:
-            asyncio.create_task(self.start_comm())
-
-        if 'PUBLISH_QUEUE' in config:
-            self.publish_queue = config['PUBLISH_QUEUE']
-        else:
-            self.publish_queue = None
-
         self.butlers = []
         for butlerConfig in butlerConfigs:
-            butler = ButlerProxy(butlerConfig["butler"], self.publisher, self.publish_queue)
+            butler = ButlerProxy(csc, butlerConfig["butler"])
             self.butlers.append(butler)
 
         self.tasks = []
@@ -94,13 +79,6 @@ class FileIngester(object):
         for butler in self.butlers:
             tasks.append(butler.clean_task)
         return tasks
-
-    async def start_comm(self):
-        """Start communication services
-        """
-
-        self.publisher = Publisher(self.base_broker_url)
-        await self.publisher.start()
 
     def extract_cause(self, e):
         """extract the cause of an exception

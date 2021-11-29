@@ -43,18 +43,14 @@ class Gen3ButlerBroker(ButlerBroker):
 
     Parameters
     ----------
+    parent: `OodsCSC`
+        OODS CSC
     config: `dict`
         configuration of this butler ingester
-    publisher: `Publisher`
-        RabbitMQ publisher
-    publisher_queue: `str`
-        The queue used to publish messages
     """
-    def __init__(self, config, publisher, publisher_queue):
+    def __init__(self, parent, config):
         self.archiver_name = ArchiverName().archiver_name
         self.config = config
-        self.publisher = publisher
-        self.publisher_queue = publisher_queue
 
         repo = self.config["repoDirectory"]
         instrument = self.config["instrument"]
@@ -125,9 +121,7 @@ class Gen3ButlerBroker(ButlerBroker):
         msg['STATUS_CODE'] = code
         msg['DESCRIPTION'] = description
         LOGGER.info(f"msg: {msg}, code: {code}, description: {description}")
-        if self.publisher is None:
-            return
-        asyncio.create_task(self.publisher.publish_message(self.publisher_queue, msg))
+        asyncio.create_task(self.parent.send_imageInOODS(msg))
 
     def on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
