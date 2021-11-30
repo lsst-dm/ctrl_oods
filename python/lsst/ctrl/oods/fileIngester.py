@@ -26,7 +26,6 @@ import os.path
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.fileQueue import FileQueue
 from lsst.ctrl.oods.utils import Utils
-from lsst.dm.csc.base.publisher import Publisher
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,11 +46,11 @@ class FileIngester(object):
         self.FAILURE = 1
         self.config = config
 
-        self.forwarder_staging_dir = config["forwarderStagingDirectory"]
+        self.forwarder_staging_dir = self.config["forwarderStagingDirectory"]
 
         self.fileQueue = FileQueue(self.forwarder_staging_dir)
 
-        butlerConfigs = config["butlers"]
+        butlerConfigs = self.config["butlers"]
         if len(butlerConfigs) == 0:
             raise Exception("No Butlers configured; check configuration file")
 
@@ -246,10 +245,13 @@ class FileIngester(object):
         print("Completed")
 
     async def run_task(self):
-        """Keep this object alive
+        """run tasks to queue files and ingest them
         """
         task_list = []
 
+        # this is split into two tasks so they can run at slightly different
+        # cadences.  We want to gather as many files as we can before we
+        # do the ingest
         task = asyncio.create_task(self.fileQueue.queue_files())
         task_list.append(task)
 

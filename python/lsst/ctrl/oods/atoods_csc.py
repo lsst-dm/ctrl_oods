@@ -1,4 +1,4 @@
-# This file is part of dm_ATArchiver
+# This file is part of ctrl_oods
 #
 # Developed for the LSST Data Management System.
 # This product includes software developed by the LSST Project
@@ -34,9 +34,6 @@ class ATOodsCSC(ArchiverCSC):
 
     def __init__(self):
         super().__init__("ATOODS", initial_state=salobj.State.STANDBY)
-
-        self.director = ATDirector(self, "ATOODS", "atarchiver_config.yaml", "ATOODS_CSC.log")
-        self.director.configure()
 
         self.transitioning_to_fault_evt = asyncio.Event()
         self.transitioning_to_fault_evt.clear()

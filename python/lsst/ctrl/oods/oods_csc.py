@@ -1,4 +1,4 @@
-# This file is part of dm_csc_base
+# This file is part of ctrl_oods
 #
 # Developed for the LSST Data Management System.
 # This product includes software developed by the LSST Project
@@ -20,7 +20,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
-from lsst.dm.csc.base.dm_csc import DmCSC
+from lsst.ctrl_oods.dm_csc import DmCSC
 from lsst.ts import salobj
 
 LOGGER = logging.getLogger(__name__)
@@ -43,6 +43,12 @@ class OodsCSC(DmCSC):
 
     def __init__(self, name, initial_state=salobj.State.STANDBY):
         super().__init__(name, initial_state=initial_state)
+        self.config = None
+        # import YAML file here
+        if "CTRL_OODS_CONFIG_FILE" in os.environ:
+            self.config = os.environ["CTRL_OODS_CONFIG_FILE"]
+        else:
+            raise FileNotFoundError("CTRL_OODS_CONFIG_FILE is not set")
 
     async def send_imageInOODS(self, info):
         """Send SAL message that the images has been ingested into the OODS
@@ -76,14 +82,25 @@ class OodsCSC(DmCSC):
                                      description=description)
 
     async def start_services(self):
-        """Start all support services
+        """Start all cleanup and archiving services
         """
-        await self.director.start_services()
+        ingester_config = self.config["ingester"]
+        ingester = FileIngester(ingester_config)
+
+        cache_config = self.config["cacheCleaner"]
+        cache_cleaner = CacheCleaner(cache_config)
+
+        r = [ingester.run_task(), cache_cleaner.run_task()]
+
+        LOGGER.info("gathering tasks")
+        res = await asyncio.gather(*r, return_exceptions=True)
+        LOGGER.info("tasks gathered")
+        pass
 
     async def stop_services(self):
-        """Stop all support services
+        """Stop all cleanup and archiving services
         """
-        await self.director.stop_services()
+        pass
 
     async def do_resetFromFault(self, data):
         """resetFromFault. Required by ts_salobj csc

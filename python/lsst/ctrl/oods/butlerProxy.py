@@ -27,14 +27,12 @@ class ButlerProxy(object):
 
     Parameters
     ----------
+    csc: `OodsCsc`
+        OODS CSC
     butlerConfig: `dict`
         details on how to construct and configure the butler
-    publisher: `Publisher`
-        RabbitMQ publisher
-    publisher_queue: `str`
-        The queue used to publish messages
     """
-    def __init__(self, butlerConfig, publisher=None, publisher_queue=None):
+    def __init__(self, csc, butlerConfig):
         # create the butler
         classConfig = butlerConfig["class"]
 
@@ -44,9 +42,7 @@ class ButlerProxy(object):
         mod = import_module(importFile)
         butlerClass = getattr(mod, name)
 
-        self.butlerInstance = butlerClass(butlerConfig,
-                                          publisher=publisher,
-                                          publisher_queue=publisher_queue)
+        self.butlerInstance = butlerClass(csc, butlerConfig)
 
         # load configuration info for the repository, staging,
         # and bad file areas

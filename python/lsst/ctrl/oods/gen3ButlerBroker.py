@@ -43,13 +43,14 @@ class Gen3ButlerBroker(ButlerBroker):
 
     Parameters
     ----------
-    parent: `OodsCSC`
+    csc: `OodsCSC`
         OODS CSC
     config: `dict`
         configuration of this butler ingester
     """
-    def __init__(self, parent, config):
+    def __init__(self, csc, config):
         self.archiver_name = ArchiverName().archiver_name
+        self.csc = csc
         self.config = config
 
         repo = self.config["repoDirectory"]
@@ -121,7 +122,7 @@ class Gen3ButlerBroker(ButlerBroker):
         msg['STATUS_CODE'] = code
         msg['DESCRIPTION'] = description
         LOGGER.info(f"msg: {msg}, code: {code}, description: {description}")
-        asyncio.create_task(self.parent.send_imageInOODS(msg))
+        asyncio.create_task(self.csc.send_imageInOODS(msg))
 
     def on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
