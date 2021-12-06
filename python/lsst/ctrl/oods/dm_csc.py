@@ -29,7 +29,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 class DmCSC(BaseCsc):
-    """This object implements configuration and the state transition model for the ConfigurableCSC
+    """This object implements configuration and the state
+    transition model for the BaseCSC
 
     Parameters
     ----------
@@ -79,16 +80,19 @@ class DmCSC(BaseCsc):
 
         LOGGER.info(f"current state is: {s_cur}; transition to {s_sum}")
 
-        # Services are started when transitioning from STANDBY to DISABLED.  Services
-        # are stopped when transitioning from DISABLED to STANDBY.   Services are always stopped
-        # when moving from any state to FAULT. The internal state machine in the base class only
-        # allows transition from FAULT to STANDBY.
+        # Services are started when transitioning from STANDBY to DISABLED.
+        # Services are stopped when transitioning from DISABLED to STANDBY.
+        # Services are always stopped when moving from any state to FAULT.
+        # The internal state machine in the base class only allows transition
+        # from FAULT to STANDBY
 
-        # NOTE: The following can be optimized, but hasn't been to give a clearer picture
-        #       about which state transitions occur, and what happens when they do occur.
+        # NOTE: The following can be optimized, but hasn't been to give a
+        # clearer picture about which state transitions occur, and what
+        # happens when they do occur.
 
-        # if current_state hasn't been set, and the summary_state is STANDBY, we're just
-        # starting up, so don't do anything but set the current state to STANBY
+        # if current_state hasn't been set, and the summary_state is STANDBY,
+        # we're just starting up, so don't do anything but set the current
+        # state to STANBY
         if (self.current_state is None) and (self.summary_state == State.STANDBY):
             self.current_state = State.STANDBY
             self.transitioning_to_fault_evt.clear()
@@ -106,7 +110,8 @@ class DmCSC(BaseCsc):
             self.current_state = State.STANDBY
             return
 
-        # if going from STANDBY to FAULT, kill any external services that started
+        # if going from STANDBY to FAULT, kill any external services that
+        # started
         if (self.current_state == State.STANDBY) and (self.summary_state == State.FAULT):
             asyncio.ensure_future(self.stop_services())
             self.current_state = State.FAULT
@@ -132,12 +137,14 @@ class DmCSC(BaseCsc):
 
         # These are all place holders and only update state
 
-        # if going from DISABLED to ENABLED leave external services alone, but accept control commands
+        # if going from DISABLED to ENABLED leave external services alone,
+        # but accept control commands
         if (self.current_state == State.DISABLED) and (self.summary_state == State.ENABLED):
             self.current_state = State.ENABLED
             return
 
-        # if going from ENABLED to DISABLED, leave external services alone, but reject control commands
+        # if going from ENABLED to DISABLED, leave external services alone,
+        # but reject control commands
         if (self.current_state == State.ENABLED) and (self.summary_state == State.DISABLED):
             self.current_state = State.DISABLED
             return
@@ -145,8 +152,9 @@ class DmCSC(BaseCsc):
     def call_fault(self, code, report):
         """Called when a fault in the CSC is detected
 
-        This is called by lower level methods when anything happens that the CSC detects as a fault,
-        and reports it via the ts_salobj reporting code.
+        This is called by lower level methods when anything happens that
+        the CSC detects as a fault, and reports it via the ts_salobj
+        reporting code.
 
         Parameters
         ----------
@@ -155,7 +163,8 @@ class DmCSC(BaseCsc):
         report : `str`
             description of the fault to report
         """
-        # this safeguard is in place so that if multiple faults occur, fault is only reported one time.
+        # this safeguard is in place so that if multiple faults occur, fault
+        # is only reported one time.
         if self.transitioning_to_fault_evt.is_set():
             return
         self.transitioning_to_fault_evt.set()

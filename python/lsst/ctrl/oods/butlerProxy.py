@@ -27,12 +27,12 @@ class ButlerProxy(object):
 
     Parameters
     ----------
-    csc: `OodsCsc`
-        OODS CSC
     butlerConfig: `dict`
         details on how to construct and configure the butler
+    csc: `OodsCsc`
+        OODS CSC
     """
-    def __init__(self, csc, butlerConfig):
+    def __init__(self, butlerConfig, csc=None):
         # create the butler
         classConfig = butlerConfig["class"]
 
@@ -42,7 +42,7 @@ class ButlerProxy(object):
         mod = import_module(importFile)
         butlerClass = getattr(mod, name)
 
-        self.butlerInstance = butlerClass(csc, butlerConfig)
+        self.butlerInstance = butlerClass(butlerConfig, csc)
 
         # load configuration info for the repository, staging,
         # and bad file areas

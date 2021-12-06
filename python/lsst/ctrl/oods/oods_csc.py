@@ -19,8 +19,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 import logging
-from lsst.ctrl_oods.dm_csc import DmCSC
+import os
+import yaml
+from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.cacheCleaner import CacheCleaner
+from lsst.ctrl.oods.dm_csc import DmCSC
 from lsst.ts import salobj
 
 LOGGER = logging.getLogger(__name__)
@@ -42,13 +47,18 @@ class OodsCSC(DmCSC):
     """
 
     def __init__(self, name, initial_state=salobj.State.STANDBY):
+        print("***** A *****")
         super().__init__(name, initial_state=initial_state)
+        print("***** B *****")
         self.config = None
         # import YAML file here
         if "CTRL_OODS_CONFIG_FILE" in os.environ:
-            self.config = os.environ["CTRL_OODS_CONFIG_FILE"]
+            filename = os.environ["CTRL_OODS_CONFIG_FILE"]
+            with open(filename, 'r') as f:
+                self.config = yaml.safe_load(f)
         else:
             raise FileNotFoundError("CTRL_OODS_CONFIG_FILE is not set")
+        print(f"***** C ***** {self.config}")
 
     async def send_imageInOODS(self, info):
         """Send SAL message that the images has been ingested into the OODS
@@ -93,16 +103,10 @@ class OodsCSC(DmCSC):
         r = [ingester.run_task(), cache_cleaner.run_task()]
 
         LOGGER.info("gathering tasks")
-        res = await asyncio.gather(*r, return_exceptions=True)
+        await asyncio.gather(*r, return_exceptions=True)
         LOGGER.info("tasks gathered")
-        pass
 
     async def stop_services(self):
         """Stop all cleanup and archiving services
         """
         pass
-
-    async def do_resetFromFault(self, data):
-        """resetFromFault. Required by ts_salobj csc
-        """
-        print(f"do_resetFromFault called: {data}")

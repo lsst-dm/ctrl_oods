@@ -21,22 +21,23 @@
 
 import asyncio
 import logging
-import pathlib
-from lsst.dm.csc.base.archiver_csc import ArchiverCSC
-from lsst.dm.ATArchiver.atdirector import ATDirector
+from lsst.ctrl.oods.oods_csc import OodsCSC
 from lsst.ts import salobj
-from lsst.ts.salobj import State
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ATOodsCSC(ArchiverCSC):
+class ATOodsCSC(OodsCSC):
 
     def __init__(self):
         super().__init__("ATOODS", initial_state=salobj.State.STANDBY)
 
+        print("ATOodsCSC: 1")
         self.transitioning_to_fault_evt = asyncio.Event()
+        print("ATOodsCSC: 2")
         self.transitioning_to_fault_evt.clear()
+        print("ATOodsCSC: 3")
 
         self.current_state = None
+        print("ATOodsCSC: 4")
         LOGGER.info("************************ Starting ATOODS ************************")

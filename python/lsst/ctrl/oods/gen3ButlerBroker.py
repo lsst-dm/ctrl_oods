@@ -43,12 +43,12 @@ class Gen3ButlerBroker(ButlerBroker):
 
     Parameters
     ----------
-    csc: `OodsCSC`
-        OODS CSC
     config: `dict`
         configuration of this butler ingester
+    csc: `OodsCSC`
+        OODS CSC
     """
-    def __init__(self, csc, config):
+    def __init__(self, config, csc=None):
         self.archiver_name = ArchiverName().archiver_name
         self.csc = csc
         self.config = config
@@ -122,6 +122,8 @@ class Gen3ButlerBroker(ButlerBroker):
         msg['STATUS_CODE'] = code
         msg['DESCRIPTION'] = description
         LOGGER.info(f"msg: {msg}, code: {code}, description: {description}")
+        if self.csc is None:
+            return
         asyncio.create_task(self.csc.send_imageInOODS(msg))
 
     def on_success(self, datasets):

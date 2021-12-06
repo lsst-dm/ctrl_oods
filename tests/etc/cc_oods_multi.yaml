@@ -14,13 +14,6 @@ ingester:
     forwarderStagingDirectory: forwarder_staging
     butlers:
         - butler:
-            class:
-                import : lsst.ctrl.oods.gen2ButlerBroker
-                name : Gen2ButlerBroker
-            stagingDirectory : staging
-            repoDirectory : repo
-            badFileDirectory: bad
-        - butler:
             collections:
                 - FARG/raw/all
             instrument: lsst.obs.lsst.LsstComCam

@@ -41,7 +41,7 @@ class FileIngester(object):
         A butler configuration dictionary
     """
 
-    def __init__(self, csc, config):
+    def __init__(self, config, csc=None):
         self.SUCCESS = 0
         self.FAILURE = 1
         self.config = config
@@ -56,7 +56,7 @@ class FileIngester(object):
 
         self.butlers = []
         for butlerConfig in butlerConfigs:
-            butler = ButlerProxy(csc, butlerConfig["butler"])
+            butler = ButlerProxy(butlerConfig["butler"], csc)
             self.butlers.append(butler)
 
         self.tasks = []
