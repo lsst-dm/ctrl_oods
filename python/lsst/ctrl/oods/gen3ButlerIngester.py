@@ -21,7 +21,11 @@
 
 import asyncio
 import collections
+import logging
+import os
+import shutil
 from lsst.ctrl.oods.butlerIngester import ButlerIngester
+from lsst.ctrl.oods.imageData import ImageData
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.daf.butler import Butler
 from lsst.obs.base.ingest import RawIngestTask, RawIngestConfig
@@ -29,6 +33,8 @@ from lsst.obs.base.utils import getInstrument
 from astropy.time import Time
 from astropy.time import TimeDelta
 import astropy.units as u
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Gen3ButlerIngester(ButlerIngester):
@@ -38,9 +44,15 @@ class Gen3ButlerIngester(ButlerIngester):
     ----------
     config: `dict`
         configuration of this butler ingester
+    publisher: `Publisher`
+        RabbitMQ publisher
+    publisher_queue: `str`
+        The queue used to publish messages
     """
-    def __init__(self, config):
+    def __init__(self, config, publisher=None, publisher_queue=None):
         self.config = config
+        self.publisher = publisher
+        self.publisher_queue = publisher_queue
         repo = self.config["repoDirectory"]
         instrument = self.config["instrument"]
         self.scanInterval = self.config["scanInterval"]
@@ -62,7 +74,106 @@ class Gen3ButlerIngester(ButlerIngester):
 
         cfg = RawIngestConfig()
         cfg.transfer = "direct"
-        self.task = RawIngestTask(config=cfg, butler=self.butler)
+        self.task = RawIngestTask(config=cfg,
+                                  butler=self.butler,
+                                  on_success=self.on_success,
+                                  on_ingest_failure=self.on_ingest_failure,
+                                  on_metadata_failure=self.on_metadata_failure)
+
+    def undef_metadata(self, filename):
+        """Return a sparsely initialized metadata dictionary
+        Parameters
+        ----------
+        filename: `str`
+            name of the file specified by ingest
+        Returns
+        -------
+        info: `dict`
+            Dictionary containing file name, and uninitialized elements
+        """
+        info = dict()
+        info['FILENAME'] = os.path.basename(filename)
+        info['CAMERA'] = ''
+        info['OBSID'] = ''
+        info['RAFT'] = ''
+        info['SENSOR'] = ''
+        return info
+
+    def transmit_status(self, metadata, code, description):
+        """Transmit a message with given metadata, status code and description
+        Parameters
+        ----------
+        metadata: `dict`
+            dictionary containing meta data about the image
+        code: `int`
+            status code
+        description: `str`
+            description of the ingestion status
+        """
+        msg = dict(metadata)
+        msg['MSG_TYPE'] = 'IMAGE_IN_OODS'
+        msg['ARCHIVER'] = ""
+        msg['STATUS_CODE'] = code
+        msg['DESCRIPTION'] = description
+        LOGGER.info(f"msg: {msg}, code: {code}, description: {description}")
+        if self.publisher is None:
+            return
+        asyncio.create_task(self.publisher.publish_message(self.publisher_queue, msg))
+
+    def on_success(self, datasets):
+        """Callback used on successful ingest. Used to transmit
+        successful data ingestion status
+        Parameters
+        ----------
+        datasets: `list`
+            list of DatasetRefs
+        """
+        for dataset in datasets:
+            LOGGER.info(f"{dataset.path.ospath} file ingested")
+            image_data = ImageData(dataset)
+            self.transmit_status(image_data.get_info(), code=0, description="file ingested")
+
+    def on_ingest_failure(self, filename, exc):
+        """Callback used on ingest failure. Used to transmit
+        unsuccessful data ingestion status
+        Parameters
+        ----------
+        filename: `ButlerURI`
+            ButlerURI that failed in ingest
+        exc: `Exception`
+            Exception which explains what happened
+        """
+        real_file = filename.ospath
+        self.move_file_to_bad_dir(real_file)
+        cause = self.extract_cause(exc)
+        info = self.undef_metadata(real_file)
+        LOGGER.error(description=f"ingest failure: {cause}")
+        self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
+
+    def on_metadata_failure(self, filename, exc):
+        """Callback used on metadata extraction failure. Used to transmit
+        unsuccessful data ingestion status
+        Parameters
+        ----------
+        filename: `ButlerURI`
+            ButlerURI that failed in ingest
+        exc: `Exception`
+            Exception which explains what happened
+        """
+        real_file = filename.ospath
+        self.move_file_to_bad_dir(real_file)
+
+        cause = self.extract_cause(exc)
+        info = self.undef_metadata(real_file)
+        LOGGER.error(description=f"metadata failure: {cause}")
+        self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
+
+    def move_file_to_bad_dir(self, filename):
+        bad_dir = self.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
+        try:
+            shutil.move(filename, bad_dir)
+        except Exception as fmException:
+            LOGGER.info(f"Failed to move {filename} to {self.bad_dir} {fmException}")
 
     def ingest(self, filename):
         """Ingest a file into a butler

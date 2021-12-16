@@ -64,16 +64,24 @@ class FileIngester(object):
         if len(butlerConfigs) == 0:
             raise Exception("No Butlers configured; check configuration file")
 
+        self.CONSUME_QUEUE = None
+        self.PUBLISH_QUEUE = None
+        self.consumer = None
+        self.publisher = None
+        if self.base_broker_url is not None:
+            self.CONSUME_QUEUE = config['CONSUME_QUEUE']
+            self.PUBLISH_QUEUE = config['PUBLISH_QUEUE']
+
+            self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
+            self.consumer.start()
+
+            self.publisher = Publisher(self.base_broker_url)
+            asyncio.create_task(self.start_comm())
+
         self.butlers = []
         for butlerConfig in butlerConfigs:
-            butler = ButlerProxy(butlerConfig["butler"])
+            butler = ButlerProxy(butlerConfig["butler"], self.publisher, self.PUBLISH_QUEUE)
             self.butlers.append(butler)
-
-        self.CONSUME_QUEUE = config['CONSUME_QUEUE']
-        self.PUBLISH_QUEUE = config['PUBLISH_QUEUE']
-
-        if self.base_broker_url is not None:
-            asyncio.create_task(self.start_comm())
 
     def getButlerTasks(self):
         """Get a list of all butler run_task methods
@@ -91,10 +99,6 @@ class FileIngester(object):
     async def start_comm(self):
         """Start communication services
         """
-        self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
-        self.consumer.start()
-
-        self.publisher = Publisher(self.base_broker_url)
         await self.publisher.start()
 
     def on_message(self, ch, method, properties, body):

@@ -19,45 +19,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import asyncio
-from lsst.ctrl.oods.butlerIngester import ButlerIngester
-from lsst.pipe.tasks.ingest import IngestTask
+from pathlib import PurePath
 
 
-class Gen2ButlerIngester(ButlerIngester):
-    """Processes files for ingestion into a Gen2 Butler.
-
-    Parameters
-    ----------
-    butlerConfig: `dict`
-        dictionary containing butler configuration information
+class Utils:
+    """representation of a time interval from a configuration
     """
-    def __init__(self, butlerConfig):
-        repo = butlerConfig["repoDirectory"]
-        self.task = IngestTask.prepareTask(repo)
 
-    def ingest(self, filename):
-        """Ingest a file into a butler
+    @staticmethod
+    def strip_prefix(pathname, prefix):
+        """Strip the prefix of the path
 
         Parameters
         ----------
-        filename: `str`
-            filename to ingest
-        """
-        self.task.ingestFiles(filename)
-
-    def getName(self):
-        """Get the name of this ingester
+        pathname: `str`
+            Path name
+        prefix: `str`
+            Prefix to strip from pathname
 
         Returns
         -------
         ret: `str`
-            the name of this ingester
+            The remaining path
         """
-        return "gen2"
-
-    async def run_task(self):
-        """Run task that require periodical attention
-        """
-        while True:
-            await asyncio.sleep(60)
+        p = PurePath(pathname)
+        ret = str(p.relative_to(prefix))
+        return ret
