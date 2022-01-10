@@ -24,7 +24,7 @@ from pathlib import PurePath
 
 
 class Utils:
-    """representation of a time interval from a configuration
+    """statis utility functions
     """
 
     @staticmethod
@@ -67,6 +67,11 @@ class Utils:
         -------
         newdir: `str`
             new directory name
+
+        Raises
+        ------
+        PermissionError
+            Raised if the directory could not be created
         """
         # strip the original directory location, except for the date
         newfile = Utils.strip_prefix(original, staging_dir_root)

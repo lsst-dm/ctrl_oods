@@ -29,6 +29,10 @@ class ButlerProxy(object):
     ----------
     butlerConfig: `dict`
         details on how to construct and configure the butler
+    publisher: `Publisher`
+        publisher to use to send messages
+    queue:  `str`
+        name of queue to publish to 
     """
     def __init__(self, butlerConfig, publisher, queue):
         # create the butler

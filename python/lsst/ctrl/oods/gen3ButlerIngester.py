@@ -87,10 +87,12 @@ class Gen3ButlerIngester(ButlerIngester):
 
     def undef_metadata(self, filename):
         """Return a sparsely initialized metadata dictionary
+
         Parameters
         ----------
         filename: `str`
             name of the file specified by ingest
+
         Returns
         -------
         info: `dict`
@@ -106,6 +108,7 @@ class Gen3ButlerIngester(ButlerIngester):
 
     def transmit_status(self, metadata, code, description):
         """Transmit a message with given metadata, status code and description
+
         Parameters
         ----------
         metadata: `dict`
@@ -128,6 +131,7 @@ class Gen3ButlerIngester(ButlerIngester):
     def on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
         successful data ingestion status
+
         Parameters
         ----------
         datasets: `list`
@@ -141,6 +145,7 @@ class Gen3ButlerIngester(ButlerIngester):
     def on_failure(self, filename, exc, code, reason):
         """Callback used on ingest failure. Used to transmit
         unsuccessful data ingestion status
+
         Parameters
         ----------
         filename: `ButlerURI`
@@ -163,6 +168,7 @@ class Gen3ButlerIngester(ButlerIngester):
     def on_ingest_failure(self, filename, exc):
         """Callback used on ingest failure. Used to transmit
         unsuccessful data ingestion status
+
         Parameters
         ----------
         filename: `ButlerURI`
@@ -175,6 +181,7 @@ class Gen3ButlerIngester(ButlerIngester):
     def on_metadata_failure(self, filename, exc):
         """Callback used on metadata extraction failure. Used to transmit
         unsuccessful data ingestion status
+
         Parameters
         ----------
         filename: `ButlerURI`
@@ -185,6 +192,13 @@ class Gen3ButlerIngester(ButlerIngester):
         self.on_failure(filename, exc, self.METADATA_FAILURE, "metadata failure")
 
     def move_file_to_bad_dir(self, filename):
+        """Move filename to a the "bad file" directory
+
+        Parameters
+        ----------
+        filename: `str`
+            file name of the file to move
+        """
         bad_dir = Utils.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
         try:
             shutil.move(filename, bad_dir)
