@@ -68,6 +68,13 @@ class ImageData:
             LOGGER.info(f"Failed to extract data for {dataset}: {e}")
 
     def get_info(self):
+        """Return the extracted information of the dataset
+
+        Returns
+        -------
+        info: `dict`
+            A dictionary containing the image information
+        """
         return self.info
 
     def __repr__(self) -> str:

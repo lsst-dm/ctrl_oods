@@ -19,11 +19,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import os
 from pathlib import PurePath
 
 
 class Utils:
-    """representation of a time interval from a configuration
+    """statis utility functions
     """
 
     @staticmethod
@@ -45,3 +46,43 @@ class Utils:
         p = PurePath(pathname)
         ret = str(p.relative_to(prefix))
         return ret
+
+    @staticmethod
+    def create_bad_dirname(bad_dir_root, staging_dir_root, original):
+        """Create a full path to a directory contained in the
+        'bad directory' heirarchy; this retains the subdirectory structure
+        created where the file was staged, where the uningestable file will
+        be placed.
+
+        Parameters
+        ----------
+        bad_dir_root: `str`
+            Root of the bad directory heirarchy
+        staging_dir_root: `str`
+            Root of the bad directory heirarchy
+        original: `str`
+            Original directory location
+
+        Returns
+        -------
+        newdir: `str`
+            new directory name
+
+        Raises
+        ------
+        PermissionError
+            Raised if the directory could not be created
+        """
+        # strip the original directory location, except for the date
+        newfile = Utils.strip_prefix(original, staging_dir_root)
+
+        # split into subdir and filename
+        head, tail = os.path.split(newfile)
+
+        # create subdirectory path name for directory with date
+        newdir = os.path.join(bad_dir_root, head)
+
+        # create the directory, and hand the name back
+        os.makedirs(newdir, exist_ok=True)
+
+        return newdir

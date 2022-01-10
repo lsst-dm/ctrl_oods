@@ -19,16 +19,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asynctest
 import asyncio
 import os
 import tempfile
 from pathlib import PurePath
 from shutil import copyfile
 import yaml
+import lsst.utils.tests
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
-import lsst.utils.tests
-import asynctest
 
 
 class Gen3ComCamIngesterTestCase(asynctest.TestCase):
@@ -71,14 +71,12 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         ingesterConfig = config["ingester"]
         self.forwarderStagingDir = tempfile.mkdtemp()
         ingesterConfig["forwarderStagingDirectory"] = self.forwarderStagingDir
-        print(f"forwarderStagingDirectory = {self.forwarderStagingDir}")
 
         self.badDir = tempfile.mkdtemp()
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
         butlerConfig["badFileDirectory"] = self.badDir
         self.stagingDirectory = tempfile.mkdtemp()
         butlerConfig["stagingDirectory"] = self.stagingDirectory
-        print(f"stagingDirectory = {self.stagingDirectory}")
 
         repoDir = tempfile.mkdtemp()
         butlerConfig["repoDirectory"] = repoDir
@@ -167,7 +165,6 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
-        print(f"destFile = {self.destFile}")
 
         # trigger the ingester by sending it a "message"
         msg = {}
