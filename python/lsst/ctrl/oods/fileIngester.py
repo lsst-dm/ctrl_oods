@@ -27,6 +27,7 @@ import os.path
 from pathlib import PurePath
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
+from lsst.ctrl.oods.utils import Utils
 from lsst.dm.csc.base.consumer import Consumer
 from lsst.dm.csc.base.publisher import Publisher
 
@@ -64,16 +65,24 @@ class FileIngester(object):
         if len(butlerConfigs) == 0:
             raise Exception("No Butlers configured; check configuration file")
 
+        self.CONSUME_QUEUE = None
+        self.PUBLISH_QUEUE = None
+        self.consumer = None
+        self.publisher = None
+        if self.base_broker_url is not None:
+            self.CONSUME_QUEUE = config['CONSUME_QUEUE']
+            self.PUBLISH_QUEUE = config['PUBLISH_QUEUE']
+
+            self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
+            self.consumer.start()
+
+            self.publisher = Publisher(self.base_broker_url)
+            asyncio.create_task(self.start_comm())
+
         self.butlers = []
         for butlerConfig in butlerConfigs:
-            butler = ButlerProxy(butlerConfig["butler"])
+            butler = ButlerProxy(butlerConfig["butler"], self.publisher, self.PUBLISH_QUEUE)
             self.butlers.append(butler)
-
-        self.CONSUME_QUEUE = config['CONSUME_QUEUE']
-        self.PUBLISH_QUEUE = config['PUBLISH_QUEUE']
-
-        if self.base_broker_url is not None:
-            asyncio.create_task(self.start_comm())
 
     def getButlerTasks(self):
         """Get a list of all butler run_task methods
@@ -91,10 +100,6 @@ class FileIngester(object):
     async def start_comm(self):
         """Start communication services
         """
-        self.consumer = Consumer(self.base_broker_url, None, self.CONSUME_QUEUE, self.on_message)
-        self.consumer.start()
-
-        self.publisher = Publisher(self.base_broker_url)
         await self.publisher.start()
 
     def on_message(self, ch, method, properties, body):
@@ -134,40 +139,6 @@ class FileIngester(object):
             return f"{str(e.__cause__)}"
         else:
             return f"{str(e.__cause__)};  {cause}"
-
-    def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
-        """Create a full path to a directory contained in the
-        'bad directory' heirarchy; this retains the subdirectory structure
-        created where the file was staged, where the uningestable file will
-        be placed.
-
-        Parameters
-        ----------
-        bad_dir_root: `str`
-            Root of the bad directory heirarchy
-        staging_dir_root: `str`
-            Root of the bad directory heirarchy
-        original: `str`
-            Original directory location
-
-        Returns
-        -------
-        newdir: `str`
-            new directory name
-        """
-        # strip the original directory location, except for the date
-        newfile = self.strip_prefix(original, staging_dir_root)
-
-        # split into subdir and filename
-        head, tail = os.path.split(newfile)
-
-        # create subdirectory path name for directory with date
-        newdir = os.path.join(bad_dir_root, head)
-
-        # create the directory, and hand the name back
-        os.makedirs(newdir, exist_ok=True)
-
-        return newdir
 
     def strip_prefix(self, pathname, prefix):
         """Strip the prefix of the path
@@ -335,7 +306,7 @@ class FileIngester(object):
             bad_dir = butlerProxy.getBadFileDirectory()
             staging_dir = butlerProxy.getStagingDirectory()
 
-            bad_file_dir = self.create_bad_dirname(bad_dir, staging_dir, filename)
+            bad_file_dir = Utils.create_bad_dirname(bad_dir, staging_dir, filename)
             try:
                 LOGGER.info(f"Moving {filename} to {bad_file_dir}")
                 shutil.move(filename, bad_file_dir)

@@ -29,8 +29,12 @@ class ButlerProxy(object):
     ----------
     butlerConfig: `dict`
         details on how to construct and configure the butler
+    publisher: `Publisher`
+        publisher to use to send messages
+    queue:  `str`
+        name of queue to publish to 
     """
-    def __init__(self, butlerConfig):
+    def __init__(self, butlerConfig, publisher, queue):
         # create the butler
         classConfig = butlerConfig["class"]
 
@@ -40,7 +44,7 @@ class ButlerProxy(object):
         mod = import_module(importFile)
         butlerClass = getattr(mod, name)
 
-        self.butlerInstance = butlerClass(butlerConfig)
+        self.butlerInstance = butlerClass(butlerConfig, publisher, queue)
 
         # load configuration info for the repository, staging,
         # and bad file areas

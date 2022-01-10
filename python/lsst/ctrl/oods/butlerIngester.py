@@ -49,6 +49,19 @@ class ButlerIngester(ABC):
         """
         raise NotImplementedError()
 
+    def extract_cause(self, e):
+        """extract the cause of an exception
+
+        Returns
+        -------
+        s: `str`
+            A string containing the cause of an exception
+        """
+        if e.__cause__ is None:
+            return str(e)
+        else:
+            return str(e.__cause__)
+
     async def run_task(self):
         """Run task that require periodical attention
         """
