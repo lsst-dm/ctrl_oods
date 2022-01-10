@@ -32,7 +32,7 @@ class ButlerProxy(object):
     publisher: `Publisher`
         publisher to use to send messages
     queue:  `str`
-        name of queue to publish to 
+        name of queue to publish to
     """
     def __init__(self, butlerConfig, publisher, queue):
         # create the butler
