@@ -61,6 +61,7 @@ class Gen3ButlerIngester(ButlerIngester):
         self.collections = self.config["collections"]
         self.bad_file_dir = self.config["badFileDirectory"]
         self.staging_dir = self.config["stagingDirectory"]
+        self.archiver = "undefined"
         self.INGEST_FAILURE = 1
         self.METADATA_FAILURE = 2
 
@@ -100,10 +101,10 @@ class Gen3ButlerIngester(ButlerIngester):
         """
         info = dict()
         info['FILENAME'] = os.path.basename(filename)
-        info['CAMERA'] = ''
-        info['OBSID'] = ''
-        info['RAFT'] = ''
-        info['SENSOR'] = ''
+        info['CAMERA'] = 'UNDEF'
+        info['OBSID'] = '??'
+        info['RAFT'] = 'R??'
+        info['SENSOR'] = 'S??'
         return info
 
     def transmit_status(self, metadata, code, description):
@@ -120,7 +121,7 @@ class Gen3ButlerIngester(ButlerIngester):
         """
         msg = dict(metadata)
         msg['MSG_TYPE'] = 'IMAGE_IN_OODS'
-        msg['ARCHIVER'] = ""
+        msg['ARCHIVER'] = self.archiver
         msg['STATUS_CODE'] = code
         msg['DESCRIPTION'] = description
         LOGGER.info(f"msg = {msg}")
@@ -205,7 +206,7 @@ class Gen3ButlerIngester(ButlerIngester):
         except Exception as fmException:
             LOGGER.info(f"Failed to move {filename} to {self.bad_dir} {fmException}")
 
-    def ingest(self, filename):
+    def ingest(self, archiver, filename):
         """Ingest a file into a butler
 
         Parameters
@@ -215,6 +216,7 @@ class Gen3ButlerIngester(ButlerIngester):
         """
 
         # Ingest image.
+        self.archiver = archiver
         self.task.run([filename])
 
     def getName(self):

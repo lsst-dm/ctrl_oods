@@ -21,6 +21,8 @@
 
 import asynctest
 import asyncio
+import logging
+import lsst.log as lsstlog
 import os
 import tempfile
 from pathlib import PurePath
@@ -130,7 +132,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         msg['CAMERA'] = "LATISS"
         msg['OBSID'] = "AT_C_20180920_000028"
         msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "AT"
+        msg['ARCHIVER'] = "ATArchiver"
         await ingester.ingest(msg)
 
         # check to make sure the file was moved from the staging directory
@@ -171,7 +173,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         msg['CAMERA'] = "COMCAM"
         msg['OBSID'] = "CC_C_20190530_000001"
         msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "CC"
+        msg['ARCHIVER'] = "CCArchiver"
         await ingester.ingest(msg)
 
         # make sure staging area is now empty
@@ -233,7 +235,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         msg['CAMERA'] = "COMCAM"
         msg['OBSID'] = "CC_C_20190530_000001"
         msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "CC"
+        msg['ARCHIVER'] = "CCArchiver"
         await ingester.ingest(msg)
 
         files = scanner.getAllFiles()
@@ -262,3 +264,7 @@ class MemoryTester(lsst.utils.tests.MemoryTestCase):
 
 def setup_module(module):
     lsst.utils.tests.init()
+    lsstlog.usePythonLogging()
+
+    F = '%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s'
+    logging.basicConfig(level=logging.INFO, format=(F), datefmt="%Y-%m-%d %H:%M:%S")
