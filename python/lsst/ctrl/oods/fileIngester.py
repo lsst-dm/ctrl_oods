@@ -222,15 +222,11 @@ class FileIngester(object):
         self.stageFiles(msg)
 
         # for each butler, attempt to ingest the requested file,
-        # Success or failure is noted in a message description which
-        # is sent via RabbitMQ message back to Archiver, which will
-        # send it out via a CSC logevent.
         try:
             for butler in self.butlers:
                 self.ingest_file(butler, msg)
-        except Exception as e:
-            print("Exception thrown")
-            print(f"Exception: {e}")
+        except Exception:
+            LOGGER.exception("Failed in ingest file")
 
     def get_locally_staged_filename(self, butlerProxy, full_filename):
         """Construct the full path to the staging area unique to a butler Proxy
@@ -272,9 +268,7 @@ class FileIngester(object):
         filename = self.get_locally_staged_filename(butlerProxy, os.path.realpath(msg['FILENAME']))
         archiver = msg['ARCHIVER']
 
-        # attempt to ingest the file;  if ingests, log that
-        # if it does not ingest, move it to a "bad file" directory
-        # and log that.
+        # attempt to ingest the file
         butler = butlerProxy.getButler()
         butler.ingest(archiver, filename)
 
