@@ -36,9 +36,9 @@ class ImageData:
         dataset: `DatasetRef`
             The DatasetRef to extract information from
         """
-        self.info = {"camera": "", "raft": "", "sensor": "", "obsid": ""}
+        self.info = {"CAMERA": "UNDEF", "RAFT": "R??", "SENSOR": "S??", "OBSID": "??"}
         try:
-            self.info["filename"] = os.path.basename(dataset.path.ospath)
+            self.info["FILENAME"] = os.path.basename(dataset.path.ospath)
         except Exception as e:
             LOGGER.info(f"Failed to extract filename for {dataset}: {e}")
             return
@@ -54,16 +54,16 @@ class ImageData:
 
             if 'instrument' in records:
                 instrument = records['instrument'].toDict()
-                self.info["camera"] = instrument["name"]
+                self.info["CAMERA"] = instrument.get("name", "UNDEF")
 
             if 'detector' in records:
                 detector = records['detector'].toDict()
-                self.info["raft"] = detector["raft"]
-                self.info["sensor"] = detector["name_in_raft"]
+                self.info["RAFT"] = detector.get("raft", "R??")
+                self.info["SENSOR"] = detector.get("name_in_raft", "S??")
 
             if 'exposure' in records:
                 exposure = records['exposure'].toDict()
-                self.info["obsid"] = exposure["obs_id"]
+                self.info["OBSID"] = exposure.get("obs_id", "??")
         except Exception as e:
             LOGGER.info(f"Failed to extract data for {dataset}: {e}")
 

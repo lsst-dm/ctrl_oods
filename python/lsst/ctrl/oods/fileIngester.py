@@ -21,13 +21,11 @@
 
 import asyncio
 import logging
-import shutil
 import os
 import os.path
 from pathlib import PurePath
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
-from lsst.ctrl.oods.utils import Utils
 from lsst.dm.csc.base.consumer import Consumer
 from lsst.dm.csc.base.publisher import Publisher
 
@@ -224,31 +222,11 @@ class FileIngester(object):
         self.stageFiles(msg)
 
         # for each butler, attempt to ingest the requested file,
-        # Success or failure is noted in a message description which
-        # is sent via RabbitMQ message back to Archiver, which will
-        # send it out via a CSC logevent.
-        code = self.SUCCESS
-        description = None
-        for butler in self.butlers:
-            (status_code, status_msg) = self.ingest_file(butler, msg)
-            if status_code == self.FAILURE:
-                code = self.FAILURE
-            if description is None:
-                description = status_msg
-            else:
-                description = f"{description}; {status_msg}"
-
-        if code == self.SUCCESS and description is None:
-            LOGGER.info("Error in processing, no success message was created")
-            return
-
-        if self.base_broker_url is not None:
-            LOGGER.info(f"Sending message: {msg}")
-            d = dict(msg)
-            d['MSG_TYPE'] = 'IMAGE_IN_OODS'
-            d['STATUS_CODE'] = code
-            d['DESCRIPTION'] = description
-            await self.publisher.publish_message(self.PUBLISH_QUEUE, d)
+        try:
+            for butler in self.butlers:
+                self.ingest_file(butler, msg)
+        except Exception:
+            LOGGER.exception("Failed in ingest file")
 
     def get_locally_staged_filename(self, butlerProxy, full_filename):
         """Construct the full path to the staging area unique to a butler Proxy
@@ -287,38 +265,12 @@ class FileIngester(object):
         """
 
         # get the locally staged file name
-        camera = msg['CAMERA']
-        obsid = msg['OBSID']
         filename = self.get_locally_staged_filename(butlerProxy, os.path.realpath(msg['FILENAME']))
         archiver = msg['ARCHIVER']
 
-        # attempt to ingest the file;  if ingests, log that
-        # if it does not ingest, move it to a "bad file" directory
-        # and log that.
-        try:
-            butler = butlerProxy.getButler()
-            butler.ingest(filename)
-            LOGGER.info(f"{butler.getName()}: {obsid} {filename} ingested from {camera} by {archiver}")
-        except Exception as e:
-            status_code = self.FAILURE
-            status_msg = f"{butler.getName()}: {filename} could not be ingested: {self.extract_cause(e)}"
-            LOGGER.exception(status_msg)
-            bad_dir = butlerProxy.getBadFileDirectory()
-            staging_dir = butlerProxy.getStagingDirectory()
-
-            bad_file_dir = Utils.create_bad_dirname(bad_dir, staging_dir, filename)
-            try:
-                LOGGER.info(f"Moving {filename} to {bad_file_dir}")
-                shutil.move(filename, bad_file_dir)
-            except Exception as fmException:
-                LOGGER.info(f"Failed to move {filename} to {bad_file_dir} {fmException}")
-
-            return (status_code, status_msg)
-
-        status_code = self.SUCCESS
-        status_msg = f"{butler.getName()}: OBSID {obsid} - File {filename} ingested into OODS"
-
-        return (status_code, status_msg)
+        # attempt to ingest the file
+        butler = butlerProxy.getButler()
+        butler.ingest(archiver, filename)
 
     async def run_task(self):
         """Keep this object alive
