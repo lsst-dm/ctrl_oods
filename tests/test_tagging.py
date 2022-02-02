@@ -22,7 +22,6 @@
 import asynctest
 import asyncio
 import logging
-import lsst.log as lsstlog
 import os
 import tempfile
 from pathlib import PurePath
@@ -36,33 +35,43 @@ from lsst.daf.butler.registry import CollectionType
 
 
 class TaggingTestCase(asynctest.TestCase):
-    """Test TAGGED deletion 
+    """Test TAGGED deletion
 
-    This test simulates the OODS asyncio cleanup and a secondary associate (tagging) and
-    disassociate (untagging) of files, to see be sure the OODS cleanup behaves properly:
-    1) When a dataset is TAGGED, will not be deleted, and the OODS cleaup routine bypasses it.
-    2) When a dataset is not TAGGED, it can be deleted, and the OODS cleaup routine removes it.
+    This test simulates the OODS asyncio cleanup and a secondary associate
+    (tagging) and disassociate (untagging) of files, to see be sure the OODS
+    cleanup behaves properly:
 
-    The test simulates this by gathering all ingester asyncio tasks, plus unit test tasks to associate,
-    disassociate and check for a dataset's existance (or non-existance), and an interrupt task. Because
-    the ingester cleanup tasks run at predetermined intervals, the various checks in the unit tests are
-    also set up as asyncio tasks, waiting an appropriate amount of time for the ingest cleanup routines
-    to run. The code below might be a little hard to follow, so here's a description of how the tasks
-    run in this unit test.
+    1) When a dataset is TAGGED, will not be deleted, and the OODS cleaup
+       routine bypasses it.
+    2) When a dataset is not TAGGED, it can be deleted, and the OODS cleaup
+       routine removes it.
+
+    The test simulates this by gathering all ingester asyncio tasks, plus unit
+    test tasks to associate, disassociate and check for a dataset's existance
+    (or non-existance), and an interrupt task. Because the ingester cleanup
+    tasks run at predetermined intervals, the various checks in the unit tests
+    are also set up as asyncio tasks, waiting an appropriate amount of time
+    for the ingest cleanup routines to run. The code below might be a little
+    hard to follow, so here's a description of how the tasks run in this unit
+    test.
 
     1) File ingest runs
-    2) Ingester cleanup runs, and nothing happens because the file hasn't expired yet, and goes to sleep
+    2) Ingester cleanup runs, and nothing happens because the file hasn't
+       expired yet, and goes to sleep
     3) Task to associate the dataset runs, and tags the file, and completes
-    4) Ingester cleanup task runs, finds an expired file, but doesn't deleted it because it's TAGGED, and
-       goes back to sleep
-    5) Task disassociate the dataset runs, and removes the TAGGED designation, and completes
-    6) Task to check that the file runs, affirming it's still on disk, and completes
-    7) Ingester cleanup task runs, finds an expired file, and deletes it, since it's not TAGGED anymore
-       and goes back to sleep
-    8) Task to check that the file runs, affirming it is not longer on disk, and completes
+    4) Ingester cleanup task runs, finds an expired file, but doesn't deleted
+       it because it's TAGGED, and goes back to sleep
+    5) Task disassociate the dataset runs, and removes the TAGGED designation,
+        and completes
+    6) Task to check that the file runs, affirming it's still on disk, and
+       completes
+    7) Ingester cleanup task runs, finds an expired file, and deletes it,
+       since it's not TAGGED anymore and goes back to sleep
+    8) Task to check that the file runs, affirming it is not longer on disk,
+       and completes
     7) Ingester cleanup task runs, finds nothing to do, and goes back to sleep
-    9) Task to interrupt all tasks runs, causes an exception on purpose, which interrupts that gather()
-       causing all tasks to stop.  End of unit test
+    9) Task to interrupt all tasks runs, causes an exception on purpose, which
+       interrupts that gather() causing all tasks to stop.  End of unit test
     """
 
     async def stage(self):
@@ -248,7 +257,7 @@ class TaggingTestCase(asynctest.TestCase):
         # get the dataset
         try:
             results = set(butler.registry.queryDatasets(datasetType=..., collections=self.collections,
-                      where=f"exposure={exposure} and instrument='LSSTComCam'"))
+                          where=f"exposure={exposure} and instrument='LSSTComCam'"))
         except Exception as e:
             logging.info(e)
 
