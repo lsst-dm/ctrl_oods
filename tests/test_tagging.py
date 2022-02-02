@@ -31,12 +31,15 @@ import yaml
 import lsst.utils.tests
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.daf.butler import Butler
+from lsst.daf.butler.registry import CollectionType
+from lsst.obs.base.utils import getInstrument
 
 
-class Gen3IngesterTestCase(asynctest.TestCase):
-    """Test Gen3 Butler Ingest"""
+class TaggingTestCase(asynctest.TestCase):
+    """Test TAGGED deletion"""
 
-    def createConfig(self, config_name, fits_name):
+    async def createConfig(self, config_name, fits_name):
         """create a standard configuration file, using temporary directories
 
         Parameters
@@ -80,72 +83,17 @@ class Gen3IngesterTestCase(asynctest.TestCase):
         self.stagingDirectory = tempfile.mkdtemp()
         butlerConfig["stagingDirectory"] = self.stagingDirectory
 
-        repoDir = tempfile.mkdtemp()
-        butlerConfig["repoDirectory"] = repoDir
+        self.repoDir = tempfile.mkdtemp()
+        butlerConfig["repoDirectory"] = self.repoDir
+
+        self.collections = butlerConfig["collections"]
+        print(f'self.collections = {self.collections}')
 
         # copy the FITS file to it's test location
 
         subDir = tempfile.mkdtemp(dir=self.forwarderStagingDir)
         self.destFile = os.path.join(subDir, fits_name)
         copyfile(fitsFile, self.destFile)
-
-        return config
-
-    def strip_prefix(self, name, prefix):
-        """strip prefix from name
-
-        Parameters
-        ----------
-        name: `str`
-           path of a file
-        prefix: `str`
-           prefix to strip
-
-        Returns
-        -------
-        ret: `str`
-            remainder of string
-        """
-        p = PurePath(name)
-        ret = str(p.relative_to(prefix))
-        return ret
-
-    async def testAuxTelIngest(self):
-        """test ingesting an auxtel file
-        """
-        fits_name = "2020032700020-det000.fits.fz"
-        config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
-
-        # setup directory to scan for files in the forwarder staging directory
-        # and ensure one file is there
-        ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 1)
-
-        # create a FileIngester
-        ingester = FileIngester(ingesterConfig)
-
-        # trigger the ingester by sending it a "message"
-        msg = {}
-        msg['CAMERA'] = "LATISS"
-        msg['OBSID'] = "AT_C_20180920_000028"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "ATArchiver"
-        await ingester.ingest(msg)
-
-        # check to make sure the file was moved from the staging directory
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 0)
-
-        # check to be sure the file didn't land in the "bad file" directory
-        bad_path = os.path.join(self.badDir, fits_name)
-        self.assertFalse(os.path.exists(bad_path))
-
-    async def testComCamIngest(self):
-        fits_name = "3019053000001-R22-S00-det000.fits.fz"
-        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
         # setup directory to scan for files in the forwarder staging directory
         # and ensure one file is there
@@ -196,6 +144,14 @@ class Gen3IngesterTestCase(asynctest.TestCase):
         # throwing an acception
         task_list.append(asyncio.create_task(self.interrupt_me()))
 
+        return file_to_ingest, task_list
+
+    async def testTaggedFileTestCase(self):
+        fits_name = "3019053000001-R22-S00-det000.fits.fz"
+        file_to_ingest, task_list = await self.createConfig("ingest_tag_test.yaml", fits_name)
+
+        task_list.append(asyncio.create_task(self.register_file("3019053000001")))
+
         # kick off all the tasks, until one (the "interrupt_me" task)
         # throws an exception
         try:
@@ -204,12 +160,37 @@ class Gen3IngesterTestCase(asynctest.TestCase):
             for task in task_list:
                 task.cancel()
 
-        # that should have been enough time to run the "real" tasks,
-        # which performed the ingestion, and the clean up task, which
-        # was set to clean it up right away.  (That "clean up" time
+        # now wait some additional time for the cleanup task to run
+        await asyncio.sleep(10)
+        # That "clean up" time
         # is set in the config file loaded for this FileIngester).
-        # And, when "cleaned up", the file that was originally there
-        # is now gone.  Check for that.
+        # And, when "cleaned up", the file should still be there
+        # because it was TAGGED
+        self.assertTrue(os.path.exists(file_to_ingest))
+
+        # check to be sure that the file wasn't "bad" (and
+        # therefore, not ingested)
+        bad_path = os.path.join(self.badDir, fits_name)
+        self.assertFalse(os.path.exists(bad_path))
+
+    async def testUntaggedFileTestCase(self):
+        fits_name = "3019053000001-R22-S00-det000.fits.fz"
+        file_to_ingest, task_list = await self.createConfig("ingest_tag_test.yaml", fits_name)
+        task_list.append(asyncio.create_task(self.register_file("3019053000002")))
+
+        # kick off all the tasks, until one (the "interrupt_me" task)
+        # throws an exception
+        try:
+            await asyncio.gather(*task_list)
+        except Exception:
+            for task in task_list:
+                task.cancel()
+
+        # now wait some additional time for the cleanup task to run
+        await asyncio.sleep(10)
+        # That "clean up" time
+        # is set in the config file loaded for this FileIngester).
+        # And, when "cleaned up", the file should not be there
         self.assertFalse(os.path.exists(file_to_ingest))
 
         # check to be sure that the file wasn't "bad" (and
@@ -217,44 +198,44 @@ class Gen3IngesterTestCase(asynctest.TestCase):
         bad_path = os.path.join(self.badDir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
-    async def testBadIngest(self):
-        fits_name = "bad.fits.fz"
-        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
+    async def register_file(self, exposure):
+        await asyncio.sleep(10)
+        # now that the file has been ingested, tag it
 
-        # setup directory to scan for files in the forwarder staging directory
-        ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 1)
+        instr = getInstrument("lsst.obs.lsst.LsstComCam")
+        run = instr.makeDefaultRawIngestRunName()
+        opts = dict(run=run, writeable=True, collections=self.collections)
+        butler = Butler(self.repoDir, **opts)
 
-        ingester = FileIngester(config["ingester"])
+        butler.registry.registerCollection("test_collection", CollectionType.TAGGED)
 
-        # trigger the ingester by sending it a "message"
-        msg = {}
-        msg['CAMERA'] = "COMCAM"
-        msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "CCArchiver"
-        await ingester.ingest(msg)
+        results = set(butler.registry.queryDatasets(datasetType=..., collections=self.collections,
+                      where=f"exposure={exposure} and instrument='LSSTComCam'"))
+        if len(results) != 0:
+            butler.registry.associate("test_collection", results)
 
-        files = scanner.getAllFiles()
-        self.assertEqual(len(files), 0)
+    def strip_prefix(self, name, prefix):
+        """strip prefix from name
 
-        name = self.strip_prefix(self.destFile, forwarder_staging_dir)
-        bad_path = os.path.join(self.badDir, name)
-        self.assertTrue(os.path.exists(bad_path))
+        Parameters
+        ----------
+        name: `str`
+           path of a file
+        prefix: `str`
+           prefix to strip
 
-    async def testRepoExists(self):
-        fits_name = "bad.fits.fz"
-        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
-
-        FileIngester(config["ingester"])
-        # tests the path that the previously created repo (above) exists
-        FileIngester(config["ingester"])
+        Returns
+        -------
+        ret: `str`
+            remainder of string
+        """
+        p = PurePath(name)
+        ret = str(p.relative_to(prefix))
+        return ret
 
     async def interrupt_me(self):
-        await asyncio.sleep(20)
+        await asyncio.sleep(40)
+        logging.info("About to interrupt all tasks")
         raise RuntimeError("I'm interrupting")
 
 
@@ -267,4 +248,4 @@ def setup_module(module):
     lsstlog.usePythonLogging()
 
     F = '%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s'
-    logging.basicConfig(level=logging.INFO, format=(F), datefmt="%Y-%m-%d %H:%M:%S")
+    logging.basicConfig(level=logging.DEBUG, format=(F), datefmt="%Y-%m-%d %H:%M:%S")

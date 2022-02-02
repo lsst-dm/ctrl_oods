@@ -1,0 +1,45 @@
+defaultInterval: &interval
+    days: 0
+    hours: 0
+    minutes: 0
+    seconds: 0
+
+ingester:
+    FILE_INGEST_REQUEST: CC_FILE_INGEST_REQUEST
+    CONSUME_QUEUE: cc_publish_to_oods
+    PUBLISH_QUEUE: oods_publish_to_cc
+    forwarderStagingDirectory: data
+    butlers:
+        - butler:
+            class:
+                import : lsst.ctrl.oods.gen3ButlerIngester
+                name : Gen3ButlerIngester
+            repoDirectory : repo
+            instrument: lsst.obs.lsst.LsstComCam
+            badFileDirectory: /tmp/bad
+            stagingDirectory: /tmp/staging
+            collections:
+                - LSSTComCam/raw/all
+            scanInterval:
+                <<: *interval
+                seconds: 20
+            filesOlderThan:
+                <<: *interval
+                seconds: 5
+    batchSize: 20
+    scanInterval:
+        <<: *interval
+        seconds: 15 
+
+cacheCleaner:
+    directories:
+        - repo/raw
+    scanInterval:
+        <<: *interval
+        seconds: 30
+    filesOlderThan:
+        <<: *interval
+        days: 30 
+    directoriesEmptyForMoreThan:
+        <<: *interval
+        days: 1

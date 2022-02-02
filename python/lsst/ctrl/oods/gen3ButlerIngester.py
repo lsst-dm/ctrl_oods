@@ -29,6 +29,7 @@ from lsst.ctrl.oods.imageData import ImageData
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler
+from lsst.daf.butler.registry import CollectionType
 from lsst.obs.base.ingest import RawIngestTask, RawIngestConfig
 from lsst.obs.base.utils import getInstrument
 from astropy.time import Time
@@ -250,11 +251,21 @@ class Gen3ButlerIngester(ButlerIngester):
                        interval.minutes*u.min + interval.seconds*u.s)
         t = t - td
 
-        # get the datasets
-        ref = set(self.butler.registry.queryDatasets(datasetType=...,
-                                                     collections=self.collections,
-                                                     where="ingest_date < ref_date",
-                                                     bind={"ref_date": t}))
+        self.butler.registry.refresh()
+
+        # get all datasets in these collections
+        all_datasets = set(self.butler.registry.queryDatasets(datasetType=...,
+                                                              collections=self.collections,
+                                                              where="ingest_date < ref_date",
+                                                              bind={"ref_date": t}))
+        # get all TAGGED collections
+        tagged_cols = list(self.butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
+
+        # get all TAGGED datasets
+        tagged_datasets = set(self.butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
+
+        # get a set of datasets in all_datasets, but not in tagged_datasets
+        ref = all_datasets.difference(tagged_datasets)
 
         # References outside of the Butler's datastore
         # need to be cleaned up, since the Butler will
@@ -264,13 +275,13 @@ class Gen3ButlerIngester(ButlerIngester):
         # the Butler, and if the URI was available,
         # remove it.
         for x in ref:
-            print(f"removing {x}")
+            LOGGER.info(f"removing {x}")
 
             uri = None
             try:
                 uri = self.butler.getURI(x, collections=x.run)
             except Exception as e:
-                print(f"butler is missing uri for {x}: {e}")
+                LOGGER.warning(f"butler is missing uri for {x}: {e}")
 
             if uri is not None:
                 uri.remove()
