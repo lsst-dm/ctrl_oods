@@ -33,27 +33,54 @@ from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.daf.butler import Butler
 from lsst.daf.butler.registry import CollectionType
-from lsst.obs.base.utils import getInstrument
 
 
 class TaggingTestCase(asynctest.TestCase):
-    """Test TAGGED deletion"""
+    """Test TAGGED deletion 
 
-    async def createConfig(self, config_name, fits_name):
-        """create a standard configuration file, using temporary directories
+    This test simulates the OODS asyncio cleanup and a secondary associate (tagging) and
+    disassociate (untagging) of files, to see be sure the OODS cleanup behaves properly:
+    1) When a dataset is TAGGED, will not be deleted, and the OODS cleaup routine bypasses it.
+    2) When a dataset is not TAGGED, it can be deleted, and the OODS cleaup routine removes it.
 
-        Parameters
-        ----------
-        config_name: `str`
-            name of the OODS configuration file
-        fits_name: `str`
-            name of the test FITS file
+    The test simulates this by gathering all ingester asyncio tasks, plus unit test tasks to associate,
+    disassociate and check for a dataset's existance (or non-existance), and an interrupt task. Because
+    the ingester cleanup tasks run at predetermined intervals, the various checks in the unit tests are
+    also set up as asyncio tasks, waiting an appropriate amount of time for the ingest cleanup routines
+    to run. The code below might be a little hard to follow, so here's a description of how the tasks
+    run in this unit test.
+
+    1) File ingest runs
+    2) Ingester cleanup runs, and nothing happens because the file hasn't expired yet, and goes to sleep
+    3) Task to associate the dataset runs, and tags the file, and completes
+    4) Ingester cleanup task runs, finds an expired file, but doesn't deleted it because it's TAGGED, and
+       goes back to sleep
+    5) Task disassociate the dataset runs, and removes the TAGGED designation, and completes
+    6) Task to check that the file runs, affirming it's still on disk, and completes
+    7) Ingester cleanup task runs, finds an expired file, and deletes it, since it's not TAGGED anymore
+       and goes back to sleep
+    8) Task to check that the file runs, affirming it is not longer on disk, and completes
+    7) Ingester cleanup task runs, finds nothing to do, and goes back to sleep
+    9) Task to interrupt all tasks runs, causes an exception on purpose, which interrupts that gather()
+       causing all tasks to stop.  End of unit test
+    """
+
+    async def stage(self):
+        """stage test data and set up ingester tasks
 
         Returns
         -------
-        config: `dict`
-            An OODS configuration to use for testing
+        staged_file: `str`
+            Path to file to after it has been staged for ingestion
+        task_list: `list`
+            A list of tasks to run for this butler ingester (ingest, cleanup)
         """
+
+        # fits file to ingest
+        fits_name = "3019053000001-R22-S00-det000.fits.fz"
+
+        # configuration file to load
+        config_name = "ingest_tag_test.yaml"
 
         # create a path to the configuration file
 
@@ -134,49 +161,27 @@ class TaggingTestCase(asynctest.TestCase):
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
         name = self.strip_prefix(self.destFile, self.forwarderStagingDir)
-        file_to_ingest = os.path.join(self.stagingDirectory, name)
-        self.assertTrue(os.path.exists(file_to_ingest))
+        staged_file = os.path.join(self.stagingDirectory, name)
+        self.assertTrue(os.path.exists(staged_file))
 
         # this file should now not exist
         self.assertFalse(os.path.exists(self.destFile))
 
         # add one more task, whose sole purpose is to interrupt the others by
-        # throwing an acception
+        # throwing an exception. This is used to exit all tasks.
         task_list.append(asyncio.create_task(self.interrupt_me()))
 
-        return file_to_ingest, task_list
+        return staged_file, task_list
 
     async def testTaggedFileTestCase(self):
-        fits_name = "3019053000001-R22-S00-det000.fits.fz"
-        file_to_ingest, task_list = await self.createConfig("ingest_tag_test.yaml", fits_name)
+        exposure = "3019053000001"
+        file_to_ingest, task_list = await self.stage()
 
-        task_list.append(asyncio.create_task(self.register_file("3019053000001")))
-
-        # kick off all the tasks, until one (the "interrupt_me" task)
-        # throws an exception
-        try:
-            await asyncio.gather(*task_list)
-        except Exception:
-            for task in task_list:
-                task.cancel()
-
-        # now wait some additional time for the cleanup task to run
-        await asyncio.sleep(10)
-        # That "clean up" time
-        # is set in the config file loaded for this FileIngester).
-        # And, when "cleaned up", the file should still be there
-        # because it was TAGGED
-        self.assertTrue(os.path.exists(file_to_ingest))
-
-        # check to be sure that the file wasn't "bad" (and
-        # therefore, not ingested)
-        bad_path = os.path.join(self.badDir, fits_name)
-        self.assertFalse(os.path.exists(bad_path))
-
-    async def testUntaggedFileTestCase(self):
-        fits_name = "3019053000001-R22-S00-det000.fits.fz"
-        file_to_ingest, task_list = await self.createConfig("ingest_tag_test.yaml", fits_name)
-        task_list.append(asyncio.create_task(self.register_file("3019053000002")))
+        # add an extra task, which runs after ingestion
+        task_list.append(asyncio.create_task(self.associate_file(exposure)))
+        task_list.append(asyncio.create_task(self.check_file(file_to_ingest)))
+        task_list.append(asyncio.create_task(self.disassociate_file(exposure)))
+        task_list.append(asyncio.create_task(self.check_file(file_to_ingest, wait=50, exists=False)))
 
         # kick off all the tasks, until one (the "interrupt_me" task)
         # throws an exception
@@ -186,33 +191,73 @@ class TaggingTestCase(asynctest.TestCase):
             for task in task_list:
                 task.cancel()
 
-        # now wait some additional time for the cleanup task to run
+    async def check_file(self, filename, wait=25, exists=True):
+        await asyncio.sleep(wait)
+        if exists:
+            self.assertTrue(os.path.exists(filename))
+            logging.info("file was there, as expected")
+        else:
+            self.assertFalse(os.path.exists(filename))
+            logging.info("file was not there, as expected")
+
+    async def associate_file(self, exposure):
+        """add exposure from TAGGED collection
+
+        Parameters
+        ----------
+        exposure: `str`
+            the name of the exposure to add
+        """
+        # wait for the file to be ingested
+        logging.info("waiting to associate file")
         await asyncio.sleep(10)
-        # That "clean up" time
-        # is set in the config file loaded for this FileIngester).
-        # And, when "cleaned up", the file should not be there
-        self.assertFalse(os.path.exists(file_to_ingest))
+        logging.info("about to associate file")
 
-        # check to be sure that the file wasn't "bad" (and
-        # therefore, not ingested)
-        bad_path = os.path.join(self.badDir, fits_name)
-        self.assertFalse(os.path.exists(bad_path))
+        # now that the file has been ingested, create a butler
+        # and tag the file
+        butler = Butler(self.repoDir, writeable=True)
 
-    async def register_file(self, exposure):
-        await asyncio.sleep(10)
-        # now that the file has been ingested, tag it
-
-        instr = getInstrument("lsst.obs.lsst.LsstComCam")
-        run = instr.makeDefaultRawIngestRunName()
-        opts = dict(run=run, writeable=True, collections=self.collections)
-        butler = Butler(self.repoDir, **opts)
-
+        # register the new collection
         butler.registry.registerCollection("test_collection", CollectionType.TAGGED)
 
+        # get the dataset
         results = set(butler.registry.queryDatasets(datasetType=..., collections=self.collections,
                       where=f"exposure={exposure} and instrument='LSSTComCam'"))
-        if len(results) != 0:
-            butler.registry.associate("test_collection", results)
+
+        # should just be one...
+        self.assertEqual(len(results), 1)
+
+        # associate the dataset
+        butler.registry.associate("test_collection", results)
+        logging.info("done associating file")
+
+    async def disassociate_file(self, exposure):
+        """remove exposure from TAGGED collection
+
+        Parameters
+        ----------
+        exposure: `str`
+            the name of the exposure to remove
+        """
+
+        logging.info("waiting to disassociate file")
+        await asyncio.sleep(20)
+        # create a butler and remove the file from the TAGGED collecdtion
+        butler = Butler(self.repoDir, writeable=True)
+
+        # get the dataset
+        try:
+            results = set(butler.registry.queryDatasets(datasetType=..., collections=self.collections,
+                      where=f"exposure={exposure} and instrument='LSSTComCam'"))
+        except Exception as e:
+            logging.info(e)
+
+        # should just be one...
+        self.assertEqual(len(results), 1)
+
+        # disassociate the dataset
+        butler.registry.disassociate("test_collection", results)
+        logging.info("done disassociating file")
 
     def strip_prefix(self, name, prefix):
         """strip prefix from name
@@ -234,7 +279,7 @@ class TaggingTestCase(asynctest.TestCase):
         return ret
 
     async def interrupt_me(self):
-        await asyncio.sleep(40)
+        await asyncio.sleep(70)
         logging.info("About to interrupt all tasks")
         raise RuntimeError("I'm interrupting")
 
@@ -245,7 +290,3 @@ class MemoryTester(lsst.utils.tests.MemoryTestCase):
 
 def setup_module(module):
     lsst.utils.tests.init()
-    lsstlog.usePythonLogging()
-
-    F = '%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=(F), datefmt="%Y-%m-%d %H:%M:%S")

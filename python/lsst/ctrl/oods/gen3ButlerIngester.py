@@ -235,7 +235,9 @@ class Gen3ButlerIngester(ButlerIngester):
         """
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
+            LOGGER.info("running cleaning tasks")
             self.clean()
+            LOGGER.info(f"waiting {seconds} seconds until next clean task")
             await asyncio.sleep(seconds)
 
     def clean(self):
@@ -258,14 +260,17 @@ class Gen3ButlerIngester(ButlerIngester):
                                                               collections=self.collections,
                                                               where="ingest_date < ref_date",
                                                               bind={"ref_date": t}))
+        LOGGER.info(f"Number of all expired datasets: {len(all_datasets)}")
         # get all TAGGED collections
         tagged_cols = list(self.butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
 
         # get all TAGGED datasets
         tagged_datasets = set(self.butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
+        LOGGER.info(f"{len(tagged_datasets)} total TAGGED datasets exist in repo, and can't be deleted")
 
         # get a set of datasets in all_datasets, but not in tagged_datasets
         ref = all_datasets.difference(tagged_datasets)
+        LOGGER.info(f"Deleting {len(ref)} datasets")
 
         # References outside of the Butler's datastore
         # need to be cleaned up, since the Butler will
