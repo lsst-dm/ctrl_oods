@@ -120,7 +120,7 @@ class FileIngester(object):
             handler = self._msg_actions.get(msg_type)
             asyncio.create_task(handler(body))
         else:
-            LOGGER.info(f"unknown message type: {msg_type}")
+            LOGGER.info("unknown message type: %s", msg_type)
 
     def extract_cause(self, e):
         """extract the cause of an exception
@@ -182,7 +182,7 @@ class FileIngester(object):
         os.makedirs(new_dir, exist_ok=True)
         # hard link the file in the staging area
         os.link(filename, new_file)
-        LOGGER.info(f"created link to {new_file}")
+        LOGGER.info("created link to %s", new_file)
 
         return new_file
 
@@ -202,7 +202,7 @@ class FileIngester(object):
                 local_staging_dir = butlerProxy.getStagingDirectory()
                 self.create_link_to_file(filename, local_staging_dir)
         except Exception:
-            LOGGER.info(f"error staging files butler for {filename}")
+            LOGGER.info("error staging files butler for %s", filename)
             return
         # file has been linked to all staging areas;
         # now we unlink the original file.

@@ -125,7 +125,7 @@ class Gen3ButlerIngester(ButlerIngester):
         msg['ARCHIVER'] = self.archiver
         msg['STATUS_CODE'] = code
         msg['DESCRIPTION'] = description
-        LOGGER.info(f"msg = {msg}")
+        LOGGER.info("msg = %s", msg)
         if self.publisher is None:
             return
         asyncio.create_task(self.publisher.publish_message(self.publisher_queue, msg))
@@ -140,7 +140,7 @@ class Gen3ButlerIngester(ButlerIngester):
             list of DatasetRefs
         """
         for dataset in datasets:
-            LOGGER.info(f"{dataset.path.ospath} file ingested")
+            LOGGER.info("%s file ingested", dataset.path.ospath)
             image_data = ImageData(dataset)
             self.transmit_status(image_data.get_info(), code=0, description="file ingested")
 
@@ -204,8 +204,8 @@ class Gen3ButlerIngester(ButlerIngester):
         bad_dir = Utils.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
         try:
             shutil.move(filename, bad_dir)
-        except Exception as fmException:
-            LOGGER.info(f"Failed to move {filename} to {self.bad_dir} {fmException}")
+        except Exception as e:
+            LOGGER.info("Failed to move %s to %s %s", filename, self.bad_dir, e)
 
     def ingest(self, archiver, filename):
         """Ingest a file into a butler
@@ -237,7 +237,7 @@ class Gen3ButlerIngester(ButlerIngester):
         while True:
             LOGGER.info("running cleaning tasks")
             self.clean()
-            LOGGER.info(f"waiting {seconds} seconds until next clean task")
+            LOGGER.info("waiting %d seconds until next clean task", seconds)
             await asyncio.sleep(seconds)
 
     def clean(self):
@@ -260,17 +260,17 @@ class Gen3ButlerIngester(ButlerIngester):
                                                               collections=self.collections,
                                                               where="ingest_date < ref_date",
                                                               bind={"ref_date": t}))
-        LOGGER.info(f"Number of all expired datasets: {len(all_datasets)}")
+        LOGGER.info("Number of all expired datasets: %d", len(all_datasets))
         # get all TAGGED collections
         tagged_cols = list(self.butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
 
         # get all TAGGED datasets
         tagged_datasets = set(self.butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
-        LOGGER.info(f"{len(tagged_datasets)} total TAGGED datasets exist in repo, and can't be deleted")
+        LOGGER.info("%d total TAGGED datasets exist in repo, and won't be deleted", len(tagged_datasets))
 
         # get a set of datasets in all_datasets, but not in tagged_datasets
         ref = all_datasets.difference(tagged_datasets)
-        LOGGER.info(f"Deleting {len(ref)} datasets")
+        LOGGER.info("Deleting %d datasets", len(ref))
 
         # References outside of the Butler's datastore
         # need to be cleaned up, since the Butler will
@@ -280,13 +280,13 @@ class Gen3ButlerIngester(ButlerIngester):
         # the Butler, and if the URI was available,
         # remove it.
         for x in ref:
-            LOGGER.info(f"removing {x}")
+            LOGGER.info("removing %s", ref)
 
             uri = None
             try:
                 uri = self.butler.getURI(x, collections=x.run)
             except Exception as e:
-                LOGGER.warning(f"butler is missing uri for {x}: {e}")
+                LOGGER.warning("butler is missing uri for %s: %s", x, e)
 
             if uri is not None:
                 uri.remove()

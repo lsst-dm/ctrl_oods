@@ -40,14 +40,14 @@ class ImageData:
         try:
             self.info["FILENAME"] = os.path.basename(dataset.path.ospath)
         except Exception as e:
-            LOGGER.info(f"Failed to extract filename for {dataset}: {e}")
+            LOGGER.info("Failed to extract filename for %s: %s", dataset, e)
             return
 
         try:
             refs = dataset.refs
             ref = refs[0]  # OODS only gets a single element in the list
             if ref.dataId.hasRecords() is False:
-                LOGGER.info(f"Failed to extract data for {dataset}; no records")
+                LOGGER.info("Failed to extract data for %s; no records", dataset)
                 return
 
             records = ref.dataId.records
@@ -65,7 +65,7 @@ class ImageData:
                 exposure = records['exposure'].toDict()
                 self.info["OBSID"] = exposure.get("obs_id", "??")
         except Exception as e:
-            LOGGER.info(f"Failed to extract data for {dataset}: {e}")
+            LOGGER.info("Failed to extract data for %s: %s", dataset, e)
 
     def get_info(self):
         """Return the extracted information of the dataset

@@ -19,19 +19,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import asynctest
 import asyncio
 import logging
 import os
-import tempfile
 from pathlib import PurePath
 from shutil import copyfile
+import tempfile
 import yaml
+
 import lsst.utils.tests
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.daf.butler import Butler
 from lsst.daf.butler.registry import CollectionType
+
+import asynctest
 
 
 class TaggingTestCase(asynctest.TestCase):
@@ -79,12 +81,11 @@ class TaggingTestCase(asynctest.TestCase):
 
         Returns
         -------
-        staged_file: `str`
+        staged_file : `str`
             Path to file to after it has been staged for ingestion
-        task_list: `list`
+        task_list : `list`
             A list of tasks to run for this butler ingester (ingest, cleanup)
         """
-
         # fits file to ingest
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
 
@@ -94,7 +95,7 @@ class TaggingTestCase(asynctest.TestCase):
         # create a path to the configuration file
 
         testdir = os.path.abspath(os.path.dirname(__file__))
-        configFile = os.path.join(testdir, "etc", config_name)
+        config_file = os.path.join(testdir, "etc", config_name)
 
         # path to the FITS file to ingest
 
@@ -102,7 +103,7 @@ class TaggingTestCase(asynctest.TestCase):
 
         # load the YAML configuration
 
-        with open(configFile, "r") as f:
+        with open(config_file, "r") as f:
             config = yaml.safe_load(f)
 
         # extract parts of the ingester configuration
@@ -123,7 +124,6 @@ class TaggingTestCase(asynctest.TestCase):
         butlerConfig["repoDirectory"] = self.repoDir
 
         self.collections = butlerConfig["collections"]
-        print(f'self.collections = {self.collections}')
 
         # copy the FITS file to it's test location
 
@@ -183,6 +183,13 @@ class TaggingTestCase(asynctest.TestCase):
         return staged_file, task_list
 
     async def testTaggedFileTestCase(self):
+        """Test associating and disassociating of datasets
+
+        This test creates async tasks to simulate the OODS in operation
+        when outside actors associate and disassociate datasets.  Associated
+        files are not deleted, even if expired. When these files are
+        later disassociated, they are cleaned up.
+        """
         exposure = "3019053000001"
         file_to_ingest, task_list = await self.stage()
 
@@ -201,6 +208,19 @@ class TaggingTestCase(asynctest.TestCase):
                 task.cancel()
 
     async def check_file(self, filename, wait=25, exists=True):
+        """Check that the existance of a file
+
+        Parameters
+        ----------
+        filename : `str`
+            name of the file to check
+        wait : `int`
+            seconds to wait until the file is checked
+        exists : `bool`
+            If True, file is checked that it exists
+            If False, file is checked that it doesn't exist
+        """
+
         await asyncio.sleep(wait)
         if exists:
             self.assertTrue(os.path.exists(filename))
@@ -214,7 +234,7 @@ class TaggingTestCase(asynctest.TestCase):
 
         Parameters
         ----------
-        exposure: `str`
+        exposure : `str`
             the name of the exposure to add
         """
         # wait for the file to be ingested
@@ -245,13 +265,14 @@ class TaggingTestCase(asynctest.TestCase):
 
         Parameters
         ----------
-        exposure: `str`
+        exposure : `str`
             the name of the exposure to remove
         """
 
         logging.info("waiting to disassociate file")
         await asyncio.sleep(20)
         # create a butler and remove the file from the TAGGED collecdtion
+        logging.info("about to disassociate file")
         butler = Butler(self.repoDir, writeable=True)
 
         # get the dataset
@@ -273,14 +294,14 @@ class TaggingTestCase(asynctest.TestCase):
 
         Parameters
         ----------
-        name: `str`
+        name : `str`
            path of a file
-        prefix: `str`
+        prefix : `str`
            prefix to strip
 
         Returns
         -------
-        ret: `str`
+        ret : `str`
             remainder of string
         """
         p = PurePath(name)
@@ -288,6 +309,8 @@ class TaggingTestCase(asynctest.TestCase):
         return ret
 
     async def interrupt_me(self):
+        """Throw an exception after waiting.  Used to break out of gather()
+        """
         await asyncio.sleep(70)
         logging.info("About to interrupt all tasks")
         raise RuntimeError("I'm interrupting")
