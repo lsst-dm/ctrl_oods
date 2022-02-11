@@ -99,7 +99,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         shutil.rmtree(self.repoDir, ignore_errors=True)
         shutil.rmtree(self.subDir, ignore_errors=True)
 
-    async def _testAuxTelIngest(self):
+    async def testAuxTelIngest(self):
         """test ingesting an auxtel file
         """
         fits_name = "2020032700020-det000.fits.fz"
@@ -195,7 +195,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         bad_path = os.path.join(self.badDir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
-    async def _testBadIngest(self):
+    async def testBadIngest(self):
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
@@ -217,7 +217,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         bad_path = os.path.join(self.badDir, name)
         self.assertTrue(os.path.exists(bad_path))
 
-    async def _testRepoExists(self):
+    async def testRepoExists(self):
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 

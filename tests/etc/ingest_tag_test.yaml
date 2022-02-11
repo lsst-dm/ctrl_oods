@@ -4,9 +4,6 @@ defaultInterval: &interval
     minutes: 0
     seconds: 0
 
-archiver:
-    name: "CCArchiver"
-
 ingester:
     FILE_INGEST_REQUEST: CC_FILE_INGEST_REQUEST
     CONSUME_QUEUE: cc_publish_to_oods
@@ -25,14 +22,14 @@ ingester:
                 - LSSTComCam/raw/all
             scanInterval:
                 <<: *interval
-                seconds: 1
+                seconds: 20
             filesOlderThan:
                 <<: *interval
-                seconds: 2
+                seconds: 5
     batchSize: 20
     scanInterval:
         <<: *interval
-        seconds: 10
+        seconds: 15 
 
 cacheCleaner:
     directories:

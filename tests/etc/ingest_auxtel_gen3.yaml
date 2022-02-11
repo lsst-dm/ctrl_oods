@@ -15,8 +15,8 @@ ingester:
     butlers:
         - butler:
             class:
-                import : lsst.ctrl.oods.gen3ButlerBroker
-                name : Gen3ButlerBroker
+                import : lsst.ctrl.oods.gen3ButlerIngester
+                name : Gen3ButlerIngester
             repoDirectory : repo
             instrument: lsst.obs.lsst.Latiss
             badFileDirectory: /tmp/bad

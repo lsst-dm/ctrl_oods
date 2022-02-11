@@ -46,19 +46,7 @@ class ButlerProxy(object):
 
         # load configuration info for the repository, staging,
         # and bad file areas
-        self.repo_dir = butlerConfig["repoDirectory"]
         self.staging_dir = butlerConfig["stagingDirectory"]
-        self.bad_file_dir = butlerConfig["badFileDirectory"]
-
-    def getButler(self):
-        """Return the butler being proxied
-
-        Returns
-        -------
-        butler: `lsst.daf.butler.Butler`
-            this butler instance
-        """
-        return self.butlerInstance
 
     def getStagingDirectory(self):
         """Return the path of the staging directory
@@ -69,16 +57,6 @@ class ButlerProxy(object):
             the staging directory
         """
         return self.staging_dir
-
-    def getBadFileDirectory(self):
-        """Return the path of the "bad file" directory
-
-        Returns
-        -------
-        bad_file_dir: `str`
-            the bad file directory
-        """
-        return self.bad_file_dir
 
     def ingest(self, file_list):
         """Bulk ingest of a list of files

@@ -47,18 +47,16 @@ class OodsCSC(DmCSC):
     """
 
     def __init__(self, name, initial_state=salobj.State.STANDBY):
-        print("***** A *****")
         super().__init__(name, initial_state=initial_state)
-        print("***** B *****")
         self.config = None
         # import YAML file here
         if "CTRL_OODS_CONFIG_FILE" in os.environ:
             filename = os.environ["CTRL_OODS_CONFIG_FILE"]
+            LOGGER.info("using configuration %s", filename)
             with open(filename, 'r') as f:
                 self.config = yaml.safe_load(f)
         else:
             raise FileNotFoundError("CTRL_OODS_CONFIG_FILE is not set")
-        print(f"***** C ***** {self.config}")
 
     async def send_imageInOODS(self, info):
         """Send SAL message that the images has been ingested into the OODS
@@ -69,7 +67,6 @@ class OodsCSC(DmCSC):
             information about the image
         """
         camera = info['CAMERA']
-        archiverName = info['ARCHIVER']
         obsid = info['OBSID']
         raft = "undef"
         if 'RAFT' in info:
@@ -81,13 +78,12 @@ class OodsCSC(DmCSC):
         description = info['DESCRIPTION']
 
         s = f'sending camera={camera} obsid={obsid} raft={raft} sensor={sensor} '
-        s = s + f'archiverName={archiverName}, statusCode={statusCode}, description={description}'
+        s = s + f'statusCode={statusCode}, description={description}'
         LOGGER.info(s)
         self.evt_imageInOODS.set_put(camera=camera,
                                      obsid=obsid,
                                      raft=raft,
                                      sensor=sensor,
-                                     archiverName=archiverName,
                                      statusCode=statusCode,
                                      description=description)
 

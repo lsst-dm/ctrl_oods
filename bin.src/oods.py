@@ -31,7 +31,6 @@ import lsst.log as lsstlog
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.validator import Validator
-from lsst.ctrl.oods.archiverName import ArchiverName
 
 LOGGER = logging.getLogger(__name__)
 
@@ -82,13 +81,5 @@ if __name__ == "__main__":
         sys.exit(10)
 
     LOGGER.info("***** OODS starting...")
-
-    try:
-        name = oods_config["archiver"]["name"]
-    except KeyError:
-        name = "unknown"
-
-    archiver_name = ArchiverName()
-    archiver_name.setName(name)
 
     asyncio.get_event_loop().run_until_complete(gather_tasks(oods_config))

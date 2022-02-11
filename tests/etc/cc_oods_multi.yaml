@@ -18,8 +18,8 @@ ingester:
                 - FARG/raw/all
             instrument: lsst.obs.lsst.LsstComCam
             class:
-                import : lsst.ctrl.oods.gen3ButlerBroker
-                name : Gen3ButlerBroker
+                import : lsst.ctrl.oods.gen3ButlerIngester
+                name : Gen3ButlerIngester
             stagingDirectory : staging2
             repoDirectory : repo2
             badFileDirectory: bad2

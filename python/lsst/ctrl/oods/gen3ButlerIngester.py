@@ -24,11 +24,11 @@ import collections
 import logging
 import os
 import shutil
-from lsst.ctrl.oods.butlerBroker import ButlerBroker
+from lsst.ctrl.oods.butlerIngester import ButlerIngester
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.imageData import ImageData
-from lsst.ctrl.oods.archiverName import ArchiverName
 from lsst.daf.butler import Butler
+from lsst.daf.butler.registry import CollectionType
 from lsst.obs.base.ingest import RawIngestTask, RawIngestConfig
 from lsst.obs.base.utils import getInstrument
 from astropy.time import Time
@@ -38,7 +38,7 @@ import astropy.units as u
 LOGGER = logging.getLogger(__name__)
 
 
-class Gen3ButlerBroker(ButlerBroker):
+class Gen3ButlerIngester(ButlerIngester):
     """Processes files on behalf of a Gen3 Butler.
 
     Parameters
@@ -49,7 +49,6 @@ class Gen3ButlerBroker(ButlerBroker):
         OODS CSC
     """
     def __init__(self, config, csc=None):
-        self.archiver_name = ArchiverName().archiver_name
         self.csc = csc
         self.config = config
 
@@ -98,10 +97,10 @@ class Gen3ButlerBroker(ButlerBroker):
         """
         info = dict()
         info['FILENAME'] = os.path.basename(filename)
-        info['CAMERA'] = ''
-        info['OBSID'] = ''
-        info['RAFT'] = ''
-        info['SENSOR'] = ''
+        info['CAMERA'] = 'UNDEF'
+        info['OBSID'] = '??'
+        info['RAFT'] = 'R??'
+        info['SENSOR'] = 'S??'
         return info
 
     def transmit_status(self, metadata, code, description):
@@ -118,10 +117,9 @@ class Gen3ButlerBroker(ButlerBroker):
         """
         msg = dict(metadata)
         msg['MSG_TYPE'] = 'IMAGE_IN_OODS'
-        msg['ARCHIVER'] = self.archiver_name
         msg['STATUS_CODE'] = code
         msg['DESCRIPTION'] = description
-        LOGGER.info(f"msg: {msg}, code: {code}, description: {description}")
+        LOGGER.info("msg: %s, code: %s, description: %s", msg, code, description)
         if self.csc is None:
             return
         asyncio.create_task(self.csc.send_imageInOODS(msg))
@@ -136,9 +134,10 @@ class Gen3ButlerBroker(ButlerBroker):
             list of DatasetRefs
         """
         for dataset in datasets:
-            LOGGER.info(f"{dataset.path.ospath} file ingested")
+            LOGGER.info("file %s successfully ingested", dataset.path.ospath)
             image_data = ImageData(dataset)
-            self.transmit_status(image_data.info(), code=0, description="file ingested")
+            LOGGER.info("image_data.get_info() = %s", image_data.get_info())
+            self.transmit_status(image_data.get_info(), code=0, description="file ingested")
 
     def on_ingest_failure(self, filename, exc):
         """Callback used on ingest failure. Used to transmit
@@ -180,8 +179,8 @@ class Gen3ButlerBroker(ButlerBroker):
         bad_dir = self.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
         try:
             shutil.move(filename, bad_dir)
-        except Exception as fmException:
-            LOGGER.info(f"Failed to move {filename} to {self.bad_dir} {fmException}")
+        except Exception as e:
+            LOGGER.info("Failed to move %s to %s: %s", filename, self.bad_dir, e)
 
     def ingest(self, file_list):
         """Ingest a list of files into a butler
@@ -194,10 +193,9 @@ class Gen3ButlerBroker(ButlerBroker):
 
         # Ingest image.
         try:
-            print(f"file_list: {type(file_list)}")
             self.task.run(file_list)
         except Exception as e:
-            LOGGER.info(f"Ingestion failure: {e}")
+            LOGGER.info("Ingestion failure: %s", e)
 
     def getName(self):
         """Return the name of this ingester
@@ -214,7 +212,9 @@ class Gen3ButlerBroker(ButlerBroker):
         """
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
+            LOGGER.info("Cleaning")
             self.clean()
+            LOGGER.info("sleeping for %d seconds", seconds)
             await asyncio.sleep(seconds)
 
     def clean(self):
@@ -230,11 +230,25 @@ class Gen3ButlerBroker(ButlerBroker):
                        interval.minutes*u.min + interval.seconds*u.s)
         t = t - td
 
-        # get the datasets
-        ref = set(self.butler.registry.queryDatasets(datasetType=...,
-                                                     collections=self.collections,
-                                                     where="ingest_date < ref_date",
-                                                     bind={"ref_date": t}))
+        self.butler.registry.refresh()
+
+        # get all datasets in these collections
+        all_datasets = set(self.butler.registry.queryDatasets(datasetType=...,
+                                                              collections=self.collections,
+                                                              where="ingest_date < ref_date",
+                                                              bind={"ref_date": t}))
+        LOGGER.info("Number of all expired datasets: %d", len(all_datasets))
+
+        # get all TAGGED collections
+        tagged_cols = list(self.butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
+
+        # get all TAGGED datasets
+        tagged_datasets = set(self.butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
+        LOGGER.info("%d total TAGGED datasets exist in repo, and won't be deleted", len(tagged_datasets))
+
+        # get a set of datasets in all_datasets, but not in tagged_datasets
+        ref = all_datasets.difference(tagged_datasets)
+        LOGGER.info("Deleting %d datasets", len(ref))
 
         # References outside of the Butler's datastore
         # need to be cleaned up, since the Butler will
@@ -244,13 +258,13 @@ class Gen3ButlerBroker(ButlerBroker):
         # the Butler, and if the URI was available,
         # remove it.
         for x in ref:
-            print(f"removing {x}")
+            LOGGER.info("removing %s", ref)
 
             uri = None
             try:
                 uri = self.butler.getURI(x, collections=x.run)
             except Exception as e:
-                print(f"butler is missing uri for {x}: {e}")
+                LOGGER.warning("butler is missing uri for %s: %s", x, e)
 
             if uri is not None:
                 uri.remove()

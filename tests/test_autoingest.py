@@ -26,7 +26,6 @@ import shutil
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
-from lsst.ctrl.oods.archiverName import ArchiverName
 from lsst.ctrl.oods.utils import Utils
 import lsst.utils.tests
 import asynctest
@@ -68,10 +67,6 @@ class AutoIngestTestCase(asynctest.TestCase):
         # extract parts of the ingester configuration
         # and alter the forwarder staging directory to point
         # at the temporary directories created for his test
-
-        name = config['archiver']['name']
-        archiver_name = ArchiverName()
-        archiver_name.setName(name)
 
         ingesterConfig = config["ingester"]
         self.forwarderDir = tempfile.mkdtemp()
@@ -238,7 +233,7 @@ class AutoIngestTestCase(asynctest.TestCase):
     async def interrupt_me(self):
         """Used to interrupt asyncio.gather() so that test can be halted
         """
-        await asyncio.sleep(20)
+        await asyncio.sleep(10)
         raise RuntimeError("I'm interrupting")
 
 

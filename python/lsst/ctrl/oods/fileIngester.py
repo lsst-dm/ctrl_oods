@@ -79,56 +79,6 @@ class FileIngester(object):
             tasks.append(butler.clean_task)
         return tasks
 
-    def extract_cause(self, e):
-        """extract the cause of an exception
-
-        Returns
-        -------
-        s: `str`
-            A string containing the cause of an exception
-        """
-        if e.__cause__ is None:
-            return None
-        cause = self.extract_cause(e.__cause__)
-        if cause is None:
-            return f"{str(e.__cause__)}"
-        else:
-            return f"{str(e.__cause__)};  {cause}"
-
-    def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
-        """Create a full path to a directory contained in the
-        'bad directory' heirarchy; this retains the subdirectory structure
-        created where the file was staged, where the uningestable file will
-        be placed.
-
-        Parameters
-        ----------
-        bad_dir_root: `str`
-            Root of the bad directory heirarchy
-        staging_dir_root: `str`
-            Root of the bad directory heirarchy
-        original: `str`
-            Original directory location
-
-        Returns
-        -------
-        newdir: `str`
-            new directory name
-        """
-        # strip the original directory location, except for the date
-        newfile = Utils.strip_prefix(original, staging_dir_root)
-
-        # split into subdir and filename
-        head, tail = os.path.split(newfile)
-
-        # create subdirectory path name for directory with date
-        newdir = os.path.join(bad_dir_root, head)
-
-        # create the directory, and hand the name back
-        os.makedirs(newdir, exist_ok=True)
-
-        return newdir
-
     def create_link_to_file(self, filename, dirname):
         """Create a link from filename to a new file in directory dirname
 
@@ -201,48 +151,6 @@ class FileIngester(object):
         except Exception as e:
             print("Exception thrown")
             print(f"Exception: {e}")
-
-    def get_locally_staged_filename(self, butlerProxy, full_filename):
-        """Construct the full path to the staging area unique to a butler Proxy
-
-        Parameters
-        ----------
-        butlerProxy: `ButlerProxy`
-            A Butler Proxy
-        full_filename: `str`
-            The full name of forwarder-staged file
-
-        Returns
-        -------
-        locally_staged_filename: `str`
-            The full pathname of to the file in this butler's staging area
-        """
-        basefile = Utils.strip_prefix(full_filename, self.forwarder_staging_dir)
-        local_staging_dir = butlerProxy.getStagingDirectory()
-        locally_staged_filename = os.path.join(local_staging_dir, basefile)
-        return locally_staged_filename
-
-    def ingest_files(self, butlerProxy, file_list):
-        """Ingest the file the incoming message requests
-
-        Parameters
-        ----------
-        butlerProxy: `ButlerProxy`
-            proxy for the butler
-        file_list: `list`
-            list that contains information about the image files
-
-        Returns
-        -------
-        (status_code, status_msg): `int`, `str`
-            status code and message to send about what happened
-        """
-
-        # attempt to ingest the file;  if ingests, log that
-        # if it does not ingest, move it to a "bad file" directory
-        # and log that.
-        butlerProxy.ingest(file_list)
-        print("Completed")
 
     async def run_task(self):
         """run tasks to queue files and ingest them

@@ -29,43 +29,45 @@ class ImageData:
     """Encapsulate information extracted from an DatasetRef
     """
     def __init__(self, dataset):
-        """Initiailize the object using DatasetRef
+        """Initialize the object using DatasetRef
 
         Parameters
         ----------
         dataset: `DatasetRef`
             The DatasetRef to extract information from
         """
-        self.info = {"camera": "", "raft": "", "sensor": "", "obsid": ""}
+        self.info = {"CAMERA": "", "RAFT": "", "SENSOR": "", "OBSID": ""}
         try:
-            self.info["filename"] = os.path.basename(dataset.path.ospath)
+            self.info["FILENAME"] = os.path.basename(dataset.path.ospath)
         except Exception as e:
-            LOGGER.info(f"Failed to extract filename for {dataset}: {e}")
+            LOGGER.info("Failed to extract filename for %s: %s", dataset, e)
             return
 
         try:
             refs = dataset.refs
             ref = refs[0]  # OODS only gets a single element in the list
             if ref.dataId.hasRecords() is False:
-                LOGGER.info(f"Failed to extract data for {dataset}; no records")
+                LOGGER.info("Failed to extract data for %s; no records", dataset)
                 return
 
             records = ref.dataId.records
 
-            instrument = records['instrument'].toDict()
-            self.info["camera"] = instrument["name"]
+            if 'instrument' in records:
+                instrument = records['instrument'].toDict()
+                self.info["CAMERA"] = instrument.get("name", "UNDEF")
 
-            detector = records['detector'].toDict()
-            self.info["raft"] = detector["raft"]
-            self.info["sensor"] = detector["name_in_raft"]
+            if 'detector' in records:
+                detector = records['detector'].toDict()
+                self.info["RAFT"] = detector.get("raft", "R??")
+                self.info["SENSOR"] = detector.get("name_in_raft", "S??")
 
-            exposure = records['exposure'].toDict()
-            self.info["obsid"] = exposure["obs_id"]
+            if 'exposure' in records:
+                exposure = records['exposure'].toDict()
+                self.info["OBSID"] = exposure.get("obs_id", "??")
         except Exception as e:
-            LOGGER.info(f"Failed to extract data for {dataset}: {e}")
+            LOGGER.info("Failed to extract data for %s: %s", dataset, e)
 
-    @property
-    def info(self):
+    def get_info(self):
         return self.info
 
     def __repr__(self) -> str:

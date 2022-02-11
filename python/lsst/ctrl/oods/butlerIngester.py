@@ -26,7 +26,7 @@ from lsst.ctrl.oods.utils import Utils
 from abc import ABC, abstractmethod
 
 
-class ButlerBroker(ABC):
+class ButlerIngester(ABC):
     """Interface class for processing files for a butler.
     """
 
