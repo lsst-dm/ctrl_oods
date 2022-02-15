@@ -28,7 +28,7 @@ from . import __version__
 LOGGER = logging.getLogger(__name__)
 
 
-class DmCSC(BaseCsc):
+class DmCsc(BaseCsc):
     """This object implements configuration and the state
     transition model for the BaseCSC
 

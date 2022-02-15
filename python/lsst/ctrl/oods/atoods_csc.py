@@ -21,13 +21,13 @@
 
 import asyncio
 import logging
-from lsst.ctrl.oods.oods_csc import OodsCSC
+from lsst.ctrl.oods.oods_csc import OodsCsc
 from lsst.ts import salobj
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ATOodsCSC(OodsCSC):
+class AtOodsCsc(OodsCsc):
 
     def __init__(self):
         super().__init__("ATOODS", initial_state=salobj.State.STANDBY)

@@ -25,13 +25,13 @@ import os
 import yaml
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
-from lsst.ctrl.oods.dm_csc import DmCSC
+from lsst.ctrl.oods.dm_csc import DmCsc
 from lsst.ts import salobj
 
 LOGGER = logging.getLogger(__name__)
 
 
-class OodsCSC(DmCSC):
+class OodsCsc(DmCsc):
     """Base OODS class used for OODS Commandable SAL Components (CSC)
 
     Parameters
