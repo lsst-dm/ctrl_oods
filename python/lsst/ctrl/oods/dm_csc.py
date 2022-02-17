@@ -100,13 +100,11 @@ class DmCsc(BaseCsc):
 
         # if going from STANDBY to DISABLED, start external services
         if (self.current_state == State.STANDBY) and (self.summary_state == State.DISABLED):
-            asyncio.ensure_future(self.start_services())
             self.current_state = State.DISABLED
             return
 
         # if going from DISABLED to STANDBY, stop external services
         if (self.current_state == State.DISABLED) and (self.summary_state == State.STANDBY):
-            asyncio.ensure_future(self.stop_services())
             self.current_state = State.STANDBY
             return
 
@@ -140,13 +138,16 @@ class DmCsc(BaseCsc):
         # if going from DISABLED to ENABLED leave external services alone,
         # but accept control commands
         if (self.current_state == State.DISABLED) and (self.summary_state == State.ENABLED):
+            asyncio.ensure_future(self.start_services())
             self.current_state = State.ENABLED
             return
 
         # if going from ENABLED to DISABLED, leave external services alone,
         # but reject control commands
         if (self.current_state == State.ENABLED) and (self.summary_state == State.DISABLED):
+            asyncio.ensure_future(self.stop_services())
             self.current_state = State.DISABLED
+            [*map(print, asyncio.all_tasks())]
             return
 
     def call_fault(self, code, report):

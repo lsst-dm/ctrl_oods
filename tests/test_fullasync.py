@@ -116,7 +116,7 @@ class AsyncIngestTestCase(asynctest.TestCase):
         ingester = FileIngester(ingesterConfig)
 
         # start all the ingester tasks
-        task_list = await ingester.run_task()
+        task_list = ingester.run_tasks()
 
         # allow the other async tasks to run
         await asyncio.sleep(2)

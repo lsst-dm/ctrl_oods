@@ -58,6 +58,14 @@ class OodsCsc(DmCsc):
         else:
             raise FileNotFoundError("CTRL_OODS_CONFIG_FILE is not set")
 
+        self.task_list = None
+
+        ingester_config = self.config["ingester"]
+        self.ingester = FileIngester(ingester_config)
+
+        cache_config = self.config["cacheCleaner"]
+        self.cache_cleaner = CacheCleaner(cache_config)
+
     async def send_imageInOODS(self, info):
         """Send SAL message that the images has been ingested into the OODS
 
@@ -90,19 +98,15 @@ class OodsCsc(DmCsc):
     async def start_services(self):
         """Start all cleanup and archiving services
         """
-        ingester_config = self.config["ingester"]
-        ingester = FileIngester(ingester_config)
 
-        cache_config = self.config["cacheCleaner"]
-        cache_cleaner = CacheCleaner(cache_config)
-
-        r = [ingester.run_task(), cache_cleaner.run_task()]
-
-        LOGGER.info("gathering tasks")
-        await asyncio.gather(*r, return_exceptions=True)
-        LOGGER.info("tasks gathered")
+        self.task_list = self.ingester.run_tasks()
+        self.task_list.append(asyncio.create_task(self.cache_cleaner.run_tasks()))
 
     async def stop_services(self):
         """Stop all cleanup and archiving services
         """
-        pass
+        self.ingester.stop_tasks()
+        self.cache_cleaner.stop_tasks()
+        await asyncio.sleep(1)
+        # [*map(asyncio.Task.print_stack, asyncio.all_tasks())]
+        # [*map (print, asyncio.all_tasks())]

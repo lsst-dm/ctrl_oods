@@ -60,6 +60,7 @@ class FileIngester(object):
             self.butlers.append(butler)
 
         self.tasks = []
+        self.dequeue_task = None
 
     def getStagingDirectory(self):
         """Return the directory where the external service stages files
@@ -152,26 +153,31 @@ class FileIngester(object):
             print("Exception thrown")
             print(f"Exception: {e}")
 
-    async def run_task(self):
+    def run_tasks(self):
         """run tasks to queue files and ingest them
         """
-        task_list = []
 
         # this is split into two tasks so they can run at slightly different
         # cadences.  We want to gather as many files as we can before we
         # do the ingest
         task = asyncio.create_task(self.fileQueue.queue_files())
-        task_list.append(task)
+        self.tasks.append(task)
 
         task = asyncio.create_task(self.dequeue_and_ingest_files())
-        task_list.append(task)
+        self.tasks.append(task)
 
         cleanTasks = self.getButlerCleanTasks()
         for cleanTask in cleanTasks:
             task = asyncio.create_task(cleanTask())
-            task_list.append(task)
+            self.tasks.append(task)
 
-        return task_list
+        return self.tasks
+
+    def stop_tasks(self):
+        for task in self.tasks:
+            task.cancel()
+
+        self.tasks = None
 
     async def dequeue_and_ingest_files(self):
         while True:
