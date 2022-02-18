@@ -32,7 +32,7 @@ ingester:
         seconds: 15 
 
 cacheCleaner:
-    directories:
+    clearEmptyDirectoriesAndOldFiles:
         - repo/raw
     scanInterval:
         <<: *interval

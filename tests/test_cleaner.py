@@ -36,7 +36,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         dirPath = tempfile.mkdtemp()
 
         config = {}
-        config["directories"] = [dirPath]
+        config["clearEmptyDirectoriesAndOldFiles"] = [dirPath]
 
         interval = {}
         interval["days"] = 1
@@ -108,7 +108,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         dirPath = tempfile.mkdtemp()
 
         config = {}
-        config["directories"] = [dirPath]
+        config["clearEmptyDirectoriesAndOldFiles"] = [dirPath]
 
         interval = {}
         interval["days"] = 1

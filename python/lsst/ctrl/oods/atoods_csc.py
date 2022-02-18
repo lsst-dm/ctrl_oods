@@ -32,12 +32,8 @@ class AtOodsCsc(OodsCsc):
     def __init__(self):
         super().__init__("ATOODS", initial_state=salobj.State.STANDBY)
 
-        print("ATOodsCSC: 1")
         self.transitioning_to_fault_evt = asyncio.Event()
-        print("ATOodsCSC: 2")
         self.transitioning_to_fault_evt.clear()
-        print("ATOodsCSC: 3")
 
         self.current_state = None
-        print("ATOodsCSC: 4")
         LOGGER.info("************************ Starting ATOODS ************************")

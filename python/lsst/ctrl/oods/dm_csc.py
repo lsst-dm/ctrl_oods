@@ -147,7 +147,6 @@ class DmCsc(BaseCsc):
         if (self.current_state == State.ENABLED) and (self.summary_state == State.DISABLED):
             asyncio.ensure_future(self.stop_services())
             self.current_state = State.DISABLED
-            [*map(print, asyncio.all_tasks())]
             return
 
     def call_fault(self, code, report):

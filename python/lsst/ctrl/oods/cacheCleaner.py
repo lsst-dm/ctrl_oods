@@ -32,7 +32,10 @@ class CacheCleaner(object):
 
     def __init__(self, config):
         self.config = config
-        self.directories = self.config["directories"]
+        self.files_and_directories = self.config["clearEmptyDirectoriesAndOldFiles"]
+        self.only_empty_directories = []
+        if "clearEmptyDirectories" in self.config:
+            self.only_empty_directories = self.config["clearEmptyDirectories"]
         self.fileInterval = self.config["filesOlderThan"]
         self.emptyDirsInterval = self.config["directoriesEmptyForMoreThan"]
         scanInterval = self.config["scanInterval"]
@@ -66,7 +69,7 @@ class CacheCleaner(object):
         seconds = TimeInterval.calculateTotalSeconds(self.fileInterval)
         seconds = now - seconds
 
-        files = self.getAllFilesOlderThan(seconds, self.directories)
+        files = self.getAllFilesOlderThan(seconds, self.files_and_directories)
         for name in files:
             LOGGER.info(f"removing file {name}")
             os.unlink(name)
@@ -75,9 +78,13 @@ class CacheCleaner(object):
         seconds = TimeInterval.calculateTotalSeconds(self.emptyDirsInterval)
         seconds = now - seconds
 
-        dirs = self.getAllEmptyDirectoriesOlderThan(seconds, self.directories)
+        self.clearEmptyDirectories(seconds, self.files_and_directories)
+        self.clearEmptyDirectories(seconds, self.only_empty_directories)
+
+    def clearEmptyDirectories(self, seconds, directories):
+        dirs = self.getAllEmptyDirectoriesOlderThan(seconds, directories)
         for name in dirs:
-            LOGGER.info(f"removing directory {name}")
+            LOGGER.info(f"removing empty directory {name}")
             os.rmdir(name)
 
     def getAllFilesOlderThan(self, seconds, directories):

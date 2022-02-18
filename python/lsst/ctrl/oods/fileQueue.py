@@ -48,6 +48,7 @@ class FileQueue(object):
         into this directory
         """
         # scan for all files currently in this directory
+        LOGGER.info("Scanning files in %s", self.dir_path)
         scanner = DirectoryScanner([self.dir_path])
 
         # now, add all the currently known files to the queue

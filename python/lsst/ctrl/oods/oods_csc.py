@@ -107,6 +107,3 @@ class OodsCsc(DmCsc):
         """
         self.ingester.stop_tasks()
         self.cache_cleaner.stop_tasks()
-        await asyncio.sleep(1)
-        # [*map(asyncio.Task.print_stack, asyncio.all_tasks())]
-        # [*map (print, asyncio.all_tasks())]

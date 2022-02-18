@@ -212,9 +212,9 @@ class Gen3ButlerIngester(ButlerIngester):
         """
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
-            LOGGER.info("Cleaning")
+            LOGGER.debug("Cleaning")
             self.clean()
-            LOGGER.info("sleeping for %d seconds", seconds)
+            LOGGER.debug("sleeping for %d seconds", seconds)
             await asyncio.sleep(seconds)
 
     def clean(self):
@@ -237,18 +237,18 @@ class Gen3ButlerIngester(ButlerIngester):
                                                               collections=self.collections,
                                                               where="ingest_date < ref_date",
                                                               bind={"ref_date": t}))
-        LOGGER.info("Number of all expired datasets: %d", len(all_datasets))
+        LOGGER.debug("Number of all expired datasets: %d", len(all_datasets))
 
         # get all TAGGED collections
         tagged_cols = list(self.butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
 
         # get all TAGGED datasets
         tagged_datasets = set(self.butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
-        LOGGER.info("%d total TAGGED datasets exist in repo, and won't be deleted", len(tagged_datasets))
+        LOGGER.debug("%d total TAGGED datasets exist in repo, and won't be deleted", len(tagged_datasets))
 
         # get a set of datasets in all_datasets, but not in tagged_datasets
         ref = all_datasets.difference(tagged_datasets)
-        LOGGER.info("Deleting %d datasets", len(ref))
+        LOGGER.info("Deleting %d expired datasets", len(ref))
 
         # References outside of the Butler's datastore
         # need to be cleaned up, since the Butler will
@@ -258,8 +258,6 @@ class Gen3ButlerIngester(ButlerIngester):
         # the Butler, and if the URI was available,
         # remove it.
         for x in ref:
-            LOGGER.info("removing %s", ref)
-
             uri = None
             try:
                 uri = self.butler.getURI(x, collections=x.run)
@@ -267,6 +265,7 @@ class Gen3ButlerIngester(ButlerIngester):
                 LOGGER.warning("butler is missing uri for %s: %s", x, e)
 
             if uri is not None:
+                LOGGER.info("removing %s", uri)
                 uri.remove()
 
         self.butler.pruneDatasets(ref, purge=True, unstore=True)

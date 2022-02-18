@@ -123,8 +123,8 @@ class FileIngester(object):
                     local_staging_dir = butlerProxy.getStagingDirectory()
                     newfile = self.create_link_to_file(filename, local_staging_dir)
                     files[butlerProxy].append(newfile)
-            except Exception:
-                LOGGER.info(f"error staging files butler for {filename}")
+            except Exception as e:
+                LOGGER.info("error staging files butler for %s, %s", filename, e)
                 continue
             os.unlink(filename)
         return files
@@ -176,8 +176,7 @@ class FileIngester(object):
     def stop_tasks(self):
         for task in self.tasks:
             task.cancel()
-
-        self.tasks = None
+        self.tasks = []
 
     async def dequeue_and_ingest_files(self):
         while True:
