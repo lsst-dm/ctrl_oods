@@ -65,12 +65,12 @@ class AsyncIngestTestCase(asynctest.TestCase):
             config = yaml.safe_load(f)
 
         # extract parts of the ingester configuration
-        # and alter the forwarder staging directory to point
+        # and alter the image staging directory to point
         # at the temporary directories created for his test
 
         ingesterConfig = config["ingester"]
-        self.forwarderStagingDir = tempfile.mkdtemp()
-        ingesterConfig["forwarderStagingDirectory"] = self.forwarderStagingDir
+        self.imageStagingDir = tempfile.mkdtemp()
+        ingesterConfig["imageStagingDirectory"] = self.imageStagingDir
 
         self.badDir = tempfile.mkdtemp()
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
@@ -83,7 +83,7 @@ class AsyncIngestTestCase(asynctest.TestCase):
 
         # copy the FITS file to it's test location
 
-        self.subDir = tempfile.mkdtemp(dir=self.forwarderStagingDir)
+        self.subDir = tempfile.mkdtemp(dir=self.imageStagingDir)
         self.destFile = os.path.join(self.subDir, fits_name)
         shutil.copyfile(fitsFile, self.destFile)
 
@@ -92,7 +92,7 @@ class AsyncIngestTestCase(asynctest.TestCase):
     def tearDown(self):
         """ clean up after each test """
         shutil.rmtree(self.destFile, ignore_errors=True)
-        shutil.rmtree(self.forwarderStagingDir, ignore_errors=True)
+        shutil.rmtree(self.imageStagingDir, ignore_errors=True)
         shutil.rmtree(self.badDir, ignore_errors=True)
         shutil.rmtree(self.stagingDirectory, ignore_errors=True)
         shutil.rmtree(self.repoDir, ignore_errors=True)
@@ -104,11 +104,11 @@ class AsyncIngestTestCase(asynctest.TestCase):
         fits_name = "2020032700020-det000.fits.fz"
         config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
 
-        # setup directory to scan for files in the forwarder staging directory
+        # setup directory to scan for files in the image staging directory
         # and ensure one file is there
         ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
+        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        scanner = DirectoryScanner([image_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
@@ -121,7 +121,7 @@ class AsyncIngestTestCase(asynctest.TestCase):
         # allow the other async tasks to run
         await asyncio.sleep(2)
 
-        # check to make sure file was moved from forwarder staging directory
+        # check to make sure file was moved from image staging directory
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
@@ -130,7 +130,7 @@ class AsyncIngestTestCase(asynctest.TestCase):
         self.assertFalse(os.path.exists(bad_path))
 
         # check to be sure file ended up landing in butler "staging" directory
-        staging_sub_dir = Utils.strip_prefix(self.subDir, forwarder_staging_dir)
+        staging_sub_dir = Utils.strip_prefix(self.subDir, image_staging_dir)
         stage_path = os.path.join(self.stagingDirectory, staging_sub_dir, fits_name)
 
         self.assertTrue(os.path.exists(stage_path))

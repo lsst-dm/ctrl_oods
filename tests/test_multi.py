@@ -44,7 +44,7 @@ class MultiComCamIngesterTestCase(asynctest.TestCase):
 
         ingesterConfig = config["ingester"]
         self.dataDir = tempfile.mkdtemp()
-        ingesterConfig["forwarderStagingDirectory"] = self.dataDir
+        ingesterConfig["imageStagingDirectory"] = self.dataDir
 
         for x in ingesterConfig["butlers"]:
             butlerConfig = x["butler"]
@@ -83,8 +83,8 @@ class MultiComCamIngesterTestCase(asynctest.TestCase):
         config, destFile = self.createConfig("cc_oods_multi.yaml", fits_name)
 
         ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
+        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        scanner = DirectoryScanner([image_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 

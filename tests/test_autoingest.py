@@ -65,12 +65,12 @@ class AutoIngestTestCase(asynctest.TestCase):
             config = yaml.safe_load(f)
 
         # extract parts of the ingester configuration
-        # and alter the forwarder staging directory to point
+        # and alter the image staging directory to point
         # at the temporary directories created for his test
 
         ingesterConfig = config["ingester"]
-        self.forwarderDir = tempfile.mkdtemp()
-        ingesterConfig["forwarderStagingDirectory"] = self.forwarderDir
+        self.imageDir = tempfile.mkdtemp()
+        ingesterConfig["imageStagingDirectory"] = self.imageDir
 
         self.badDir = tempfile.mkdtemp()
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
@@ -83,7 +83,7 @@ class AutoIngestTestCase(asynctest.TestCase):
 
         # copy the FITS file to it's test location
 
-        self.subDir = tempfile.mkdtemp(dir=self.forwarderDir)
+        self.subDir = tempfile.mkdtemp(dir=self.imageDir)
         self.destFile = os.path.join(self.subDir, fits_name)
         shutil.copyfile(fitsFile, self.destFile)
 
@@ -92,7 +92,7 @@ class AutoIngestTestCase(asynctest.TestCase):
     def tearDown(self):
         """Remove directories created by createConfig
         """
-        shutil.rmtree(self.forwarderDir, ignore_errors=True)
+        shutil.rmtree(self.imageDir, ignore_errors=True)
         shutil.rmtree(self.badDir, ignore_errors=True)
         shutil.rmtree(self.stagingDir, ignore_errors=True)
         shutil.rmtree(self.repoDir, ignore_errors=True)
@@ -104,11 +104,11 @@ class AutoIngestTestCase(asynctest.TestCase):
         fits_name = "2020032700020-det000.fits.fz"
         config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
 
-        # setup directory to scan for files in the forwarder staging directory
+        # setup directory to scan for files in the image staging directory
         # and ensure one file is there
         ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
+        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        scanner = DirectoryScanner([image_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
@@ -117,7 +117,7 @@ class AutoIngestTestCase(asynctest.TestCase):
 
         await ingester.ingest([self.destFile])
 
-        # check to make sure file was moved from forwarder staging directory
+        # check to make sure file was moved from image staging directory
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
@@ -131,11 +131,11 @@ class AutoIngestTestCase(asynctest.TestCase):
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
-        # setup directory to scan for files in the forwarder staging directory
+        # setup directory to scan for files in the image staging directory
         # and ensure one file is there
         ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
+        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        scanner = DirectoryScanner([image_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
@@ -155,16 +155,16 @@ class AutoIngestTestCase(asynctest.TestCase):
 
         await ingester.ingest([self.destFile])
 
-        # make sure forwarder staging area is now empty
+        # make sure image staging area is now empty
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         # Check to see that the file was ingested.
-        # Recall that files start in the forwarder staging area, and are
+        # Recall that files start in the image staging area, and are
         # moved to the butler staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = Utils.strip_prefix(self.destFile, self.forwarderDir)
+        name = Utils.strip_prefix(self.destFile, self.imageDir)
         file_to_ingest = os.path.join(self.stagingDir, name)
         self.assertTrue(os.path.exists(file_to_ingest))
 
@@ -202,10 +202,10 @@ class AutoIngestTestCase(asynctest.TestCase):
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
-        # setup directory to scan for files in the forwarder staging directory
+        # setup directory to scan for files in the image staging directory
         ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
+        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        scanner = DirectoryScanner([image_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
@@ -216,7 +216,7 @@ class AutoIngestTestCase(asynctest.TestCase):
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        name = Utils.strip_prefix(self.destFile, forwarder_staging_dir)
+        name = Utils.strip_prefix(self.destFile, image_staging_dir)
         bad_path = os.path.join(self.badDir, name)
         self.assertTrue(os.path.exists(bad_path))
 

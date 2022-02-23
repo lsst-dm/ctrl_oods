@@ -46,9 +46,9 @@ class FileIngester(object):
         self.FAILURE = 1
         self.config = config
 
-        self.forwarder_staging_dir = self.config["forwarderStagingDirectory"]
+        self.image_staging_dir = self.config["imageStagingDirectory"]
 
-        self.fileQueue = FileQueue(self.forwarder_staging_dir)
+        self.fileQueue = FileQueue(self.image_staging_dir)
 
         butlerConfigs = self.config["butlers"]
         if len(butlerConfigs) == 0:
@@ -65,7 +65,7 @@ class FileIngester(object):
     def getStagingDirectory(self):
         """Return the directory where the external service stages files
         """
-        return self.forwarder_staging_dir
+        return self.image_staging_dir
 
     def getButlerCleanTasks(self):
         """Get a list of all butler run_task methods
@@ -95,7 +95,7 @@ class FileIngester(object):
         # in a subdirectory of the staging directory.  We want to retain
         #  that subdirectory name
 
-        basefile = Utils.strip_prefix(filename, self.forwarder_staging_dir)
+        basefile = Utils.strip_prefix(filename, self.image_staging_dir)
 
         # create a new full path to where the file will be linked for the OODS
         new_file = os.path.join(dirname, basefile)
