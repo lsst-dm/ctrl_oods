@@ -138,7 +138,7 @@ class FileIngester(object):
             file to ingest
         """
 
-        # first move the files from the Forwarder staging area
+        # first move the files from the image staging area
         # to the area where they're staged for the OODS.
         butler_file_lists = self.stageFiles(file_list)
 
