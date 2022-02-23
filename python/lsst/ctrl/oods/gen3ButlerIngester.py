@@ -237,18 +237,15 @@ class Gen3ButlerIngester(ButlerIngester):
                                                               collections=self.collections,
                                                               where="ingest_date < ref_date",
                                                               bind={"ref_date": t}))
-        LOGGER.debug("Number of all expired datasets: %d", len(all_datasets))
 
         # get all TAGGED collections
         tagged_cols = list(self.butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
 
         # get all TAGGED datasets
         tagged_datasets = set(self.butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
-        LOGGER.debug("%d total TAGGED datasets exist in repo, and won't be deleted", len(tagged_datasets))
 
         # get a set of datasets in all_datasets, but not in tagged_datasets
         ref = all_datasets.difference(tagged_datasets)
-        LOGGER.info("Deleting %d expired datasets", len(ref))
 
         # References outside of the Butler's datastore
         # need to be cleaned up, since the Butler will
