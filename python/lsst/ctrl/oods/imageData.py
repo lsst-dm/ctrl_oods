@@ -29,14 +29,14 @@ class ImageData:
     """Encapsulate information extracted from an DatasetRef
     """
     def __init__(self, dataset):
-        """Initiailize the object using DatasetRef
+        """Initialize the object using DatasetRef
 
         Parameters
         ----------
         dataset: `DatasetRef`
             The DatasetRef to extract information from
         """
-        self.info = {"CAMERA": "UNDEF", "RAFT": "R??", "SENSOR": "S??", "OBSID": "??"}
+        self.info = {"CAMERA": "", "RAFT": "", "SENSOR": "", "OBSID": ""}
         try:
             self.info["FILENAME"] = os.path.basename(dataset.path.ospath)
         except Exception as e:
@@ -68,13 +68,6 @@ class ImageData:
             LOGGER.info("Failed to extract data for %s: %s", dataset, e)
 
     def get_info(self):
-        """Return the extracted information of the dataset
-
-        Returns
-        -------
-        info: `dict`
-            A dictionary containing the image information
-        """
         return self.info
 
     def __repr__(self) -> str:

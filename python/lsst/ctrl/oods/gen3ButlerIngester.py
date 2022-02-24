@@ -25,9 +25,8 @@ import logging
 import os
 import shutil
 from lsst.ctrl.oods.butlerIngester import ButlerIngester
-from lsst.ctrl.oods.imageData import ImageData
 from lsst.ctrl.oods.timeInterval import TimeInterval
-from lsst.ctrl.oods.utils import Utils
+from lsst.ctrl.oods.imageData import ImageData
 from lsst.daf.butler import Butler
 from lsst.daf.butler.registry import CollectionType
 from lsst.obs.base.ingest import RawIngestTask, RawIngestConfig
@@ -40,31 +39,27 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Gen3ButlerIngester(ButlerIngester):
-    """Processes files for ingestion into a Gen3 Butler.
+    """Processes files on behalf of a Gen3 Butler.
 
     Parameters
     ----------
     config: `dict`
         configuration of this butler ingester
-    publisher: `Publisher`
-        RabbitMQ publisher
-    publisher_queue: `str`
-        The queue used to publish messages
+    csc: `OodsCSC`
+        OODS CSC
     """
-    def __init__(self, config, publisher=None, publisher_queue=None):
+    def __init__(self, config, csc=None):
+        self.csc = csc
         self.config = config
-        self.publisher = publisher
-        self.publisher_queue = publisher_queue
+
         repo = self.config["repoDirectory"]
         instrument = self.config["instrument"]
         self.scanInterval = self.config["scanInterval"]
         self.olderThan = self.config["filesOlderThan"]
         self.collections = self.config["collections"]
-        self.bad_file_dir = self.config["badFileDirectory"]
+
         self.staging_dir = self.config["stagingDirectory"]
-        self.archiver = "undefined"
-        self.INGEST_FAILURE = 1
-        self.METADATA_FAILURE = 2
+        self.bad_file_dir = self.config["badFileDirectory"]
 
         try:
             butlerConfig = Butler.makeRepo(repo)
@@ -122,13 +117,12 @@ class Gen3ButlerIngester(ButlerIngester):
         """
         msg = dict(metadata)
         msg['MSG_TYPE'] = 'IMAGE_IN_OODS'
-        msg['ARCHIVER'] = self.archiver
         msg['STATUS_CODE'] = code
         msg['DESCRIPTION'] = description
-        LOGGER.info("msg = %s", msg)
-        if self.publisher is None:
+        LOGGER.info("msg: %s, code: %s, description: %s", msg, code, description)
+        if self.csc is None:
             return
-        asyncio.create_task(self.publisher.publish_message(self.publisher_queue, msg))
+        asyncio.create_task(self.csc.send_imageInOODS(msg))
 
     def on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
@@ -140,32 +134,10 @@ class Gen3ButlerIngester(ButlerIngester):
             list of DatasetRefs
         """
         for dataset in datasets:
-            LOGGER.info("%s file ingested", dataset.path.ospath)
+            LOGGER.info("file %s successfully ingested", dataset.path.ospath)
             image_data = ImageData(dataset)
+            LOGGER.info("image_data.get_info() = %s", image_data.get_info())
             self.transmit_status(image_data.get_info(), code=0, description="file ingested")
-
-    def on_failure(self, filename, exc, code, reason):
-        """Callback used on ingest failure. Used to transmit
-        unsuccessful data ingestion status
-
-        Parameters
-        ----------
-        filename: `ButlerURI`
-            ButlerURI that failed in ingest
-        exc: `Exception`
-            Exception which explains what happened
-        code: `int`
-            error code
-        reason: `str`
-            reason for failure
-        """
-        real_file = filename.ospath
-        self.move_file_to_bad_dir(real_file)
-        cause = self.extract_cause(exc)
-        info = self.undef_metadata(real_file)
-        description = f"{reason}: {cause}"
-        LOGGER.error(description)
-        self.transmit_status(info, code=code, description=description)
 
     def on_ingest_failure(self, filename, exc):
         """Callback used on ingest failure. Used to transmit
@@ -177,8 +149,13 @@ class Gen3ButlerIngester(ButlerIngester):
             ButlerURI that failed in ingest
         exc: `Exception`
             Exception which explains what happened
+
         """
-        self.on_failure(filename, exc, self.INGEST_FAILURE, "ingest failure")
+        real_file = filename.ospath
+        self.move_file_to_bad_dir(real_file)
+        cause = self.extract_cause(exc)
+        info = self.undef_metadata(real_file)
+        self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
 
     def on_metadata_failure(self, filename, exc):
         """Callback used on metadata extraction failure. Used to transmit
@@ -191,34 +168,34 @@ class Gen3ButlerIngester(ButlerIngester):
         exc: `Exception`
             Exception which explains what happened
         """
-        self.on_failure(filename, exc, self.METADATA_FAILURE, "metadata failure")
+        real_file = filename.ospath
+        self.move_file_to_bad_dir(real_file)
+
+        cause = self.extract_cause(exc)
+        info = self.undef_metadata(real_file)
+        self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
 
     def move_file_to_bad_dir(self, filename):
-        """Move filename to a the "bad file" directory
-
-        Parameters
-        ----------
-        filename: `str`
-            file name of the file to move
-        """
-        bad_dir = Utils.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
+        bad_dir = self.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
         try:
             shutil.move(filename, bad_dir)
         except Exception as e:
-            LOGGER.info("Failed to move %s to %s %s", filename, self.bad_dir, e)
+            LOGGER.info("Failed to move %s to %s: %s", filename, self.bad_dir, e)
 
-    def ingest(self, archiver, filename):
-        """Ingest a file into a butler
+    def ingest(self, file_list):
+        """Ingest a list of files into a butler
 
         Parameters
         ----------
-        filename: `str`
-            file name of the file to ingest
+        file_list: `list`
+            files to ingest
         """
 
         # Ingest image.
-        self.archiver = archiver
-        self.task.run([filename])
+        try:
+            self.task.run(file_list)
+        except Exception as e:
+            LOGGER.info("Ingestion failure: %s", e)
 
     def getName(self):
         """Return the name of this ingester
@@ -230,14 +207,14 @@ class Gen3ButlerIngester(ButlerIngester):
         """
         return "gen3"
 
-    async def run_task(self):
+    async def clean_task(self):
         """run the clean() method at the configured interval
         """
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
-            LOGGER.debug("running cleaning tasks")
+            LOGGER.debug("Cleaning")
             self.clean()
-            LOGGER.debug("waiting %d seconds until next clean task", seconds)
+            LOGGER.debug("sleeping for %d seconds", seconds)
             await asyncio.sleep(seconds)
 
     def clean(self):
@@ -260,17 +237,15 @@ class Gen3ButlerIngester(ButlerIngester):
                                                               collections=self.collections,
                                                               where="ingest_date < ref_date",
                                                               bind={"ref_date": t}))
-        LOGGER.debug("Number of all expired datasets: %d", len(all_datasets))
+
         # get all TAGGED collections
         tagged_cols = list(self.butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
 
         # get all TAGGED datasets
         tagged_datasets = set(self.butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
-        LOGGER.debug("%d total TAGGED datasets exist in repo, and won't be deleted", len(tagged_datasets))
 
         # get a set of datasets in all_datasets, but not in tagged_datasets
         ref = all_datasets.difference(tagged_datasets)
-        LOGGER.debug("Deleting %d datasets", len(ref))
 
         # References outside of the Butler's datastore
         # need to be cleaned up, since the Butler will
@@ -280,8 +255,6 @@ class Gen3ButlerIngester(ButlerIngester):
         # the Butler, and if the URI was available,
         # remove it.
         for x in ref:
-            LOGGER.info("removing %s", ref)
-
             uri = None
             try:
                 uri = self.butler.getURI(x, collections=x.run)
@@ -289,6 +262,7 @@ class Gen3ButlerIngester(ButlerIngester):
                 LOGGER.warning("butler is missing uri for %s: %s", x, e)
 
             if uri is not None:
+                LOGGER.info("removing %s", uri)
                 uri.remove()
 
         self.butler.pruneDatasets(ref, purge=True, unstore=True)

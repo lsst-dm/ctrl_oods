@@ -107,12 +107,12 @@ class TaggingTestCase(asynctest.TestCase):
             config = yaml.safe_load(f)
 
         # extract parts of the ingester configuration
-        # and alter the forwarder staging directory to point
+        # and alter the image staging directory to point
         # at the temporary directories created for his test
 
         ingesterConfig = config["ingester"]
-        self.forwarderStagingDir = tempfile.mkdtemp()
-        ingesterConfig["forwarderStagingDirectory"] = self.forwarderStagingDir
+        self.imageStagingDir = tempfile.mkdtemp()
+        ingesterConfig["imageStagingDirectory"] = self.imageStagingDir
 
         self.badDir = tempfile.mkdtemp()
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
@@ -127,22 +127,22 @@ class TaggingTestCase(asynctest.TestCase):
 
         # copy the FITS file to it's test location
 
-        subDir = tempfile.mkdtemp(dir=self.forwarderStagingDir)
+        subDir = tempfile.mkdtemp(dir=self.imageStagingDir)
         self.destFile = os.path.join(subDir, fits_name)
         copyfile(fitsFile, self.destFile)
 
-        # setup directory to scan for files in the forwarder staging directory
+        # setup directory to scan for files in the image staging directory
         # and ensure one file is there
         ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
+        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        scanner = DirectoryScanner([image_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
         ingester = FileIngester(ingesterConfig)
-        butler_tasks = ingester.getButlerTasks()
+        butler_tasks = ingester.getButlerCleanTasks()
 
         task_list = []
         for butler_task in butler_tasks:
@@ -152,24 +152,19 @@ class TaggingTestCase(asynctest.TestCase):
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
 
-        # trigger the ingester by sending it a "message"
-        msg = {}
-        msg['CAMERA'] = "COMCAM"
-        msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "CCArchiver"
-        await ingester.ingest(msg)
+        # trigger the ingester
+        await ingester.ingest([self.destFile])
 
         # make sure staging area is now empty
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         # Check to see that the file was ingested.
-        # Recall that files start in teh forwarder staging area, and are
+        # Recall that files start in teh image staging area, and are
         # moved to the OODS staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = self.strip_prefix(self.destFile, self.forwarderStagingDir)
+        name = self.strip_prefix(self.destFile, self.imageStagingDir)
         staged_file = os.path.join(self.stagingDirectory, name)
         self.assertTrue(os.path.exists(staged_file))
 

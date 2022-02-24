@@ -19,19 +19,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import asynctest
 import asyncio
 import os
 import tempfile
-from pathlib import PurePath
-from shutil import copyfile
+import shutil
 import yaml
-import lsst.utils.tests
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.utils import Utils
+import lsst.utils.tests
+import asynctest
 
 
-class Gen3IngesterTestCase(asynctest.TestCase):
+class Gen3ComCamIngesterTestCase(asynctest.TestCase):
     """Test Gen3 Butler Ingest"""
 
     def createConfig(self, config_name, fits_name):
@@ -65,48 +65,39 @@ class Gen3IngesterTestCase(asynctest.TestCase):
             config = yaml.safe_load(f)
 
         # extract parts of the ingester configuration
-        # and alter the forwarder staging directory to point
+        # and alter the image staging directory to point
         # at the temporary directories created for his test
 
         ingesterConfig = config["ingester"]
-        self.forwarderStagingDir = tempfile.mkdtemp()
-        ingesterConfig["forwarderStagingDirectory"] = self.forwarderStagingDir
+        self.imageStagingDir = tempfile.mkdtemp()
+        ingesterConfig["imageStagingDirectory"] = self.imageStagingDir
+        print(f"imageStagingDirectory = {self.imageStagingDir}")
 
         self.badDir = tempfile.mkdtemp()
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
         butlerConfig["badFileDirectory"] = self.badDir
         self.stagingDirectory = tempfile.mkdtemp()
         butlerConfig["stagingDirectory"] = self.stagingDirectory
+        print(f"stagingDirectory = {self.stagingDirectory}")
 
-        repoDir = tempfile.mkdtemp()
-        butlerConfig["repoDirectory"] = repoDir
+        self.repoDir = tempfile.mkdtemp()
+        butlerConfig["repoDirectory"] = self.repoDir
 
         # copy the FITS file to it's test location
 
-        subDir = tempfile.mkdtemp(dir=self.forwarderStagingDir)
-        self.destFile = os.path.join(subDir, fits_name)
-        copyfile(fitsFile, self.destFile)
+        self.subDir = tempfile.mkdtemp(dir=self.imageStagingDir)
+        self.destFile = os.path.join(self.subDir, fits_name)
+        shutil.copyfile(fitsFile, self.destFile)
 
         return config
 
-    def strip_prefix(self, name, prefix):
-        """strip prefix from name
-
-        Parameters
-        ----------
-        name: `str`
-           path of a file
-        prefix: `str`
-           prefix to strip
-
-        Returns
-        -------
-        ret: `str`
-            remainder of string
-        """
-        p = PurePath(name)
-        ret = str(p.relative_to(prefix))
-        return ret
+    def tearDown(self):
+        shutil.rmtree(self.destFile, ignore_errors=True)
+        shutil.rmtree(self.imageStagingDir, ignore_errors=True)
+        shutil.rmtree(self.badDir, ignore_errors=True)
+        shutil.rmtree(self.stagingDirectory, ignore_errors=True)
+        shutil.rmtree(self.repoDir, ignore_errors=True)
+        shutil.rmtree(self.subDir, ignore_errors=True)
 
     async def testAuxTelIngest(self):
         """test ingesting an auxtel file
@@ -114,24 +105,18 @@ class Gen3IngesterTestCase(asynctest.TestCase):
         fits_name = "2020032700020-det000.fits.fz"
         config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
 
-        # setup directory to scan for files in the forwarder staging directory
+        # setup directory to scan for files in the image staging directory
         # and ensure one file is there
         ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
+        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        scanner = DirectoryScanner([image_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         # create a FileIngester
         ingester = FileIngester(ingesterConfig)
 
-        # trigger the ingester by sending it a "message"
-        msg = {}
-        msg['CAMERA'] = "LATISS"
-        msg['OBSID'] = "AT_C_20180920_000028"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "ATArchiver"
-        await ingester.ingest(msg)
+        await ingester.ingest([self.destFile])
 
         # check to make sure the file was moved from the staging directory
         files = scanner.getAllFiles()
@@ -145,45 +130,40 @@ class Gen3IngesterTestCase(asynctest.TestCase):
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
-        # setup directory to scan for files in the forwarder staging directory
+        # setup directory to scan for files in the image staging directory
         # and ensure one file is there
         ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
+        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        scanner = DirectoryScanner([image_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
         ingester = FileIngester(ingesterConfig)
-        butler_tasks = ingester.getButlerTasks()
+        clean_tasks = ingester.getButlerCleanTasks()
 
         task_list = []
-        for butler_task in butler_tasks:
-            task = asyncio.create_task(butler_task())
+        for clean_task in clean_tasks:
+            task = asyncio.create_task(clean_task())
             task_list.append(task)
 
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
+        print(f"destFile = {self.destFile}")
 
-        # trigger the ingester by sending it a "message"
-        msg = {}
-        msg['CAMERA'] = "COMCAM"
-        msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "CCArchiver"
-        await ingester.ingest(msg)
+        await ingester.ingest([self.destFile])
 
         # make sure staging area is now empty
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         # Check to see that the file was ingested.
-        # Recall that files start in teh forwarder staging area, and are
+        # Recall that files start in teh image staging area, and are
         # moved to the OODS staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = self.strip_prefix(self.destFile, self.forwarderStagingDir)
+        name = Utils.strip_prefix(self.destFile, self.imageStagingDir)
         file_to_ingest = os.path.join(self.stagingDirectory, name)
         self.assertTrue(os.path.exists(file_to_ingest))
 
@@ -194,7 +174,7 @@ class Gen3IngesterTestCase(asynctest.TestCase):
         # throwing an acception
         task_list.append(asyncio.create_task(self.interrupt_me()))
 
-        # kick off all the tasks, until one (the "interrupt_me" task)
+        # gather all the tasks, until one (the "interrupt_me" task)
         # throws an exception
         try:
             await asyncio.gather(*task_list)
@@ -219,27 +199,21 @@ class Gen3IngesterTestCase(asynctest.TestCase):
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
-        # setup directory to scan for files in the forwarder staging directory
+        # setup directory to scan for files in the image staging directory
         ingesterConfig = config["ingester"]
-        forwarder_staging_dir = ingesterConfig["forwarderStagingDirectory"]
-        scanner = DirectoryScanner([forwarder_staging_dir])
+        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        scanner = DirectoryScanner([image_staging_dir])
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         ingester = FileIngester(config["ingester"])
 
-        # trigger the ingester by sending it a "message"
-        msg = {}
-        msg['CAMERA'] = "COMCAM"
-        msg['OBSID'] = "CC_C_20190530_000001"
-        msg['FILENAME'] = self.destFile
-        msg['ARCHIVER'] = "CCArchiver"
-        await ingester.ingest(msg)
+        await ingester.ingest([self.destFile])
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        name = self.strip_prefix(self.destFile, forwarder_staging_dir)
+        name = Utils.strip_prefix(self.destFile, image_staging_dir)
         bad_path = os.path.join(self.badDir, name)
         self.assertTrue(os.path.exists(bad_path))
 

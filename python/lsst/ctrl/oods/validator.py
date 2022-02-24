@@ -63,12 +63,12 @@ class Validator(object):
 
         else:
             ingesterConfig = self.oodsConfig[configName]
-            if "forwarderStagingDirectory" in ingesterConfig:
-                dirs = ingesterConfig["forwarderStagingDirectory"]
+            if "imageStagingDirectory" in ingesterConfig:
+                dirs = ingesterConfig["imageStagingDirectory"]
                 if dirs is None:
-                    self.missingValue("ingester:forwarderStagingDirectory")
+                    self.missingValue("ingester:imageStagingDirectory")
             else:
-                self.missingElement("ingester:forwarderStagingDirectory")
+                self.missingElement("ingester:imageStagingDirectory")
             if "butlers" in ingesterConfig:
                 butlerEntries = ingesterConfig["butlers"]
                 for entry in butlerEntries:
