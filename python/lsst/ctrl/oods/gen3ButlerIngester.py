@@ -48,6 +48,7 @@ class Gen3ButlerIngester(ButlerIngester):
     csc: `OodsCSC`
         OODS CSC
     """
+
     def __init__(self, config, csc=None):
         self.csc = csc
         self.config = config
@@ -76,11 +77,13 @@ class Gen3ButlerIngester(ButlerIngester):
 
         cfg = RawIngestConfig()
         cfg.transfer = "direct"
-        self.task = RawIngestTask(config=cfg,
-                                  butler=self.butler,
-                                  on_success=self.on_success,
-                                  on_ingest_failure=self.on_ingest_failure,
-                                  on_metadata_failure=self.on_metadata_failure)
+        self.task = RawIngestTask(
+            config=cfg,
+            butler=self.butler,
+            on_success=self.on_success,
+            on_ingest_failure=self.on_ingest_failure,
+            on_metadata_failure=self.on_metadata_failure,
+        )
 
     def undef_metadata(self, filename):
         """Return a sparsely initialized metadata dictionary
@@ -96,11 +99,11 @@ class Gen3ButlerIngester(ButlerIngester):
             Dictionary containing file name, and uninitialized elements
         """
         info = dict()
-        info['FILENAME'] = os.path.basename(filename)
-        info['CAMERA'] = 'UNDEF'
-        info['OBSID'] = '??'
-        info['RAFT'] = 'R??'
-        info['SENSOR'] = 'S??'
+        info["FILENAME"] = os.path.basename(filename)
+        info["CAMERA"] = "UNDEF"
+        info["OBSID"] = "??"
+        info["RAFT"] = "R??"
+        info["SENSOR"] = "S??"
         return info
 
     def transmit_status(self, metadata, code, description):
@@ -116,9 +119,9 @@ class Gen3ButlerIngester(ButlerIngester):
             description of the ingestion status
         """
         msg = dict(metadata)
-        msg['MSG_TYPE'] = 'IMAGE_IN_OODS'
-        msg['STATUS_CODE'] = code
-        msg['DESCRIPTION'] = description
+        msg["MSG_TYPE"] = "IMAGE_IN_OODS"
+        msg["STATUS_CODE"] = code
+        msg["DESCRIPTION"] = description
         LOGGER.info("msg: %s, code: %s, description: %s", msg, code, description)
         if self.csc is None:
             return
@@ -136,7 +139,7 @@ class Gen3ButlerIngester(ButlerIngester):
         for dataset in datasets:
             LOGGER.info("file %s successfully ingested", dataset.path.ospath)
             image_data = ImageData(dataset)
-            LOGGER.info("image_data.get_info() = %s", image_data.get_info())
+            LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
             self.transmit_status(image_data.get_info(), code=0, description="file ingested")
 
     def on_ingest_failure(self, filename, exc):
@@ -208,8 +211,7 @@ class Gen3ButlerIngester(ButlerIngester):
         return "gen3"
 
     async def clean_task(self):
-        """run the clean() method at the configured interval
-        """
+        """run the clean() method at the configured interval"""
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
             LOGGER.debug("Cleaning")
@@ -226,17 +228,22 @@ class Gen3ButlerIngester(ButlerIngester):
         # "olderThan" configuration
         t = Time.now()
         interval = collections.namedtuple("Interval", self.olderThan.keys())(*self.olderThan.values())
-        td = TimeDelta(interval.days*u.d + interval.hours * u.h +
-                       interval.minutes*u.min + interval.seconds*u.s)
+        td = TimeDelta(
+            interval.days * u.d + interval.hours * u.h + interval.minutes * u.min + interval.seconds * u.s
+        )
         t = t - td
 
         self.butler.registry.refresh()
 
         # get all datasets in these collections
-        all_datasets = set(self.butler.registry.queryDatasets(datasetType=...,
-                                                              collections=self.collections,
-                                                              where="ingest_date < ref_date",
-                                                              bind={"ref_date": t}))
+        all_datasets = set(
+            self.butler.registry.queryDatasets(
+                datasetType=...,
+                collections=self.collections,
+                where="ingest_date < ref_date",
+                bind={"ref_date": t},
+            )
+        )
 
         # get all TAGGED collections
         tagged_cols = list(self.butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))

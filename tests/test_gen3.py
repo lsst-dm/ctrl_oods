@@ -71,14 +71,12 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         ingesterConfig = config["ingester"]
         self.imageStagingDir = tempfile.mkdtemp()
         ingesterConfig["imageStagingDirectory"] = self.imageStagingDir
-        print(f"imageStagingDirectory = {self.imageStagingDir}")
 
         self.badDir = tempfile.mkdtemp()
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
         butlerConfig["badFileDirectory"] = self.badDir
         self.stagingDirectory = tempfile.mkdtemp()
         butlerConfig["stagingDirectory"] = self.stagingDirectory
-        print(f"stagingDirectory = {self.stagingDirectory}")
 
         self.repoDir = tempfile.mkdtemp()
         butlerConfig["repoDirectory"] = self.repoDir
@@ -150,7 +148,6 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
-        print(f"destFile = {self.destFile}")
 
         await ingester.ingest([self.destFile])
 

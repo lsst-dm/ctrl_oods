@@ -63,8 +63,7 @@ class FileIngester(object):
         self.dequeue_task = None
 
     def getStagingDirectory(self):
-        """Return the directory where the external service stages files
-        """
+        """Return the directory where the external service stages files"""
         return self.image_staging_dir
 
     def getButlerCleanTasks(self):
@@ -106,7 +105,7 @@ class FileIngester(object):
         os.makedirs(new_dir, exist_ok=True)
         # hard link the file in the staging area
         os.link(filename, new_file)
-        LOGGER.info(f"created link to {new_file}")
+        LOGGER.debug("created link to %s", new_file)
 
         return new_file
 
@@ -150,12 +149,10 @@ class FileIngester(object):
             for butler in self.butlers:
                 butler.ingest(butler_file_lists[butler])
         except Exception as e:
-            print("Exception thrown")
-            print(f"Exception: {e}")
+            LOGGER.warn("Exception: %s", e)
 
     def run_tasks(self):
-        """run tasks to queue files and ingest them
-        """
+        """run tasks to queue files and ingest them"""
 
         # this is split into two tasks so they can run at slightly different
         # cadences.  We want to gather as many files as we can before we

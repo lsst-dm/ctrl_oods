@@ -27,8 +27,7 @@ from abc import ABC, abstractmethod
 
 
 class ButlerIngester(ABC):
-    """Interface class for processing files for a butler.
-    """
+    """Interface class for processing files for a butler."""
 
     SUCCESS = 0
     FAILURE = 1
@@ -39,7 +38,7 @@ class ButlerIngester(ABC):
 
         Parameters
         ----------
-        file_list: `list`
+        file_list : `list`
             list of files to ingest
         """
         raise NotImplementedError()
@@ -50,19 +49,17 @@ class ButlerIngester(ABC):
 
         Returns
         -------
-        ret: `str`
+        ret : `str`
             the name of this ingester
         """
         raise NotImplementedError()
 
     async def cleaner_task(self):
-        """Run task that require periodical attention
-        """
+        """Run task that require periodical attention"""
         await asyncio.sleep(60)
 
     def clean(self):
-        """Perform a cleaning pass for this ingester; override if necessary
-        """
+        """Perform a cleaning pass for this ingester; override if necessary"""
         pass
 
     def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
@@ -73,16 +70,16 @@ class ButlerIngester(ABC):
 
         Parameters
         ----------
-        bad_dir_root: `str`
+        bad_dir_root : `str`
             Root of the bad directory hierarchy
-        staging_dir_root: `str`
+        staging_dir_root : `str`
             Root of the bad directory hierarchy
-        original: `str`
+        original : `str`
             Original directory location
 
         Returns
         -------
-        newdir: `str`
+        newdir : `str`
             new directory name
         """
         # strip the original directory location, except for the date
@@ -104,7 +101,7 @@ class ButlerIngester(ABC):
 
         Returns
         -------
-        s: `str`
+        s : `str`
             A string containing the cause of an exception
         """
         if e.__cause__ is None:

@@ -53,7 +53,8 @@ class DmCsc(BaseCsc):
             State.ENABLED: "enabled",
             State.FAULT: "fault",
             State.OFFLINE: "offline",
-            State.STANDBY: "standby"}
+            State.STANDBY: "standby",
+        }
 
     async def configure(self, config):
         """Configure this CSC and output the ``settingsApplied`` event.
@@ -69,8 +70,7 @@ class DmCsc(BaseCsc):
         await self.evt_softwareVersions.set_put(cscVersion=self.version, subsystemVersions="")
 
     def report_summary_state(self):
-        """State transition model for the ArchiverCSC
-        """
+        """State transition model for the ArchiverCSC"""
         super().report_summary_state()
 
         s_cur = None
@@ -78,7 +78,7 @@ class DmCsc(BaseCsc):
             s_cur = self.state_to_str[self.current_state]
         s_sum = self.state_to_str[self.summary_state]
 
-        LOGGER.info(f"current state is: {s_cur}; transition to {s_sum}")
+        LOGGER.info("current state is: %s; transition to %s", s_cur, s_sum)
 
         # Services are started when transitioning from STANDBY to DISABLED.
         # Services are stopped when transitioning from DISABLED to STANDBY.

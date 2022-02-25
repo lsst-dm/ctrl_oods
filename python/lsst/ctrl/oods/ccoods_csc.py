@@ -27,14 +27,14 @@ from lsst.ts import salobj
 LOGGER = logging.getLogger(__name__)
 
 
-class AtOodsCsc(OodsCsc):
-    """AuxTel OODS CSC object"""
+class CcOodsCsc(OodsCsc):
+    """ComCam OODS CSC object"""
 
     def __init__(self):
-        super().__init__("ATOODS", initial_state=salobj.State.STANDBY)
+        super().__init__("CCOODS", initial_state=salobj.State.STANDBY)
 
         self.transitioning_to_fault_evt = asyncio.Event()
         self.transitioning_to_fault_evt.clear()
 
         self.current_state = None
-        LOGGER.info("************************ Starting ATOODS ************************")
+        LOGGER.info("************************ Starting CCOODS ************************")

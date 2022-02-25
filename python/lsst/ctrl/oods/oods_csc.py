@@ -53,7 +53,7 @@ class OodsCsc(DmCsc):
         if "CTRL_OODS_CONFIG_FILE" in os.environ:
             filename = os.environ["CTRL_OODS_CONFIG_FILE"]
             LOGGER.info("using configuration %s", filename)
-            with open(filename, 'r') as f:
+            with open(filename, "r") as f:
                 self.config = yaml.safe_load(f)
         else:
             raise FileNotFoundError("CTRL_OODS_CONFIG_FILE is not set")
@@ -74,36 +74,36 @@ class OodsCsc(DmCsc):
         info : `dict`
             information about the image
         """
-        camera = info['CAMERA']
-        obsid = info['OBSID']
+        camera = info["CAMERA"]
+        obsid = info["OBSID"]
         raft = "undef"
-        if 'RAFT' in info:
-            raft = info['RAFT']
+        if "RAFT" in info:
+            raft = info["RAFT"]
         sensor = "undef"
-        if 'SENSOR' in info:
-            sensor = info['SENSOR']
-        statusCode = info['STATUS_CODE']
-        description = info['DESCRIPTION']
+        if "SENSOR" in info:
+            sensor = info["SENSOR"]
+        statusCode = info["STATUS_CODE"]
+        description = info["DESCRIPTION"]
 
-        s = f'sending camera={camera} obsid={obsid} raft={raft} sensor={sensor} '
-        s = s + f'statusCode={statusCode}, description={description}'
+        s = f"sending camera={camera} obsid={obsid} raft={raft} sensor={sensor} "
+        s = s + f"statusCode={statusCode}, description={description}"
         LOGGER.info(s)
-        self.evt_imageInOODS.set_put(camera=camera,
-                                     obsid=obsid,
-                                     raft=raft,
-                                     sensor=sensor,
-                                     statusCode=statusCode,
-                                     description=description)
+        self.evt_imageInOODS.set_put(
+            camera=camera,
+            obsid=obsid,
+            raft=raft,
+            sensor=sensor,
+            statusCode=statusCode,
+            description=description,
+        )
 
     async def start_services(self):
-        """Start all cleanup and archiving services
-        """
+        """Start all cleanup and archiving services"""
 
         self.task_list = self.ingester.run_tasks()
         self.task_list.append(asyncio.create_task(self.cache_cleaner.run_tasks()))
 
     async def stop_services(self):
-        """Stop all cleanup and archiving services
-        """
+        """Stop all cleanup and archiving services"""
         self.ingester.stop_tasks()
         self.cache_cleaner.stop_tasks()

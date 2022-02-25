@@ -151,7 +151,6 @@ class AutoIngestTestCase(asynctest.TestCase):
 
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
-        print(f"destFile = {self.destFile}")
 
         await ingester.ingest([self.destFile])
 

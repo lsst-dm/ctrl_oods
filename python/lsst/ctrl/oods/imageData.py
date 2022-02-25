@@ -26,8 +26,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ImageData:
-    """Encapsulate information extracted from an DatasetRef
-    """
+    """Encapsulate information extracted from an DatasetRef"""
+
     def __init__(self, dataset):
         """Initialize the object using DatasetRef
 
@@ -52,17 +52,17 @@ class ImageData:
 
             records = ref.dataId.records
 
-            if 'instrument' in records:
-                instrument = records['instrument'].toDict()
+            if "instrument" in records:
+                instrument = records["instrument"].toDict()
                 self.info["CAMERA"] = instrument.get("name", "UNDEF")
 
-            if 'detector' in records:
-                detector = records['detector'].toDict()
+            if "detector" in records:
+                detector = records["detector"].toDict()
                 self.info["RAFT"] = detector.get("raft", "R??")
                 self.info["SENSOR"] = detector.get("name_in_raft", "S??")
 
-            if 'exposure' in records:
-                exposure = records['exposure'].toDict()
+            if "exposure" in records:
+                exposure = records["exposure"].toDict()
                 self.info["OBSID"] = exposure.get("obs_id", "??")
         except Exception as e:
             LOGGER.info("Failed to extract data for %s: %s", dataset, e)

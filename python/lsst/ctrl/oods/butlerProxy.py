@@ -27,11 +27,12 @@ class ButlerProxy(object):
 
     Parameters
     ----------
-    butlerConfig: `dict`
+    butlerConfig : `dict`
         details on how to construct and configure the butler
-    csc: `OodsCsc`
+    csc : `OodsCsc`
         OODS CSC
     """
+
     def __init__(self, butlerConfig, csc=None):
         # create the butler
         classConfig = butlerConfig["class"]
@@ -53,7 +54,7 @@ class ButlerProxy(object):
 
         Returns
         -------
-        staging_dir: `str`
+        staging_dir : `str`
             the staging directory
         """
         return self.staging_dir
@@ -63,12 +64,11 @@ class ButlerProxy(object):
 
         Parameters
         ----------
-        file_list: `list`
+        file_list : `list`
             A list of file names
         """
         self.butlerInstance.ingest(file_list)
 
     async def clean_task(self):
-        """Return the butler's clean_task method
-        """
+        """Return the butler's clean_task method"""
         await self.butlerInstance.clean_task()
