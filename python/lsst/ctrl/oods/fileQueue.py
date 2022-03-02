@@ -34,8 +34,8 @@ class FileQueue(object):
     ----------
     dir_path: `str`
         A file directory to watch
-    scanInterval: `int`
-        The number of seconds to wait between directory scans
+    scanInterval: `int`, optional.
+        The number of seconds to wait between directory scans. Defaults to 1.
     """
 
     def __init__(self, dir_path, scanInterval=1):
