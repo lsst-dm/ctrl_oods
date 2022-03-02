@@ -74,7 +74,7 @@ class ButlerIngester(ABC):
         bad_dir_root : `str`
             Root of the bad directory hierarchy
         staging_dir_root : `str`
-            Root of the bad directory hierarchy
+            Root of the staging directory hierarchy
         original : `str`
             Original directory location
 
@@ -99,6 +99,11 @@ class ButlerIngester(ABC):
 
     def extract_cause(self, e):
         """extract the cause of an exception
+
+        Parameters
+        ----------
+        e : `BaseException`
+            exception to extract cause from
 
         Returns
         -------
