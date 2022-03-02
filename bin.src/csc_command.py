@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# This file is part of dm_csc_base
+# This file is part of ctrl_oods
 #
 # Developed for the LSST Data Management System.
 # This product includes software developed by the LSST Project
@@ -28,7 +28,6 @@ from lsst.ts import salobj
 
 
 class Commander:
-
     def __init__(self, device_name, command, timeout):
         self.device_name = device_name
         self.command = command
@@ -50,13 +49,19 @@ if __name__ == "__main__":
 
     name = os.path.basename(sys.argv[0])
     parser = argparse.ArgumentParser(prog=name, description="Send SAL commands to devices")
-    parser.add_argument("-D", "--device", type=str, dest="device", required=True,
-                        help="component to which the command will be sent")
+    parser.add_argument(
+        "-D",
+        "--device",
+        type=str,
+        dest="device",
+        required=True,
+        help="component to which the command will be sent",
+    )
     parser.add_argument("-t", "--timeout", type=int, dest="timeout", default=5, help="command timeout")
 
     subparsers = parser.add_subparsers(dest="command")
 
-    cmds = ['start', 'enable', 'disable', 'enterControl', 'exitControl', 'standby', 'abort', 'resetFromFault']
+    cmds = ["start", "enable", "disable", "enterControl", "exitControl", "standby", "abort", "resetFromFault"]
     for x in cmds:
         p = subparsers.add_parser(x)
 
