@@ -21,8 +21,9 @@
 
 import asyncio
 import logging
-from lsst.ts.salobj import State
-from lsst.ts.salobj import BaseCsc
+
+from lsst.ts.salobj import BaseCsc, State
+
 from . import __version__
 
 LOGGER = logging.getLogger(__name__)

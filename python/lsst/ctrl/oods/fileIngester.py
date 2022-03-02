@@ -23,6 +23,7 @@ import asyncio
 import logging
 import os
 import os.path
+
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.fileQueue import FileQueue
 from lsst.ctrl.oods.utils import Utils

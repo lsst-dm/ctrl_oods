@@ -20,9 +20,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
-import asynctest
 import os
 import tempfile
+
+import asynctest
 from lsst.ctrl.oods.fileQueue import FileQueue
 
 

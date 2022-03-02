@@ -22,9 +22,10 @@ import datetime
 import os
 import tempfile
 import time
-from lsst.ctrl.oods.directoryScanner import DirectoryScanner
-from lsst.ctrl.oods.cacheCleaner import CacheCleaner
+
 import lsst.utils.tests
+from lsst.ctrl.oods.cacheCleaner import CacheCleaner
+from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 
 
 class CleanerTestCase(lsst.utils.tests.TestCase):

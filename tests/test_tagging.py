@@ -22,18 +22,17 @@
 import asyncio
 import logging
 import os
+import tempfile
 from pathlib import PurePath
 from shutil import copyfile
-import tempfile
-import yaml
 
+import asynctest
 import lsst.utils.tests
+import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.daf.butler import Butler
 from lsst.daf.butler.registry import CollectionType
-
-import asynctest
 
 
 class TaggingTestCase(asynctest.TestCase):

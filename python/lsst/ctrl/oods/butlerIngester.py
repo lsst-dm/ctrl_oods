@@ -22,8 +22,9 @@
 import asyncio
 import os
 import os.path
-from lsst.ctrl.oods.utils import Utils
 from abc import ABC, abstractmethod
+
+from lsst.ctrl.oods.utils import Utils
 
 
 class ButlerIngester(ABC):

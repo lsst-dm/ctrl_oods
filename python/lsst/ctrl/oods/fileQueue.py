@@ -21,6 +21,7 @@
 
 import asyncio
 import logging
+
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 
 LOGGER = logging.getLogger(__name__)

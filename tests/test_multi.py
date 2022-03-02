@@ -19,13 +19,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
-import tempfile
 import shutil
+import tempfile
+
+import asynctest
+import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
-import lsst.utils.tests
-import asynctest
 
 
 class MultiComCamIngesterTestCase(asynctest.TestCase):

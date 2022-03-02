@@ -21,14 +21,15 @@
 
 import asyncio
 import os
-import tempfile
 import shutil
+import tempfile
+
+import asynctest
+import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.utils import Utils
-import lsst.utils.tests
-import asynctest
 
 
 class Gen3ComCamIngesterTestCase(asynctest.TestCase):

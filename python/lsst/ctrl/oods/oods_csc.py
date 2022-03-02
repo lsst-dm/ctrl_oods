@@ -22,10 +22,11 @@
 import asyncio
 import logging
 import os
+
 import yaml
-from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.dm_csc import DmCsc
+from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ts import salobj
 
 LOGGER = logging.getLogger(__name__)

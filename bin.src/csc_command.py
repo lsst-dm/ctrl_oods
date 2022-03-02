@@ -24,6 +24,7 @@ import argparse
 import asyncio
 import os
 import sys
+
 from lsst.ts import salobj
 
 
