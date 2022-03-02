@@ -29,12 +29,25 @@ from lsst.ts import salobj
 
 
 class Commander:
+    """Issues commands to a CSC device
+
+    Parameters
+    ----------
+    device_name : `str`
+        name of CSC device to commnad
+    command : `str`
+        command to issues
+    timeout : `int`
+        command timeout value, in seconds
+    """
+
     def __init__(self, device_name, command, timeout):
         self.device_name = device_name
         self.command = command
         self.timeout = timeout
 
     async def run_command(self):
+        """send a command to a CSC device"""
         async with salobj.Domain() as domain:
             arc = salobj.Remote(domain=domain, name=self.device_name, index=0)
             await arc.start_task
