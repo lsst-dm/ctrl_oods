@@ -23,7 +23,7 @@ from pathlib import PurePath
 
 
 class Utils:
-    """representation of a time interval from a configuration"""
+    """Utility static method to manipulate strings"""
 
     @staticmethod
     def strip_prefix(pathname, prefix):
