@@ -191,6 +191,6 @@ class CacheCleaner(object):
             directories to remove, if they're empty
         """
         for directory in sorted(directories, reverse=True):
-            if os.listdir(directory) == []:
+            if not os.listdir(directory):
                 LOGGER.info("removing %s", directory)
                 os.rmdir(directory)
