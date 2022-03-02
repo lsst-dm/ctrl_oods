@@ -46,7 +46,7 @@ class Gen3ButlerIngester(ButlerIngester):
     config: `dict`
         configuration of this butler ingester
     csc: `OodsCSC`
-        OODS CSC
+        Observatory Operations Data Service Commandable SAL component
     """
 
     def __init__(self, config, csc=None):
