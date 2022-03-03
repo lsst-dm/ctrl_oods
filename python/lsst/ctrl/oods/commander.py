@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # This file is part of ctrl_oods
 #
 # Developed for the LSST Data Management System.
@@ -20,14 +19,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import argparse
-import asyncio
-import os
-import sys
-
 from lsst.ts import salobj
 
-import lsst.ctrl.oods.commander
 
 class Commander:
     """Issues commands to a CSC device
@@ -58,29 +51,3 @@ class Commander:
                 await cmd.set_start(timeout=self.timeout)
             except Exception as e:
                 print(e)
-
-
-if __name__ == "__main__":
-
-    name = os.path.basename(sys.argv[0])
-    parser = argparse.ArgumentParser(prog=name, description="Send SAL commands to devices")
-    parser.add_argument(
-        "-D",
-        "--device",
-        type=str,
-        dest="device",
-        required=True,
-        help="component to which the command will be sent",
-    )
-    parser.add_argument("-t", "--timeout", type=int, dest="timeout", default=5, help="command timeout")
-
-    subparsers = parser.add_subparsers(dest="command")
-
-    cmds = ["start", "enable", "disable", "enterControl", "exitControl", "standby", "abort", "resetFromFault"]
-    for x in cmds:
-        p = subparsers.add_parser(x)
-
-    args = parser.parse_args()
-
-    cmdr = Commander(args.device, args.command, args.timeout)
-    asyncio.run(cmdr.run_command())
