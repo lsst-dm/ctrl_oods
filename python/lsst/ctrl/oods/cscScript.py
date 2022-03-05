@@ -49,7 +49,7 @@ def build_argparser():
 
 def main():
 
-    args = build_argparser.parse_args()
+    args = build_argparser().parse_args()
 
     cmdr = Commander(args.device, args.command, args.timeout)
     asyncio.run(cmdr.run_command())
