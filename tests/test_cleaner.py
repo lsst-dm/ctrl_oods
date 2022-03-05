@@ -210,8 +210,7 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
 
     def changeModificationDate(self, filename):
         # change the modification time of the file/dir to Jan 2, 2018 03:04:05
-        date = datetime.datetime(year=2018, month=1, day=2, hour=3,
-                                 minute=4, second=5)
+        date = datetime.datetime(year=2018, month=1, day=2, hour=3, minute=4, second=5)
         modTime = time.mktime(date.timetuple())
         os.utime(filename, (modTime, modTime))
 

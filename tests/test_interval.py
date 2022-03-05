@@ -34,7 +34,7 @@ class IntervalTestCase(lsst.utils.tests.TestCase):
         config["seconds"] = 1
 
         seconds = TimeInterval.calculateTotalSeconds(config)
-        self.assertTrue(seconds, 86400+3600+60+1)
+        self.assertTrue(seconds, 86400 + 3600 + 60 + 1)
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):

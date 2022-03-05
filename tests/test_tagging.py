@@ -244,8 +244,13 @@ class TaggingTestCase(asynctest.TestCase):
         butler.registry.registerCollection("test_collection", CollectionType.TAGGED)
 
         # get the dataset
-        results = set(butler.registry.queryDatasets(datasetType=..., collections=self.collections,
-                      where=f"exposure={exposure} and instrument='LSSTComCam'"))
+        results = set(
+            butler.registry.queryDatasets(
+                datasetType=...,
+                collections=self.collections,
+                where=f"exposure={exposure} and instrument='LSSTComCam'",
+            )
+        )
 
         # should just be one...
         self.assertEqual(len(results), 1)
@@ -271,8 +276,13 @@ class TaggingTestCase(asynctest.TestCase):
 
         # get the dataset
         try:
-            results = set(butler.registry.queryDatasets(datasetType=..., collections=self.collections,
-                          where=f"exposure={exposure} and instrument='LSSTComCam'"))
+            results = set(
+                butler.registry.queryDatasets(
+                    datasetType=...,
+                    collections=self.collections,
+                    where=f"exposure={exposure} and instrument='LSSTComCam'",
+                )
+            )
         except Exception as e:
             logging.info(e)
 
@@ -303,8 +313,7 @@ class TaggingTestCase(asynctest.TestCase):
         return ret
 
     async def interrupt_me(self):
-        """Throw an exception after waiting.  Used to break out of gather()
-        """
+        """Throw an exception after waiting.  Used to break out of gather()"""
         await asyncio.sleep(70)
         logging.info("About to interrupt all tasks")
         raise RuntimeError("I'm interrupting")

@@ -30,8 +30,7 @@ from lsst.ctrl.oods.fileIngester import FileIngester
 
 
 class MultiComCamIngesterTestCase(asynctest.TestCase):
-    """Test multiple butler ingest
-    """
+    """Test multiple butler ingest"""
 
     def createConfig(self, config_name, fits_name):
         self.multi_dirs = []
@@ -78,8 +77,7 @@ class MultiComCamIngesterTestCase(asynctest.TestCase):
             shutil.rmtree(md, ignore_errors=True)
 
     async def testComCamIngest(self):
-        """Test that a ComCam file can be ingested into multiple butlers
-        """
+        """Test that a ComCam file can be ingested into multiple butlers"""
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
         config, destFile = self.createConfig("cc_oods_multi.yaml", fits_name)
 

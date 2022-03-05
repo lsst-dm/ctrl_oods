@@ -99,8 +99,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         shutil.rmtree(self.subDir, ignore_errors=True)
 
     async def testAuxTelIngest(self):
-        """test ingesting an auxtel file
-        """
+        """test ingesting an auxtel file"""
         fits_name = "2020032700020-det000.fits.fz"
         config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
 

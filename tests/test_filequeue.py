@@ -34,7 +34,7 @@ class FileQueueTestCase(asynctest.TestCase):
 
         self.tmp_dir = tempfile.mkdtemp()
         fd, self.tmp_file = tempfile.mkstemp()
-        with open(self.tmp_file, 'w') as f:
+        with open(self.tmp_file, "w") as f:
             f.write("filequeue test")
         os.close(fd)
 

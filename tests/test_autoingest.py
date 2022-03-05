@@ -91,8 +91,7 @@ class AutoIngestTestCase(asynctest.TestCase):
         return config
 
     def tearDown(self):
-        """Remove directories created by createConfig
-        """
+        """Remove directories created by createConfig"""
         shutil.rmtree(self.imageDir, ignore_errors=True)
         shutil.rmtree(self.badDir, ignore_errors=True)
         shutil.rmtree(self.stagingDir, ignore_errors=True)
@@ -100,8 +99,7 @@ class AutoIngestTestCase(asynctest.TestCase):
         shutil.rmtree(self.subDir, ignore_errors=True)
 
     async def testAuxTelIngest(self):
-        """test ingesting an auxtel file
-        """
+        """test ingesting an auxtel file"""
         fits_name = "2020032700020-det000.fits.fz"
         config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
 
@@ -127,8 +125,7 @@ class AutoIngestTestCase(asynctest.TestCase):
         self.assertFalse(os.path.exists(bad_path))
 
     async def testComCamIngest(self):
-        """test ingesting an ComCam file
-        """
+        """test ingesting an ComCam file"""
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
@@ -197,8 +194,7 @@ class AutoIngestTestCase(asynctest.TestCase):
         self.assertFalse(os.path.exists(bad_path))
 
     async def testBadIngest(self):
-        """test ingesting a bad file
-        """
+        """test ingesting a bad file"""
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
@@ -221,8 +217,7 @@ class AutoIngestTestCase(asynctest.TestCase):
         self.assertTrue(os.path.exists(bad_path))
 
     async def testRepoExists(self):
-        """test that a repository exists
-        """
+        """test that a repository exists"""
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
@@ -231,8 +226,7 @@ class AutoIngestTestCase(asynctest.TestCase):
         FileIngester(config["ingester"])
 
     async def interrupt_me(self):
-        """Used to interrupt asyncio.gather() so that test can be halted
-        """
+        """Used to interrupt asyncio.gather() so that test can be halted"""
         await asyncio.sleep(10)
         raise RuntimeError("I'm interrupting")
 
