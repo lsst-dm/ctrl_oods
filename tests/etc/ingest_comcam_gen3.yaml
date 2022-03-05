@@ -4,11 +4,14 @@ defaultInterval: &interval
     minutes: 0
     seconds: 0
 
+archiver:
+    name: "CCArchiver"
+
 ingester:
     FILE_INGEST_REQUEST: CC_FILE_INGEST_REQUEST
     CONSUME_QUEUE: cc_publish_to_oods
     PUBLISH_QUEUE: oods_publish_to_cc
-    forwarderStagingDirectory: data
+    imageStagingDirectory: data
     butlers:
         - butler:
             class:
@@ -32,7 +35,7 @@ ingester:
         seconds: 10
 
 cacheCleaner:
-    directories:
+    clearEmptyDirectoriesAndOldFiles:
         - repo/raw
     scanInterval:
         <<: *interval

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # This file is part of ctrl_oods
 #
 # Developed for the LSST Data Management System.
@@ -19,28 +20,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from pathlib import PurePath
+import argparse
+import asyncio
+import os
+import sys
 
+from lsst.ctrl.oods.cscScript import main
+from lsst.ts import salobj
 
-class Utils:
-    """Utility static method to manipulate strings"""
-
-    @staticmethod
-    def strip_prefix(pathname, prefix):
-        """Strip the prefix of the path
-
-        Parameters
-        ----------
-        pathname: `str`
-            Path name
-        prefix: `str`
-            Prefix to strip from pathname
-
-        Returns
-        -------
-        ret: `str`
-            The remaining path
-        """
-        p = PurePath(pathname)
-        ret = str(p.relative_to(prefix))
-        return ret
+if __name__ == "__main__":
+    main()

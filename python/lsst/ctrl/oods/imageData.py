@@ -19,24 +19,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import os
 import logging
+import os
 
 LOGGER = logging.getLogger(__name__)
 
 
 class ImageData:
-    """Encapsulate information extracted from an DatasetRef
-    """
+    """Encapsulate information extracted from an DatasetRef"""
+
     def __init__(self, dataset):
-        """Initiailize the object using DatasetRef
+        """Initialize the object using DatasetRef
 
         Parameters
         ----------
         dataset: `DatasetRef`
             The DatasetRef to extract information from
         """
-        self.info = {"CAMERA": "UNDEF", "RAFT": "R??", "SENSOR": "S??", "OBSID": "??"}
+        self.info = {"CAMERA": "", "RAFT": "", "SENSOR": "", "OBSID": ""}
         try:
             self.info["FILENAME"] = os.path.basename(dataset.path.ospath)
         except Exception as e:
@@ -52,29 +52,22 @@ class ImageData:
 
             records = ref.dataId.records
 
-            if 'instrument' in records:
-                instrument = records['instrument'].toDict()
+            if "instrument" in records:
+                instrument = records["instrument"].toDict()
                 self.info["CAMERA"] = instrument.get("name", "UNDEF")
 
-            if 'detector' in records:
-                detector = records['detector'].toDict()
+            if "detector" in records:
+                detector = records["detector"].toDict()
                 self.info["RAFT"] = detector.get("raft", "R??")
                 self.info["SENSOR"] = detector.get("name_in_raft", "S??")
 
-            if 'exposure' in records:
-                exposure = records['exposure'].toDict()
+            if "exposure" in records:
+                exposure = records["exposure"].toDict()
                 self.info["OBSID"] = exposure.get("obs_id", "??")
         except Exception as e:
             LOGGER.info("Failed to extract data for %s: %s", dataset, e)
 
     def get_info(self):
-        """Return the extracted information of the dataset
-
-        Returns
-        -------
-        info: `dict`
-            A dictionary containing the image information
-        """
         return self.info
 
     def __repr__(self) -> str:

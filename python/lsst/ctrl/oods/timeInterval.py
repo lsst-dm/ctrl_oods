@@ -24,8 +24,7 @@ SECONDS_PER_MINUTE = 60
 
 
 class TimeInterval(object):
-    """representation of a time interval from a configuration
-    """
+    """representation of a time interval from a configuration"""
 
     @staticmethod
     def calculateTotalSeconds(config):

@@ -18,8 +18,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-from lsst.ctrl.oods.timeInterval import TimeInterval
 import lsst.utils.tests
+from lsst.ctrl.oods.timeInterval import TimeInterval
 
 
 class IntervalTestCase(lsst.utils.tests.TestCase):
@@ -34,7 +34,7 @@ class IntervalTestCase(lsst.utils.tests.TestCase):
         config["seconds"] = 1
 
         seconds = TimeInterval.calculateTotalSeconds(config)
-        self.assertTrue(seconds, 86400+3600+60+1)
+        self.assertTrue(seconds, 86400 + 3600 + 60 + 1)
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):

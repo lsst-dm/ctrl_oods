@@ -19,28 +19,37 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from pathlib import PurePath
+import argparse
+import asyncio
+
+from lsst.ctrl.oods.commander import Commander
 
 
-class Utils:
-    """Utility static method to manipulate strings"""
+def build_argparser():
 
-    @staticmethod
-    def strip_prefix(pathname, prefix):
-        """Strip the prefix of the path
+    parser = argparse.ArgumentParser(description="Send SAL commands to devices")
+    parser.add_argument(
+        "-D",
+        "--device",
+        type=str,
+        dest="device",
+        required=True,
+        help="component to which the command will be sent",
+    )
+    parser.add_argument("-t", "--timeout", type=int, dest="timeout", default=5, help="command timeout")
 
-        Parameters
-        ----------
-        pathname: `str`
-            Path name
-        prefix: `str`
-            Prefix to strip from pathname
+    subparsers = parser.add_subparsers(dest="command")
 
-        Returns
-        -------
-        ret: `str`
-            The remaining path
-        """
-        p = PurePath(pathname)
-        ret = str(p.relative_to(prefix))
-        return ret
+    cmds = ["start", "enable", "disable", "enterControl", "exitControl", "standby", "abort", "resetFromFault"]
+    for x in cmds:
+        subparsers.add_parser(x)
+
+    return parser
+
+
+def main():
+
+    args = build_argparser().parse_args()
+
+    cmdr = Commander(args.device, args.command, args.timeout)
+    asyncio.run(cmdr.run_command())

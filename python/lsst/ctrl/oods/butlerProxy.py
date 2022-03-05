@@ -27,14 +27,13 @@ class ButlerProxy(object):
 
     Parameters
     ----------
-    butlerConfig: `dict`
+    butlerConfig : `dict`
         details on how to construct and configure the butler
-    publisher: `Publisher`
-        publisher to use to send messages
-    queue:  `str`
-        name of queue to publish to
+    csc : `OodsCsc`
+        OODS CSC
     """
-    def __init__(self, butlerConfig, publisher, queue):
+
+    def __init__(self, butlerConfig, csc=None):
         # create the butler
         classConfig = butlerConfig["class"]
 
@@ -44,60 +43,32 @@ class ButlerProxy(object):
         mod = import_module(importFile)
         butlerClass = getattr(mod, name)
 
-        self.butlerInstance = butlerClass(butlerConfig, publisher, queue)
+        self.butlerInstance = butlerClass(butlerConfig, csc)
 
         # load configuration info for the repository, staging,
         # and bad file areas
-        self.repo_dir = butlerConfig["repoDirectory"]
         self.staging_dir = butlerConfig["stagingDirectory"]
-        self.bad_file_dir = butlerConfig["badFileDirectory"]
-
-    def getButler(self):
-        """Return the butler being proxied
-
-        Returns
-        -------
-        butler: `lsst.daf.butler.Butler`
-            this butler instance
-        """
-        return self.butlerInstance
-
-    def getRepoDirectory(self):
-        """Return the path of the repository directory
-
-        Returns
-        -------
-        repo_dir: `str`
-            the repository directory
-        """
-        return self.repo_dir
 
     def getStagingDirectory(self):
         """Return the path of the staging directory
 
         Returns
         -------
-        staging_dir: `str`
+        staging_dir : `str`
             the staging directory
         """
         return self.staging_dir
 
-    def getBadFileDirectory(self):
-        """Return the path of the "bad file" directory
+    def ingest(self, file_list):
+        """Bulk ingest of a list of files
 
-        Returns
-        -------
-        bad_file_dir: `str`
-            the bad file directory
+        Parameters
+        ----------
+        file_list : `list`
+            A list of file names
         """
-        return self.bad_file_dir
+        self.butlerInstance.ingest(file_list)
 
-    async def run_task(self):
-        """Run and await the async task code for this butler
-        """
-        await self.butlerInstance.run_task()
-
-    def clean(self):
-        """Execute the clean() method for this butler
-        """
-        self.butlerInstance.clean()
+    async def clean_task(self):
+        """Return the butler's clean_task method"""
+        await self.butlerInstance.clean_task()

@@ -32,7 +32,7 @@ from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.utils import Utils
 
 
-class Gen3ComCamIngesterTestCase(asynctest.TestCase):
+class AutoIngestTestCase(asynctest.TestCase):
     """Test Gen3 Butler Ingest"""
 
     def createConfig(self, config_name, fits_name):
@@ -70,31 +70,31 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         # at the temporary directories created for his test
 
         ingesterConfig = config["ingester"]
-        self.imageStagingDir = tempfile.mkdtemp()
-        ingesterConfig["imageStagingDirectory"] = self.imageStagingDir
+        self.imageDir = tempfile.mkdtemp()
+        ingesterConfig["imageStagingDirectory"] = self.imageDir
 
         self.badDir = tempfile.mkdtemp()
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
         butlerConfig["badFileDirectory"] = self.badDir
-        self.stagingDirectory = tempfile.mkdtemp()
-        butlerConfig["stagingDirectory"] = self.stagingDirectory
+        self.stagingDir = tempfile.mkdtemp()
+        butlerConfig["stagingDirectory"] = self.stagingDir
 
         self.repoDir = tempfile.mkdtemp()
         butlerConfig["repoDirectory"] = self.repoDir
 
         # copy the FITS file to it's test location
 
-        self.subDir = tempfile.mkdtemp(dir=self.imageStagingDir)
+        self.subDir = tempfile.mkdtemp(dir=self.imageDir)
         self.destFile = os.path.join(self.subDir, fits_name)
         shutil.copyfile(fitsFile, self.destFile)
 
         return config
 
     def tearDown(self):
-        shutil.rmtree(self.destFile, ignore_errors=True)
-        shutil.rmtree(self.imageStagingDir, ignore_errors=True)
+        """Remove directories created by createConfig"""
+        shutil.rmtree(self.imageDir, ignore_errors=True)
         shutil.rmtree(self.badDir, ignore_errors=True)
-        shutil.rmtree(self.stagingDirectory, ignore_errors=True)
+        shutil.rmtree(self.stagingDir, ignore_errors=True)
         shutil.rmtree(self.repoDir, ignore_errors=True)
         shutil.rmtree(self.subDir, ignore_errors=True)
 
@@ -116,7 +116,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         await ingester.ingest([self.destFile])
 
-        # check to make sure the file was moved from the staging directory
+        # check to make sure file was moved from image staging directory
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
@@ -125,6 +125,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         self.assertFalse(os.path.exists(bad_path))
 
     async def testComCamIngest(self):
+        """test ingesting an ComCam file"""
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
@@ -151,17 +152,17 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
 
         await ingester.ingest([self.destFile])
 
-        # make sure staging area is now empty
+        # make sure image staging area is now empty
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         # Check to see that the file was ingested.
-        # Recall that files start in teh image staging area, and are
-        # moved to the OODS staging area before ingestion. On "direct"
+        # Recall that files start in the image staging area, and are
+        # moved to the butler staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = Utils.strip_prefix(self.destFile, self.imageStagingDir)
-        file_to_ingest = os.path.join(self.stagingDirectory, name)
+        name = Utils.strip_prefix(self.destFile, self.imageDir)
+        file_to_ingest = os.path.join(self.stagingDir, name)
         self.assertTrue(os.path.exists(file_to_ingest))
 
         # this file should now not exist
@@ -171,7 +172,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         # throwing an acception
         task_list.append(asyncio.create_task(self.interrupt_me()))
 
-        # gather all the tasks, until one (the "interrupt_me" task)
+        # kick off all the tasks, until one (the "interrupt_me" task)
         # throws an exception
         try:
             await asyncio.gather(*task_list)
@@ -193,6 +194,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         self.assertFalse(os.path.exists(bad_path))
 
     async def testBadIngest(self):
+        """test ingesting a bad file"""
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
@@ -215,6 +217,7 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         self.assertTrue(os.path.exists(bad_path))
 
     async def testRepoExists(self):
+        """test that a repository exists"""
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
@@ -223,7 +226,8 @@ class Gen3ComCamIngesterTestCase(asynctest.TestCase):
         FileIngester(config["ingester"])
 
     async def interrupt_me(self):
-        await asyncio.sleep(20)
+        """Used to interrupt asyncio.gather() so that test can be halted"""
+        await asyncio.sleep(10)
         raise RuntimeError("I'm interrupting")
 
 

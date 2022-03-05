@@ -19,28 +19,35 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from pathlib import PurePath
+from lsst.ts import salobj
 
 
-class Utils:
-    """Utility static method to manipulate strings"""
+class Commander:
+    """Issues commands to a CSC device
 
-    @staticmethod
-    def strip_prefix(pathname, prefix):
-        """Strip the prefix of the path
+    Parameters
+    ----------
+    device_name : `str`
+        name of CSC device to commnad
+    command : `str`
+        command to issues
+    timeout : `int`
+        command timeout value, in seconds
+    """
 
-        Parameters
-        ----------
-        pathname: `str`
-            Path name
-        prefix: `str`
-            Prefix to strip from pathname
+    def __init__(self, device_name, command, timeout):
+        self.device_name = device_name
+        self.command = command
+        self.timeout = timeout
 
-        Returns
-        -------
-        ret: `str`
-            The remaining path
-        """
-        p = PurePath(pathname)
-        ret = str(p.relative_to(prefix))
-        return ret
+    async def run_command(self):
+        """send a command to a CSC device"""
+        async with salobj.Domain() as domain:
+            arc = salobj.Remote(domain=domain, name=self.device_name, index=0)
+            await arc.start_task
+
+            try:
+                cmd = getattr(arc, f"cmd_{self.command}")
+                await cmd.set_start(timeout=self.timeout)
+            except Exception as e:
+                print(e)

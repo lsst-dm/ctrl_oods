@@ -19,28 +19,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from pathlib import PurePath
+import asyncio
+import logging
+
+from lsst.ctrl.oods.oods_csc import OodsCsc
+from lsst.ts import salobj
+
+LOGGER = logging.getLogger(__name__)
 
 
-class Utils:
-    """Utility static method to manipulate strings"""
+class AtOodsCsc(OodsCsc):
+    """AuxTel OODS CSC object"""
 
-    @staticmethod
-    def strip_prefix(pathname, prefix):
-        """Strip the prefix of the path
+    def __init__(self):
+        super().__init__("ATOODS", initial_state=salobj.State.STANDBY)
 
-        Parameters
-        ----------
-        pathname: `str`
-            Path name
-        prefix: `str`
-            Prefix to strip from pathname
+        self.transitioning_to_fault_evt = asyncio.Event()
+        self.transitioning_to_fault_evt.clear()
 
-        Returns
-        -------
-        ret: `str`
-            The remaining path
-        """
-        p = PurePath(pathname)
-        ret = str(p.relative_to(prefix))
-        return ret
+        self.current_state = None
+        LOGGER.info("************************ Starting ATOODS ************************")

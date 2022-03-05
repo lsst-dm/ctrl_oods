@@ -29,6 +29,7 @@ class DirectoryScanner(object):
     directories: `list`
         A list of directories to scan
     """
+
     def __init__(self, directories):
         self.directories = directories
 

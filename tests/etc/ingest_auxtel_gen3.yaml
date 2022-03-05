@@ -4,11 +4,14 @@ defaultInterval: &interval
     minutes: 0
     seconds: 0
 
+archiver:
+    name: "ATArchiver"
+
 ingester:
     FILE_INGEST_REQUEST: AT_FILE_INGEST_REQUEST
     CONSUME_QUEUE: at_publish_to_oods
     PUBLISH_QUEUE: oods_publish_to_at
-    forwarderStagingDirectory: data
+    imageStagingDirectory: data
     butlers:
         - butler:
             class:
@@ -32,7 +35,7 @@ ingester:
         seconds: 10
 
 cacheCleaner:
-    directories:
+    clearEmptyDirectoriesAndOldFiles:
         - repo/raw
     scanInterval:
         <<: *interval

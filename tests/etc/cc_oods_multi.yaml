@@ -4,19 +4,15 @@ defaultInterval: &interval
     minutes: 0
     seconds: 0
 
+archiver:
+    name: "CCArchiver"
+
 ingester:
     FILE_INGEST_REQUEST: CC_FILE_INGEST_REQUEST
     CONSUME_QUEUE: cc_publish_to_oods
     PUBLISH_QUEUE: oods_publish_to_cc
-    forwarderStagingDirectory: forwarder_staging
+    imageStagingDirectory: image_staging
     butlers:
-        - butler:
-            class:
-                import : lsst.ctrl.oods.gen2ButlerIngester
-                name : Gen2ButlerIngester
-            stagingDirectory : staging
-            repoDirectory : repo
-            badFileDirectory: bad
         - butler:
             collections:
                 - FARG/raw/all
@@ -40,7 +36,7 @@ ingester:
         seconds: 1
 
 cacheCleaner:
-    directories:
+    clearEmptyDirectoriesAndOldFiles:
         - repo/raw
     scanInterval:
         <<: *interval
