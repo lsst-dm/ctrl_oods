@@ -25,9 +25,8 @@ import asyncio
 import os
 import sys
 
-from lsst.ts import salobj
-
 from lsst.ctrl.oods.cscScript import main
+from lsst.ts import salobj
 
 if __name__ == "__main__":
     main()
