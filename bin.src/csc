@@ -27,60 +27,7 @@ import sys
 
 from lsst.ts import salobj
 
-import lsst.ctrl.oods.commander
-
-class Commander:
-    """Issues commands to a CSC device
-
-    Parameters
-    ----------
-    device_name : `str`
-        name of CSC device to commnad
-    command : `str`
-        command to issues
-    timeout : `int`
-        command timeout value, in seconds
-    """
-
-    def __init__(self, device_name, command, timeout):
-        self.device_name = device_name
-        self.command = command
-        self.timeout = timeout
-
-    async def run_command(self):
-        """send a command to a CSC device"""
-        async with salobj.Domain() as domain:
-            arc = salobj.Remote(domain=domain, name=self.device_name, index=0)
-            await arc.start_task
-
-            try:
-                cmd = getattr(arc, f"cmd_{self.command}")
-                await cmd.set_start(timeout=self.timeout)
-            except Exception as e:
-                print(e)
-
+from lsst.ctrl.oods.cscScript import main
 
 if __name__ == "__main__":
-
-    name = os.path.basename(sys.argv[0])
-    parser = argparse.ArgumentParser(prog=name, description="Send SAL commands to devices")
-    parser.add_argument(
-        "-D",
-        "--device",
-        type=str,
-        dest="device",
-        required=True,
-        help="component to which the command will be sent",
-    )
-    parser.add_argument("-t", "--timeout", type=int, dest="timeout", default=5, help="command timeout")
-
-    subparsers = parser.add_subparsers(dest="command")
-
-    cmds = ["start", "enable", "disable", "enterControl", "exitControl", "standby", "abort", "resetFromFault"]
-    for x in cmds:
-        p = subparsers.add_parser(x)
-
-    args = parser.parse_args()
-
-    cmdr = Commander(args.device, args.command, args.timeout)
-    asyncio.run(cmdr.run_command())
+    main()

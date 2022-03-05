@@ -19,35 +19,37 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from lsst.ts import salobj
+import argparse
+import asyncio
+
+from lsst.ctrl.oods.commander import Commander
 
 
-class Commander:
-    """Issues commands to a CSC device
+def build_argparser():
 
-    Parameters
-    ----------
-    device_name : `str`
-        name of CSC device to commnad
-    command : `str`
-        command to issues
-    timeout : `int`
-        command timeout value, in seconds
-    """
+    parser = argparse.ArgumentParser(description="Send SAL commands to devices")
+    parser.add_argument(
+        "-D",
+        "--device",
+        type=str,
+        dest="device",
+        required=True,
+        help="component to which the command will be sent",
+    )
+    parser.add_argument("-t", "--timeout", type=int, dest="timeout", default=5, help="command timeout")
 
-    def __init__(self, device_name, command, timeout):
-        self.device_name = device_name
-        self.command = command
-        self.timeout = timeout
+    subparsers = parser.add_subparsers(dest="command")
 
-    async def run_command(self):
-        """send a command to a CSC device"""
-        async with salobj.Domain() as domain:
-            arc = salobj.Remote(domain=domain, name=self.device_name, index=0)
-            await arc.start_task
+    cmds = ["start", "enable", "disable", "enterControl", "exitControl", "standby", "abort", "resetFromFault"]
+    for x in cmds:
+        subparsers.add_parser(x)
 
-            try:
-                cmd = getattr(arc, f"cmd_{self.command}")
-                await cmd.set_start(timeout=self.timeout)
-            except Exception as e:
-                print(e)
+    return parser
+
+
+def main():
+
+    args = build_argparser.parse_args()
+
+    cmdr = Commander(args.device, args.command, args.timeout)
+    asyncio.run(cmdr.run_command())
