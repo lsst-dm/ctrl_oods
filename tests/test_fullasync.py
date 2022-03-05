@@ -91,7 +91,7 @@ class AsyncIngestTestCase(asynctest.TestCase):
         return config
 
     def tearDown(self):
-        """ clean up after each test """
+        """clean up after each test"""
         shutil.rmtree(self.destFile, ignore_errors=True)
         shutil.rmtree(self.imageStagingDir, ignore_errors=True)
         shutil.rmtree(self.badDir, ignore_errors=True)
@@ -149,7 +149,7 @@ class AsyncIngestTestCase(asynctest.TestCase):
                 task.cancel()
 
     async def interrupt_me(self):
-        """ This method throws an exception after 10 seconds"""
+        """This method throws an exception after 10 seconds"""
         await asyncio.sleep(10)
         raise RuntimeError("I'm interrupting")
 
