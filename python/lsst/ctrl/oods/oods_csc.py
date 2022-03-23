@@ -62,6 +62,8 @@ class OodsCsc(DmCsc):
         self.task_list = None
 
         ingester_config = self.config["ingester"]
+        # self added here, and by the time it's utilized by FileIngester
+        # the CSC will be up and running
         self.ingester = FileIngester(ingester_config, self)
 
         cache_config = self.config["cacheCleaner"]
