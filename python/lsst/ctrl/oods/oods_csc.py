@@ -62,7 +62,7 @@ class OodsCsc(DmCsc):
         self.task_list = None
 
         ingester_config = self.config["ingester"]
-        self.ingester = FileIngester(ingester_config)
+        self.ingester = FileIngester(ingester_config, self)
 
         cache_config = self.config["cacheCleaner"]
         self.cache_cleaner = CacheCleaner(cache_config)
