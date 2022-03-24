@@ -67,12 +67,12 @@ class DmCsc(BaseCsc):
         """
         self.config = config
         LOGGER.info("configuring")
-        self.evt_settingsApplied.set_write(settingsVersion=self.config.settingsVersion)
+        await self.evt_settingsApplied.set_write(settingsVersion=self.config.settingsVersion)
         await self.evt_softwareVersions.set_write(cscVersion=self.version, subsystemVersions="")
 
-    def handle_summary_state(self):
+    async def handle_summary_state(self):
         """State transition model for the ArchiverCSC"""
-        super().handle_summary_state()
+        await super().handle_summary_state()
 
         s_cur = None
         if self.current_state is not None:
@@ -150,7 +150,7 @@ class DmCsc(BaseCsc):
             self.current_state = State.DISABLED
             return
 
-    def call_fault(self, code, report):
+    async def call_fault(self, code, report):
         """Called when a fault in the CSC is detected
 
         This is called by lower level methods when anything happens that
