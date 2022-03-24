@@ -11,6 +11,7 @@
 setupRequired(base)
 setupRequired(utils)
 setupRequired(sconsUtils)
+setupRequired(ts_salobj)
 setupRequired(daf_butler)
 setupRequired(obs_lsst)
 setupRequired(log)

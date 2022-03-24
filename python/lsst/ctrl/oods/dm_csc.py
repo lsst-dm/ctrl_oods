@@ -67,12 +67,12 @@ class DmCsc(BaseCsc):
         """
         self.config = config
         LOGGER.info("configuring")
-        self.evt_settingsApplied.set_put(settingsVersion=self.config.settingsVersion)
-        await self.evt_softwareVersions.set_put(cscVersion=self.version, subsystemVersions="")
+        self.evt_settingsApplied.set_write(settingsVersion=self.config.settingsVersion)
+        await self.evt_softwareVersions.set_write(cscVersion=self.version, subsystemVersions="")
 
-    def report_summary_state(self):
+    def handle_summary_state(self):
         """State transition model for the ArchiverCSC"""
-        super().report_summary_state()
+        super().handle_summary_state()
 
         s_cur = None
         if self.current_state is not None:
@@ -170,4 +170,4 @@ class DmCsc(BaseCsc):
             return
         self.transitioning_to_fault_evt.set()
         LOGGER.info(report)
-        self.fault(code, report)
+        await self.fault(code, report)
