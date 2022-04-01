@@ -91,7 +91,7 @@ class OodsCsc(DmCsc):
         s = f"sending camera={camera} obsid={obsid} raft={raft} sensor={sensor} "
         s = s + f"statusCode={statusCode}, description={description}"
         LOGGER.info(s)
-        self.evt_imageInOODS.set_write(
+        await self.evt_imageInOODS.set_write(
             camera=camera,
             obsid=obsid,
             raft=raft,
