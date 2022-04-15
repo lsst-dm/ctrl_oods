@@ -20,6 +20,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
+import concurrent
 import logging
 
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
@@ -52,9 +53,11 @@ class FileQueue(object):
         LOGGER.info("Scanning files in %s", self.dir_path)
         scanner = DirectoryScanner([self.dir_path])
 
+        loop = asyncio.get_running_loop()
         # now, add all the currently known files to the queue
         while True:
-            file_list = scanner.getAllFiles()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                file_list = await loop.run_in_executor(pool, scanner.getAllFiles)
             if len(file_list) != 0:
                 await self.queue.put(file_list)
             await asyncio.sleep(self.scanInterval)
