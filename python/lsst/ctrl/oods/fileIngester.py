@@ -26,6 +26,7 @@ import os.path
 
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.fileQueue import FileQueue
+from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.utils import Utils
 
 LOGGER = logging.getLogger(__name__)
@@ -48,8 +49,10 @@ class FileIngester(object):
         self.config = config
 
         self.image_staging_dir = self.config["imageStagingDirectory"]
+        scanInterval = self.config["scanInterval"]
+        seconds = TimeInterval.calculateTotalSeconds(scanInterval)
 
-        self.fileQueue = FileQueue(self.image_staging_dir)
+        self.fileQueue = FileQueue(self.image_staging_dir, seconds)
 
         butlerConfigs = self.config["butlers"]
         if len(butlerConfigs) == 0:

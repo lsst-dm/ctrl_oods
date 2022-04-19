@@ -21,6 +21,7 @@
 
 import asyncio
 import collections
+import concurrent
 import logging
 import os
 import shutil
@@ -33,7 +34,7 @@ from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.daf.butler import Butler
 from lsst.daf.butler.registry import CollectionType
 from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
-from lsst.obs.base.utils import getInstrument
+from lsst.pipe.base import Instrument
 
 LOGGER = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ class Gen3ButlerIngester(ButlerIngester):
         self.config = config
 
         repo = self.config["repoDirectory"]
-        instrument = self.config["instrument"]
+        self.instrument = self.config["instrument"]
         self.scanInterval = self.config["scanInterval"]
         self.olderThan = self.config["filesOlderThan"]
         self.collections = self.config["collections"]
@@ -63,17 +64,11 @@ class Gen3ButlerIngester(ButlerIngester):
         self.bad_file_dir = self.config["badFileDirectory"]
 
         try:
-            butlerConfig = Butler.makeRepo(repo)
+            self.butlerConfig = Butler.makeRepo(repo)
         except FileExistsError:
-            butlerConfig = repo
+            self.butlerConfig = repo
 
-        instr = getInstrument(instrument)
-        run = instr.makeDefaultRawIngestRunName()
-        opts = dict(run=run, writeable=True, collections=self.collections)
-        self.butler = Butler(butlerConfig, **opts)
-
-        # Register an instrument.
-        instr.register(self.butler.registry)
+        self.butler = self.createButler()
 
         cfg = RawIngestConfig()
         cfg.transfer = "direct"
@@ -84,6 +79,17 @@ class Gen3ButlerIngester(ButlerIngester):
             on_ingest_failure=self.on_ingest_failure,
             on_metadata_failure=self.on_metadata_failure,
         )
+
+    def createButler(self):
+        instr = Instrument.from_string(self.instrument)
+        run = instr.makeDefaultRawIngestRunName()
+        opts = dict(run=run, writeable=True, collections=self.collections)
+        butler = Butler(self.butlerConfig, **opts)
+
+        # Register an instrument.
+        instr.register(butler.registry)
+
+        return butler
 
     def undef_metadata(self, filename):
         """Return a sparsely initialized metadata dictionary
@@ -214,8 +220,13 @@ class Gen3ButlerIngester(ButlerIngester):
         """run the clean() method at the configured interval"""
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
-            LOGGER.debug("Cleaning")
-            self.clean()
+            LOGGER.debug("cleaning")
+            try:
+                loop = asyncio.get_running_loop()
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    await loop.run_in_executor(pool, self.clean)
+            except Exception as e:
+                LOGGER.info("Exception: %s", e)
             LOGGER.debug("sleeping for %d seconds", seconds)
             await asyncio.sleep(seconds)
 
@@ -233,11 +244,13 @@ class Gen3ButlerIngester(ButlerIngester):
         )
         t = t - td
 
-        self.butler.registry.refresh()
+        butler = self.createButler()
+
+        butler.registry.refresh()
 
         # get all datasets in these collections
         all_datasets = set(
-            self.butler.registry.queryDatasets(
+            butler.registry.queryDatasets(
                 datasetType=...,
                 collections=self.collections,
                 where="ingest_date < ref_date",
@@ -246,10 +259,10 @@ class Gen3ButlerIngester(ButlerIngester):
         )
 
         # get all TAGGED collections
-        tagged_cols = list(self.butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
+        tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
 
         # get all TAGGED datasets
-        tagged_datasets = set(self.butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
+        tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
 
         # get a set of datasets in all_datasets, but not in tagged_datasets
         ref = all_datasets.difference(tagged_datasets)
@@ -264,7 +277,7 @@ class Gen3ButlerIngester(ButlerIngester):
         for x in ref:
             uri = None
             try:
-                uri = self.butler.getURI(x, collections=x.run)
+                uri = butler.getURI(x, collections=x.run)
             except Exception as e:
                 LOGGER.warning("butler is missing uri for %s: %s", x, e)
 
@@ -272,4 +285,4 @@ class Gen3ButlerIngester(ButlerIngester):
                 LOGGER.info("removing %s", uri)
                 uri.remove()
 
-        self.butler.pruneDatasets(ref, purge=True, unstore=True)
+        butler.pruneDatasets(ref, purge=True, unstore=True)
