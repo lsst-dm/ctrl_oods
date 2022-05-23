@@ -59,7 +59,7 @@ class ButlerProxy(object):
         """
         return self.staging_dir
 
-    def ingest(self, file_list):
+    async def ingest(self, file_list):
         """Bulk ingest of a list of files
 
         Parameters
@@ -67,7 +67,7 @@ class ButlerProxy(object):
         file_list : `list`
             A list of file names
         """
-        self.butlerInstance.ingest(file_list)
+        await self.butlerInstance.ingest(file_list)
 
     async def clean_task(self):
         """Return the butler's clean_task method"""

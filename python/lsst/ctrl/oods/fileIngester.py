@@ -151,7 +151,7 @@ class FileIngester(object):
         # send it out via a CSC logevent.
         try:
             for butler in self.butlers:
-                butler.ingest(butler_file_lists[butler])
+                await butler.ingest(butler_file_lists[butler])
         except Exception as e:
             LOGGER.warn("Exception: %s", e)
 

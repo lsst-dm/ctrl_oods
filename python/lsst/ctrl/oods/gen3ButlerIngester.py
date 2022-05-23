@@ -191,7 +191,7 @@ class Gen3ButlerIngester(ButlerIngester):
         except Exception as e:
             LOGGER.info("Failed to move %s to %s: %s", filename, self.bad_dir, e)
 
-    def ingest(self, file_list):
+    async def ingest(self, file_list):
         """Ingest a list of files into a butler
 
         Parameters
@@ -202,7 +202,9 @@ class Gen3ButlerIngester(ButlerIngester):
 
         # Ingest image.
         try:
-            self.task.run(file_list)
+            loop = asyncio.get_running_loop()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                await loop.run_in_executor(pool, self.task.run, file_list)
         except Exception as e:
             LOGGER.info("Ingestion failure: %s", e)
 
