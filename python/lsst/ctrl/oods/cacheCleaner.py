@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import asyncio
+import concurrent
 import logging
 import os
 import time
@@ -52,8 +53,13 @@ class CacheCleaner(object):
     async def run_tasks(self):
         """Check and clean directories at regular intervals"""
         self.terminate = False
+        loop = asyncio.get_running_loop()
         while True:
-            self.clean()
+            try:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    await loop.run_in_executor(pool, self.clean)
+            except Exception as e:
+                LOGGER.info("Clean failure: %s", e)
             await asyncio.sleep(self.seconds)
             if self.terminate:
                 return
