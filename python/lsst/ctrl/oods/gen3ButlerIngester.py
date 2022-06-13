@@ -131,7 +131,7 @@ class Gen3ButlerIngester(ButlerIngester):
         LOGGER.info("msg: %s, code: %s, description: %s", msg, code, description)
         if self.csc is None:
             return
-        asyncio.create_task(self.csc.send_imageInOODS(msg))
+        asyncio.run(self.csc.send_imageInOODS(msg))
 
     def on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
