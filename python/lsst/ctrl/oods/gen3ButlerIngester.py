@@ -189,7 +189,7 @@ class Gen3ButlerIngester(ButlerIngester):
         try:
             shutil.move(filename, bad_dir)
         except Exception as e:
-            LOGGER.info("Failed to move %s to %s: %s", filename, self.bad_dir, e)
+            LOGGER.info("Failed to move %s to %s: %s", filename, bad_dir, e)
 
     async def ingest(self, file_list):
         """Ingest a list of files into a butler
