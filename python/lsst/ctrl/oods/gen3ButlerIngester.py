@@ -266,15 +266,15 @@ class Gen3ButlerIngester(ButlerIngester):
         # Note: The code below is to get around an issue where passing
         # an empty list as the collections argument to queryDatasets
         # returns all datasets.
-        if len(tagged_cols) == 0:
-            # no TAGGED collections, so use all_datasets
-            ref = all_datasets
-        else:
+        if tagged_cols:
             # get all TAGGED datasets
             tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
 
             # get a set of datasets in all_datasets, but not in tagged_datasets
             ref = all_datasets.difference(tagged_datasets)
+        else:
+            # no TAGGED collections, so use all_datasets
+            ref = all_datasets
 
         # References outside of the Butler's datastore
         # need to be cleaned up, since the Butler will
