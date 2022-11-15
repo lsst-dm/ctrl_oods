@@ -59,17 +59,17 @@ class FileQueue(object):
         while True:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 file_list = await loop.run_in_executor(pool, scanner.getAllFiles)
-        
-        async with self.lock:
-            self.fileSet.update(file_list)
-        await asyncio.sleep(self.scanInterval)
+
+            async with self.lock:
+                self.fileSet.update(file_list)
+            await asyncio.sleep(self.scanInterval)
 
     async def dequeue_files(self):
-    """Return all of the files retrieved so far
-    """
+        """Return all of the files retrieved so far
+        """
         # get a list of files, sort it, and clear the fileSet
         async with self.lock:
             file_list = list(self.fileSet)
             file_list.sort()
-            f.fileSet.clear()
+            self.fileSet.clear()
         return file_list
