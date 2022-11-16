@@ -209,9 +209,7 @@ class AutoIngestTestCase(asynctest.TestCase):
 
         ingester = FileIngester(config["ingester"])
 
-        print(f"1 self.destFile = {self.destFile}")
         staged_files = ingester.stageFiles([self.destFile])
-        print(f"staged_files = {staged_files}")
         await ingester.ingest(staged_files)
 
         files = scanner.getAllFiles()
@@ -219,9 +217,6 @@ class AutoIngestTestCase(asynctest.TestCase):
 
         name = Utils.strip_prefix(self.destFile, image_staging_dir)
         bad_path = os.path.join(self.badDir, name)
-        print(f"2 self.destFile = {self.destFile}")
-        print(f"image_staging_dir = {image_staging_dir}")
-        print(f"bad_path = {bad_path}")
         self.assertTrue(os.path.exists(bad_path))
 
     async def testRepoExists(self):

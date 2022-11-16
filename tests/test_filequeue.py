@@ -71,6 +71,8 @@ class FileQueueTestCase(asynctest.TestCase):
         # there should be no files to dequeue, because the directory scanner
         # hasn't had a chance to run.
         self.assertEqual(len(file_list), 0)
+        # now, wait a short time to ensure only one file is grabbed (instead of 
+        # multiple entries for the same file)
         await asyncio.sleep(3)
         file_list = await fileq.dequeue_files()
         self.assertEqual(len(file_list), 1)
@@ -103,13 +105,11 @@ class FileQueueTestCase(asynctest.TestCase):
         os.link(tmp_file2, os.path.join(self.tmp_dir, os.path.basename(tmp_file2)))
         file_list = await fileq.dequeue_files()
         self.assertEqual(len(file_list), 1)
-        print(file_list)
 
         await asyncio.sleep(3)
         # we waited, and there should be two files
         file_list = await fileq.dequeue_files()
         self.assertEqual(len(file_list), 2)
-        print(file_list)
 
         ret_file = file_list[0]
         ret_file2 = file_list[1]

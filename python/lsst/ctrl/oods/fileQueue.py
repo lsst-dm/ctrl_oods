@@ -65,8 +65,7 @@ class FileQueue(object):
             await asyncio.sleep(self.scanInterval)
 
     async def dequeue_files(self):
-        """Return all of the files retrieved so far
-        """
+        """Return all of the files retrieved so far"""
         # get a list of files, sort it, and clear the fileSet
         async with self.lock:
             file_list = list(self.fileSet)
