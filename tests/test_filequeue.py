@@ -71,7 +71,7 @@ class FileQueueTestCase(asynctest.TestCase):
         # there should be no files to dequeue, because the directory scanner
         # hasn't had a chance to run.
         self.assertEqual(len(file_list), 0)
-        # now, wait a short time to ensure only one file is grabbed (instead of 
+        # now, wait a short time to ensure only one file is grabbed (instead of
         # multiple entries for the same file)
         await asyncio.sleep(3)
         file_list = await fileq.dequeue_files()
