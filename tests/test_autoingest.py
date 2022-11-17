@@ -114,7 +114,8 @@ class AutoIngestTestCase(asynctest.TestCase):
         # create a FileIngester
         ingester = FileIngester(ingesterConfig)
 
-        await ingester.ingest([self.destFile])
+        staged_files = ingester.stageFiles([self.destFile])
+        await ingester.ingest(staged_files)
 
         # check to make sure file was moved from image staging directory
         files = scanner.getAllFiles()
@@ -150,7 +151,8 @@ class AutoIngestTestCase(asynctest.TestCase):
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
 
-        await ingester.ingest([self.destFile])
+        staged_files = ingester.stageFiles([self.destFile])
+        await ingester.ingest(staged_files)
 
         # make sure image staging area is now empty
         files = scanner.getAllFiles()
@@ -207,7 +209,8 @@ class AutoIngestTestCase(asynctest.TestCase):
 
         ingester = FileIngester(config["ingester"])
 
-        await ingester.ingest([self.destFile])
+        staged_files = ingester.stageFiles([self.destFile])
+        await ingester.ingest(staged_files)
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)

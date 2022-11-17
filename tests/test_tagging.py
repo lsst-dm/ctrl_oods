@@ -152,7 +152,8 @@ class TaggingTestCase(asynctest.TestCase):
         self.assertTrue(os.path.exists(self.destFile))
 
         # trigger the ingester
-        await ingester.ingest([self.destFile])
+        staged_files = ingester.stageFiles([self.destFile])
+        await ingester.ingest(staged_files)
 
         # make sure staging area is now empty
         files = scanner.getAllFiles()

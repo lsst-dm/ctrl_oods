@@ -132,26 +132,21 @@ class FileIngester(object):
             os.unlink(filename)
         return files
 
-    async def ingest(self, file_list):
+    async def ingest(self, butler_file_list):
         """Attempt to perform butler ingest for all butlers
 
         Parameters
         ----------
-        filename: `str`
-            file to ingest
+        butler_file_list: `list`
+            files to ingest
         """
-
-        # first move the files from the image staging area
-        # to the area where they're staged for the OODS.
-        butler_file_lists = self.stageFiles(file_list)
 
         # for each butler, attempt to ingest the requested file,
         # Success or failure is noted in a message description which
-        # is sent via RabbitMQ message back to Archiver, which will
-        # send it out via a CSC logevent.
+        # will send out via a CSC logevent.
         try:
             for butler in self.butlers:
-                await butler.ingest(butler_file_lists[butler])
+                await butler.ingest(butler_file_list[butler])
         except Exception as e:
             LOGGER.warn("Exception: %s", e)
 
@@ -182,4 +177,9 @@ class FileIngester(object):
     async def dequeue_and_ingest_files(self):
         while True:
             file_list = await self.fileQueue.dequeue_files()
-            await self.ingest(file_list)
+            # First move the files from the image staging area
+            # to the area where they're staged for the OODS.
+            # Files staged here so the scanning asyncio routine doesn't
+            # queue them twice.
+            butler_file_list = self.stageFiles(file_list)
+            await self.ingest(butler_file_list)

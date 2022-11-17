@@ -31,7 +31,6 @@ class FileQueueTestCase(asynctest.TestCase):
     """Test FileQueue object"""
 
     def setUp(self):
-
         self.tmp_dir = tempfile.mkdtemp()
         fd, self.tmp_file = tempfile.mkstemp()
         with open(self.tmp_file, "w") as f:
@@ -51,6 +50,7 @@ class FileQueueTestCase(asynctest.TestCase):
 
         os.link(self.tmp_file, os.path.join(self.tmp_dir, os.path.basename(self.tmp_file)))
 
+        await asyncio.sleep(1)
         file_list = await fileq.dequeue_files()
         self.assertEqual(len(file_list), 1)
         ret_file = file_list[0]
@@ -68,10 +68,52 @@ class FileQueueTestCase(asynctest.TestCase):
         os.link(self.tmp_file, os.path.join(self.tmp_dir, os.path.basename(self.tmp_file)))
 
         file_list = await fileq.dequeue_files()
+        # there should be no files to dequeue, because the directory scanner
+        # hasn't had a chance to run.
+        self.assertEqual(len(file_list), 0)
+        # now, wait a short time to ensure only one file is grabbed (instead of
+        # multiple entries for the same file)
+        await asyncio.sleep(3)
+        file_list = await fileq.dequeue_files()
         self.assertEqual(len(file_list), 1)
         ret_file = file_list[0]
 
         self.assertEqual(os.path.basename(self.tmp_file), os.path.basename(ret_file))
-        os.unlink(ret_file)
 
+        os.unlink(ret_file)
+        queue_task.cancel()
+
+    async def testDoubleScan(self):
+        fileq = FileQueue(self.tmp_dir)
+
+        queue_task = asyncio.create_task(fileq.queue_files())
+
+        os.link(self.tmp_file, os.path.join(self.tmp_dir, os.path.basename(self.tmp_file)))
+
+        file_list = await fileq.dequeue_files()
+        self.assertEqual(len(file_list), 0)
+
+        await asyncio.sleep(3)
+        # waited, now there should be 1 file that we can dequeue
+        fd, tmp_file2 = tempfile.mkstemp()
+        with open(tmp_file2, "w") as f:
+            f.write("filequeue test")
+        os.close(fd)
+
+        # create another file, but when we dequeue, there should still only
+        # be one, since we didn't wait.
+        os.link(tmp_file2, os.path.join(self.tmp_dir, os.path.basename(tmp_file2)))
+        file_list = await fileq.dequeue_files()
+        self.assertEqual(len(file_list), 1)
+
+        await asyncio.sleep(3)
+        # we waited, and there should be two files
+        file_list = await fileq.dequeue_files()
+        self.assertEqual(len(file_list), 2)
+
+        ret_file = file_list[0]
+        ret_file2 = file_list[1]
+
+        os.unlink(ret_file)
+        os.unlink(ret_file2)
         queue_task.cancel()
