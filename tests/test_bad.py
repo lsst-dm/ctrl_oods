@@ -67,7 +67,7 @@ class BadTestCase(asynctest.TestCase):
 
         # extract parts of the ingester configuration
         # and alter the image staging directory to point
-        # at the temporary directories created for his test
+        # at the temporary directories created for this test
 
         ingesterConfig = config["ingester"]
         self.imageDir = tempfile.mkdtemp()
@@ -82,7 +82,7 @@ class BadTestCase(asynctest.TestCase):
         self.repoDir = tempfile.mkdtemp()
         butlerConfig["repoDirectory"] = self.repoDir
 
-        # copy the FITS file to it's test location
+        # copy the FITS file to its test location
 
         self.subDir = tempfile.mkdtemp(dir=self.imageDir)
         self.destFile = os.path.join(self.subDir, fits_name)

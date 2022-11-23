@@ -91,14 +91,9 @@ class Gen3ButlerIngester(ButlerIngester):
 
         return butler
 
-    def extract_info(self, dataId, key):
-        if key in dataId:
-            return f"{dataId[key]}"
-        return "??"
-
     def extract_info_val(self, dataId, key, prefix):
         if key in dataId:
-            return f"{prefix}%.2d" % dataId[key]
+            return f"{prefix}{dataId[key]:02d}"
         return f"{prefix}??"
 
     def rawexposure_info(self, data):
@@ -112,14 +107,14 @@ class Gen3ButlerIngester(ButlerIngester):
         Returns
         -------
         info: `dict`
-            Dictionary containing file name, and uninitialized elements
+            Dictionary with file name and dataId elements
         """
         info = dict()
         dataset = data.datasets[0]
         info["FILENAME"] = os.path.basename(data.filename.ospath)
         dataId = dataset.dataId
-        info["CAMERA"] = self.extract_info(dataId, "instrument")
-        info["OBSID"] = self.extract_info(dataId, "exposure")
+        info["CAMERA"] = dataId.get("instrument", "??")
+        info["OBSID"] = dataId.get("exposure", "??")
         info["RAFT"] = self.extract_info_val(dataId, "raft", "R")
         info["SENSOR"] = self.extract_info_val(dataId, "detector", "S")
         return info
@@ -135,7 +130,7 @@ class Gen3ButlerIngester(ButlerIngester):
         Returns
         -------
         info: `dict`
-            Dictionary containing file name, and uninitialized elements
+            Dictionary containing file name and placeholders
         """
         info = dict()
         info["FILENAME"] = os.path.basename(filename)
