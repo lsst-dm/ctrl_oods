@@ -91,6 +91,34 @@ class Gen3ButlerIngester(ButlerIngester):
 
         return butler
 
+    def extract_info_val(self, dataId, key, prefix):
+        if key in dataId:
+            return f"{prefix}{dataId[key]:02d}"
+        return f"{prefix}??"
+
+    def rawexposure_info(self, data):
+        """Return a sparsely initialized dictionary
+
+        Parameters
+        ----------
+        data: `RawFileData`
+            information about the raw file
+
+        Returns
+        -------
+        info: `dict`
+            Dictionary with file name and dataId elements
+        """
+        info = dict()
+        dataset = data.datasets[0]
+        info["FILENAME"] = os.path.basename(data.filename.ospath)
+        dataId = dataset.dataId
+        info["CAMERA"] = dataId.get("instrument", "??")
+        info["OBSID"] = dataId.get("exposure", "??")
+        info["RAFT"] = self.extract_info_val(dataId, "raft", "R")
+        info["SENSOR"] = self.extract_info_val(dataId, "detector", "S")
+        return info
+
     def undef_metadata(self, filename):
         """Return a sparsely initialized metadata dictionary
 
@@ -102,7 +130,7 @@ class Gen3ButlerIngester(ButlerIngester):
         Returns
         -------
         info: `dict`
-            Dictionary containing file name, and uninitialized elements
+            Dictionary containing file name and placeholders
         """
         info = dict()
         info["FILENAME"] = os.path.basename(filename)
@@ -148,23 +176,24 @@ class Gen3ButlerIngester(ButlerIngester):
             LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
             self.transmit_status(image_data.get_info(), code=0, description="file ingested")
 
-    def on_ingest_failure(self, filename, exc):
+    def on_ingest_failure(self, exposures, exc):
         """Callback used on ingest failure. Used to transmit
         unsuccessful data ingestion status
 
         Parameters
         ----------
-        filename: `ButlerURI`
-            ButlerURI that failed in ingest
+        exposures: `RawExposureData`
+            exposures that failed in ingest
         exc: `Exception`
             Exception which explains what happened
 
         """
-        real_file = filename.ospath
-        self.move_file_to_bad_dir(real_file)
-        cause = self.extract_cause(exc)
-        info = self.undef_metadata(real_file)
-        self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
+        for f in exposures.files:
+            real_file = f.filename.ospath
+            self.move_file_to_bad_dir(real_file)
+            cause = self.extract_cause(exc)
+            info = self.rawexposure_info(f)
+            self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
 
     def on_metadata_failure(self, filename, exc):
         """Callback used on metadata extraction failure. Used to transmit
