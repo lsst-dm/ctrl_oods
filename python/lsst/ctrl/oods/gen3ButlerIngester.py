@@ -93,13 +93,13 @@ class Gen3ButlerIngester(ButlerIngester):
 
     def extract_info(self, dataId, key):
         if key in dataId:
-            return f'{dataId[key]}'
+            return f"{dataId[key]}"
         return "??"
 
     def extract_info_val(self, dataId, key, prefix):
         if key in dataId:
-            return f'{prefix}%.2d' % dataId[key]
-        return f'{prefix}??'
+            return f"{prefix}%.2d" % dataId[key]
+        return f"{prefix}??"
 
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary
@@ -118,10 +118,10 @@ class Gen3ButlerIngester(ButlerIngester):
         dataset = data.datasets[0]
         info["FILENAME"] = os.path.basename(data.filename.ospath)
         dataId = dataset.dataId
-        info["CAMERA"] = self.extract_info(dataId, 'instrument')
-        info["OBSID"] = self.extract_info(dataId, 'exposure')
-        info["RAFT"] = self.extract_info_val(dataId, 'raft', 'R')
-        info["SENSOR"] = self.extract_info_val(dataId, 'detector', 'S')
+        info["CAMERA"] = self.extract_info(dataId, "instrument")
+        info["OBSID"] = self.extract_info(dataId, "exposure")
+        info["RAFT"] = self.extract_info_val(dataId, "raft", "R")
+        info["SENSOR"] = self.extract_info_val(dataId, "detector", "S")
         return info
 
     def undef_metadata(self, filename):
