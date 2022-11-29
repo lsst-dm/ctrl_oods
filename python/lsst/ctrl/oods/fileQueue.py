@@ -44,7 +44,7 @@ class FileQueue(object):
         self.scanInterval = scanInterval
 
         self.fileSet = set()
-        self.lock = asyncio.Lock()
+        self.condition = asyncio.Condition()
 
     async def queue_files(self):
         """Queue all files that currently exist, and that are put
@@ -60,14 +60,17 @@ class FileQueue(object):
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 file_list = await loop.run_in_executor(pool, scanner.getAllFiles)
 
-            async with self.lock:
-                self.fileSet.update(file_list)
+            if file_list:
+                async with self.condition:
+                    self.fileSet.update(file_list)
+                    self.condition.notify_all()
             await asyncio.sleep(self.scanInterval)
 
     async def dequeue_files(self):
         """Return all of the files retrieved so far"""
         # get a list of files, sort it, and clear the fileSet
-        async with self.lock:
+        async with self.condition:
+            await self.condition.wait()
             file_list = list(self.fileSet)
             file_list.sort()
             self.fileSet.clear()
