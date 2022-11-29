@@ -100,13 +100,7 @@ class FileQueueTestCase(asynctest.TestCase):
         os.unlink(ret_file1)
         os.unlink(ret_file2)
 
-        value = 451
-        try:
-            files = await asyncio.wait_for(fileq.dequeue_files(), timeout=3.0)
-            self.assertEqual(len(files), 0)
-        except Exception:
-            value = 123
-
-        self.assertEqual(value, 123)
+        with self.assertRaises(Exception):
+            await asyncio.wait_for(fileq.dequeue_files(), timeout=3.0)
 
         queue_task.cancel()
