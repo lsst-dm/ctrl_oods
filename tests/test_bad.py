@@ -55,10 +55,11 @@ class BadTestCase(asynctest.TestCase):
 
         testdir = os.path.abspath(os.path.dirname(__file__))
         configFile = os.path.join(testdir, "etc", config_name)
+        self.fits_name = fits_name
 
         # path to the FITS file to ingest
 
-        fitsFile = os.path.join(testdir, "data", fits_name)
+        self.fitsFile = os.path.join(testdir, "data", fits_name)
 
         # load the YAML configuration
 
@@ -86,7 +87,7 @@ class BadTestCase(asynctest.TestCase):
 
         self.subDir = tempfile.mkdtemp(dir=self.imageDir)
         self.destFile = os.path.join(self.subDir, fits_name)
-        shutil.copyfile(fitsFile, self.destFile)
+        shutil.copyfile(self.fitsFile, self.destFile)
 
         return config
 
@@ -100,8 +101,8 @@ class BadTestCase(asynctest.TestCase):
 
     async def testBadIngest(self):
         """test ingesting a bad file"""
-        fits_name = "AT_O_20221122_000951_R00_S00.fits.fz"
-        config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
+        name = "AT_O_20221122_000951_R00_S00.fits.fz"
+        config = self.createConfig("ingest_auxtel_gen3.yaml", name)
 
         # setup directory to scan for files in the image staging directory
         ingesterConfig = config["ingester"]
@@ -117,6 +118,16 @@ class BadTestCase(asynctest.TestCase):
 
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
+
+        # copy the same file to ingest again, which should trigger
+        # an "on_ingest_failure" and move the file to self.badDir
+        self.subDir = tempfile.mkdtemp(dir=self.imageDir)
+        self.destFile = os.path.join(self.subDir, self.fits_name)
+        shutil.copyfile(self.fitsFile, self.destFile)
+
+        # now stage and try and ingest
+        staged_files = ingester.stageFiles([self.destFile])
+        await ingester.ingest(staged_files)
 
         name = Utils.strip_prefix(self.destFile, image_staging_dir)
         bad_path = os.path.join(self.badDir, name)
