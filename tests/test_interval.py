@@ -26,7 +26,6 @@ class IntervalTestCase(lsst.utils.tests.TestCase):
     """Test cache cleaning"""
 
     def testFileCleaner(self):
-
         config = {}
         config["days"] = 1
         config["hours"] = 1

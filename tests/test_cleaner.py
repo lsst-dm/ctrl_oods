@@ -32,7 +32,6 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
     """Test cache cleaning"""
 
     def testFileCleaner(self):
-
         # create a temporary directory that looks like the cache
         dirPath = tempfile.mkdtemp()
 
@@ -104,7 +103,6 @@ class CleanerTestCase(lsst.utils.tests.TestCase):
         os.rmdir(dirPath)
 
     def testDirectoryCleaner(self):
-
         # create a temporary directory that looks like the cache
         dirPath = tempfile.mkdtemp()
 

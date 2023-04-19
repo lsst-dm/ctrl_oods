@@ -72,7 +72,7 @@ class Gen3ButlerIngester(ButlerIngester):
             self.butler = self.createButler()
         except Exception as exc:
             cause = self.extract_cause(exc)
-            asyncio.create_task(self.csc.call_fault(code=2, report=f'failure: {cause}'))
+            asyncio.create_task(self.csc.call_fault(code=2, report=f"failure: {cause}"))
             return
 
         cfg = RawIngestConfig()

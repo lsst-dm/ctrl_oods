@@ -26,7 +26,6 @@ from lsst.ctrl.oods.commander import Commander
 
 
 def build_argparser():
-
     parser = argparse.ArgumentParser(description="Send SAL commands to devices")
     parser.add_argument(
         "-D",
@@ -48,7 +47,6 @@ def build_argparser():
 
 
 def main():
-
     args = build_argparser().parse_args()
 
     cmdr = Commander(args.device, args.command, args.timeout)
