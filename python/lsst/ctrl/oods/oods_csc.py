@@ -61,10 +61,7 @@ class OodsCsc(DmCsc):
 
         self.task_list = None
 
-        ingester_config = self.config["ingester"]
-        # self added here, and by the time it's utilized by FileIngester
-        # the CSC will be up and running
-        self.ingester = FileIngester(ingester_config, self)
+        self.ingester_config = self.config["ingester"]
 
         cache_config = self.config["cacheCleaner"]
         self.cache_cleaner = CacheCleaner(cache_config)
@@ -102,6 +99,10 @@ class OodsCsc(DmCsc):
 
     async def start_services(self):
         """Start all cleanup and archiving services"""
+
+        # self added here, and by the time it's utilized by FileIngester
+        # the CSC will be up and running
+        self.ingester = FileIngester(self.ingester_config, self)
 
         self.task_list = self.ingester.run_tasks()
         self.task_list.append(asyncio.create_task(self.cache_cleaner.run_tasks()))

@@ -29,7 +29,6 @@ class ScanDirTestCase(lsst.utils.tests.TestCase):
     """Test Scanning directory"""
 
     def testScanDir(self):
-
         dirPath = tempfile.mkdtemp()
 
         scanner = DirectoryScanner([dirPath])

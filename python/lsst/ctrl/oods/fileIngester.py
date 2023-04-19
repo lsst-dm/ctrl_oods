@@ -170,6 +170,7 @@ class FileIngester(object):
         return self.tasks
 
     def stop_tasks(self):
+        LOGGER.info("stopping file scanning and file cleanup")
         for task in self.tasks:
             task.cancel()
         self.tasks = []
