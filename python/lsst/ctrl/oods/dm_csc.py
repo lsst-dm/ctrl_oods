@@ -83,13 +83,13 @@ class DmCsc(BaseCsc):
         )
 
     async def begin_disable(self, data):
-        await self.cmd_disabled.ack_in_progress(
-            data, timeout=self.estimated_timeout, result="transitioning to state: disabled"
+        await self.cmd_disable.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: disable"
         )
 
     async def begin_enable(self, data):
-        await self.cmd_enabled.ack_in_progress(
-            data, timeout=self.estimated_timeout, result="transitioning to state: enabled"
+        await self.cmd_enable.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: enable"
         )
 
     async def begin_fault(self, data):
