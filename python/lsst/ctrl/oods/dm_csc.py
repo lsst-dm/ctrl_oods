@@ -73,29 +73,29 @@ class DmCsc(BaseCsc):
         await self.evt_softwareVersions.set_write(cscVersion=self.version, subsystemVersions="")
 
     async def begin_standby(self, data):
-        await self.cmd_standby.ack_in_progress(data,
-                                               timeout=self.estimated_timeout,
-                                               result="transitioning to state: standby")
+        await self.cmd_standby.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: standby"
+        )
 
     async def begin_start(self, data):
-        await self.cmd_start.ack_in_progress(data,
-                                             timeout=self.estimated_timeout,
-                                             result="transitioning to state: start")
+        await self.cmd_start.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: start"
+        )
 
-    async def begin_disabled(self, data):
-        await self.cmd_disabled.ack_in_progress(data,
-                                                timeout=self.estimated_timeout,
-                                                result="transitioning to state: disabled")
+    async def begin_disable(self, data):
+        await self.cmd_disabled.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: disabled"
+        )
 
-    async def begin_enabled(self, data):
-        await self.cmd_enabled.ack_in_progress(data,
-                                               timeout=self.estimated_timeout,
-                                               result="transitioning to state: enabled")
+    async def begin_enable(self, data):
+        await self.cmd_enabled.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: enabled"
+        )
 
     async def begin_fault(self, data):
-        await self.cmd_fault.ack_in_progress(data,
-                                             timeout=self.estimated_timeout,
-                                             result="transitioning to state: fault")
+        await self.cmd_fault.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: fault"
+        )
 
     async def handle_summary_state(self):
         """State transition model for the ArchiverCSC"""
