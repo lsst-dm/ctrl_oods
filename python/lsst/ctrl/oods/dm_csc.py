@@ -49,6 +49,8 @@ class DmCsc(BaseCsc):
     def __init__(self, name, initial_state):
         super().__init__(name, initial_state=initial_state)
 
+        self.estimated_timeout = 5.0
+
         self.state_to_str = {
             State.DISABLED: "disabled",
             State.ENABLED: "enabled",
@@ -69,6 +71,31 @@ class DmCsc(BaseCsc):
         LOGGER.info("configuring")
         await self.evt_settingsApplied.set_write(settingsVersion=self.config.settingsVersion)
         await self.evt_softwareVersions.set_write(cscVersion=self.version, subsystemVersions="")
+
+    async def begin_standby(self, data):
+        await self.cmd_standby.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: standby"
+        )
+
+    async def begin_start(self, data):
+        await self.cmd_start.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: start"
+        )
+
+    async def begin_disable(self, data):
+        await self.cmd_disable.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: disable"
+        )
+
+    async def begin_enable(self, data):
+        await self.cmd_enable.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: enable"
+        )
+
+    async def begin_fault(self, data):
+        await self.cmd_fault.ack_in_progress(
+            data, timeout=self.estimated_timeout, result="transitioning to state: fault"
+        )
 
     async def handle_summary_state(self):
         """State transition model for the ArchiverCSC"""
