@@ -24,9 +24,8 @@ import logging
 import os
 
 import yaml
-from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.dm_csc import DmCsc
-from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.msgIngester import MsgIngester
 from lsst.ts import salobj
 
 LOGGER = logging.getLogger(__name__)
@@ -62,9 +61,6 @@ class OodsCsc(DmCsc):
         self.task_list = None
 
         self.ingester_config = self.config["ingester"]
-
-        cache_config = self.config["cacheCleaner"]
-        self.cache_cleaner = CacheCleaner(cache_config)
 
     async def send_imageInOODS(self, info):
         """Send SAL message that the images has been ingested into the OODS
@@ -102,12 +98,10 @@ class OodsCsc(DmCsc):
 
         # self added here, and by the time it's utilized by FileIngester
         # the CSC will be up and running
-        self.ingester = FileIngester(self.ingester_config, self)
+        self.ingester = MsgIngester(self.ingester_config, self)
 
         self.task_list = self.ingester.run_tasks()
-        self.task_list.append(asyncio.create_task(self.cache_cleaner.run_tasks()))
 
     async def stop_services(self):
         """Stop all cleanup and archiving services"""
         self.ingester.stop_tasks()
-        self.cache_cleaner.stop_tasks()

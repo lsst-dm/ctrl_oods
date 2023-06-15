@@ -70,7 +70,16 @@ class MessageQueue(object):
         max_messages: `int`
             maximum number of messages to retrieve at a time
         """
-        return self.consumer.consume(num_messages=max)
+        # idea here is to not busy loop.  Wait for an initial
+        # message, and after we get one, try and get the rest.
+        # If there other messages, retrieve up to 'max_messages'.
+        # If not, read as many as you can before the timeout,
+        # and then return with what we could get.
+        # 
+        msg = self.consumer.consume(num_messages=1)
+        if max_messages > 1:
+            msg_list = self.consumer(num_messages=max_messages-1, timeout=0.1)
+        return [msg] + msg_list
 
     async def dequeue_messages(self):
         """Return all of the messages retrieved so far"""
