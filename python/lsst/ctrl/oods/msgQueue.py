@@ -38,7 +38,7 @@ class MessageQueue(object):
         The topics to listen on
     """
 
-    def __init__(self, config, topics)
+    def __init__(self, config, topics):
         self.config = config
         self.topics = topics
 
@@ -55,14 +55,14 @@ class MessageQueue(object):
         # now, add all the currently known files to the queue
         while True:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                message_list = await loop.run_in_executor(pool, self.getMessages(max_messages)
+                message_list = await loop.run_in_executor(pool, self.get_messages(max_messages))
 
             if message_list:
                 async with self.condition:
                     self.msgList.extend(message_list)
                     self.condition.notify_all()
 
-    def getMessages(self, max_messages):
+    def get_messages(self, max_messages):
         """Return up to max_messages at a time from Kafka
 
         Parameters

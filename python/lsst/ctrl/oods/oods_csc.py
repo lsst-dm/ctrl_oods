@@ -19,7 +19,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import asyncio
 import logging
 import os
 
@@ -62,7 +61,7 @@ class OodsCsc(DmCsc):
 
         self.ingester_config = self.config["ingester"]
 
-    async def send_imageInOODS(self, info):
+    async def send_imageInOods(self, info):
         """Send SAL message that the images has been ingested into the OODS
 
         Parameters
@@ -78,18 +77,18 @@ class OodsCsc(DmCsc):
         sensor = "undef"
         if "SENSOR" in info:
             sensor = info["SENSOR"]
-        statusCode = info["STATUS_CODE"]
+        status_code = info["STATUS_CODE"]
         description = info["DESCRIPTION"]
 
         s = f"sending camera={camera} obsid={obsid} raft={raft} sensor={sensor} "
-        s = s + f"statusCode={statusCode}, description={description}"
+        s = s + f"statusCode={status_code}, description={description}"
         LOGGER.info(s)
         await self.evt_imageInOODS.set_write(
             camera=camera,
             obsid=obsid,
             raft=raft,
             sensor=sensor,
-            statusCode=statusCode,
+            statusCode=status_code,
             description=description,
         )
 
