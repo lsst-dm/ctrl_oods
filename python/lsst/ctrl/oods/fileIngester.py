@@ -128,7 +128,6 @@ class FileIngester(object):
             except Exception as e:
                 LOGGER.info("error staging files butler for %s, %s", filename, e)
                 continue
-            os.unlink(filename)
         return files
 
     async def ingest(self, butler_file_list):
