@@ -23,6 +23,7 @@ import asyncio
 import concurrent
 import logging
 from confluent_kafka import Consumer
+from lsst.ctrl.oods.bucketMessage import BucketMessage
 
 LOGGER = logging.getLogger(__name__)
 
@@ -76,10 +77,36 @@ class MessageQueue(object):
         # If not, read as many as you can before the timeout,
         # and then return with what we could get.
         # 
-        msg = self.consumer.consume(num_messages=1)
-        if max_messages > 1:
-            msg_list = self.consumer(num_messages=max_messages-1, timeout=0.1)
-        return [msg] + msg_list
+        m = self.consumer.consume(num_messages=1)
+        return_list = self._extract_all_urls(m)
+
+        if max_messages == 1:
+            return return_list
+
+        # we we'd like to get more messages, so grab as many as we can
+        # before timing out.
+        mlist = self.consumer(num_messages=max_messages-1, timeout=0.1)
+
+        # if we didn't get any additional messages, just return
+        if len(mlist) == 0:
+            return return_list
+
+        # we got a list of messages.  Extract the url list from
+        # each message, appending each list to the return_list
+        # and when we're done return that list.
+        for m in mlist:
+            msg_list = self._extract_all_urls(m)
+            return_list.extend(msg_list)
+        return return_list
+
+    def _extract_all_urls(self, m):
+        # extract all urls within this message
+        msg = BucketMessage(m)
+
+        msg_list = list()
+        for url in msg.extract_urls():
+            msg_list.extend(url)
+        return msg_list
 
     async def dequeue_messages(self):
         """Return all of the messages retrieved so far"""
@@ -87,6 +114,5 @@ class MessageQueue(object):
         async with self.condition:
             await self.condition.wait()
             message_list = list(self.msgList)
-            message_list.sort()
             self.msgList.clear()
         return message_list
