@@ -76,7 +76,7 @@ class MessageQueue(object):
         # If there other messages, retrieve up to 'max_messages'.
         # If not, read as many as you can before the timeout,
         # and then return with what we could get.
-        # 
+        #
         m = self.consumer.consume(num_messages=1)
         return_list = self._extract_all_urls(m)
 

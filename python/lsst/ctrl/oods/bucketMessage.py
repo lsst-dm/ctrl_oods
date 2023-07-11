@@ -39,12 +39,12 @@ class BucketMessage(object):
 
     def extract_urls(self):
         """Extract object IDs from an S3 notification.
-    
+
         If one record is invalid, an error is logged but the function tries to
         process the remaining records.
-    
+
         Do not return notifications from "sidecar" JSON files.
-    
+
         Yields
         ------
         oid : `str`
@@ -53,7 +53,7 @@ class BucketMessage(object):
         msg = json.loads(self.message)
         for record in msg["Records"]:
             if not record["eventName"].startswith("ObjectCreated"):
-                _log.warning("Unexpected non-creation notification in topic: %s", record)
+                LOGGER.warning(f"Unexpected non-creation notification in topic: {record}")
                 continue
             try:
                 arn = record["s3"]["bucket"]["arn"]
@@ -61,4 +61,4 @@ class BucketMessage(object):
                 if not key.endswith(".json"):
                     yield f"s3://{arn}/{key}"
             except KeyError as e:
-                _log.error("Invalid S3 bucket notification: %s", e)
+                LOGGER.error(f"Invalid S3 bucket notification: {e}")
