@@ -38,8 +38,8 @@ from lsst.pipe.base import Instrument
 LOGGER = logging.getLogger(__name__)
 
 
-class Gen3ButlerIngester(ButlerIngester):
-    """Processes files on behalf of a Gen3 Butler.
+class S3ButlerIngester(ButlerIngester):
+    """Processes files from S3 into the Butler.
 
     Parameters
     ----------

@@ -95,7 +95,7 @@ class OodsCsc(DmCsc):
     async def start_services(self):
         """Start all cleanup and archiving services"""
 
-        # self added here, and by the time it's utilized by FileIngester
+        # self added here, and by the time it's utilized by MsgIngester
         # the CSC will be up and running
         self.ingester = MsgIngester(self.ingester_config, self)
 

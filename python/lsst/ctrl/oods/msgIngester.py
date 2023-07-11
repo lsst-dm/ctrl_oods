@@ -45,7 +45,10 @@ class MsgIngester(object):
         self.config = config
 
         topics = self.config["topics"]
-        self.msgQueue = MsgQueue(self.image_staging_dir, topics)
+        if len(topics) == 0:
+            raise Exception("No topics configured; check configuration file")
+
+        self.msgQueue = MsgQueue(topics)
 
         butler_configs = self.config["butlers"]
         if len(butler_configs) == 0:

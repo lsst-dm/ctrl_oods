@@ -28,7 +28,7 @@ from lsst.ctrl.oods.bucketMessage import BucketMessage
 LOGGER = logging.getLogger(__name__)
 
 
-class MessageQueue(object):
+class MsgQueue(object):
     """Report on new messages
 
     Parameters
@@ -39,13 +39,17 @@ class MessageQueue(object):
         The topics to listen on
     """
 
-    def __init__(self, config, topics):
-        self.config = config
+    def __init__(self, brokers, group_id, topics):
         self.topics = topics
 
         self.msgList = list()
         self.condition = asyncio.Condition()
 
+        config = { 'bootstrap.servers': brokers,
+                 'client.id': socket.gethostname,
+                 'group.id': group_id,
+                 'auto.offset.reset': 'earliest',
+                 'enable.auto.commit': True }
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
 

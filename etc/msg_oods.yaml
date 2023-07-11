@@ -1,0 +1,31 @@
+defaultInterval: &interval
+    days: 0
+    hours: 0
+    minutes: 0
+    seconds: 0
+
+ingester:
+    kafka:
+        brokers:
+            - localhost
+        topics: 
+            - test1
+            - test2
+            - test3
+        group_id: 1
+    butlers: 
+        - butler:
+            instrument: lsst.obs.lsst.Latiss
+            class:
+                import : lsst.ctrl.oods.S3ButlerIngester
+                name : S3ButlerIngester
+            repoDirectory : /repo/LATISS
+            collections:
+                - LATISS/raw/all
+            scanInterval:
+                <<: *interval
+                hours: 1
+            filesOlderThan:
+                <<: *interval
+                days: 30
+    batchSize: 20
