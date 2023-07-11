@@ -44,11 +44,19 @@ class MsgIngester(object):
         self.FAILURE = 1
         self.config = config
 
+        brokers = self.config["brokers"]
+        if len(brokers) == 0:
+            raise Exception("No brokers configured; check configuration file")
+
+        group_id = self.config["group_id"]
+        if self.group_id is None:
+            raise Exception("No group_id configured; check configuration file")
+
         topics = self.config["topics"]
         if len(topics) == 0:
             raise Exception("No topics configured; check configuration file")
 
-        self.msgQueue = MsgQueue(topics)
+        self.msgQueue = MsgQueue(brokers, group_id, topics)
 
         butler_configs = self.config["butlers"]
         if len(butler_configs) == 0:

@@ -22,6 +22,7 @@
 import asyncio
 import concurrent
 import logging
+import socket
 from confluent_kafka import Consumer
 from lsst.ctrl.oods.bucketMessage import BucketMessage
 
@@ -40,14 +41,18 @@ class MsgQueue(object):
     """
 
     def __init__(self, brokers, group_id, topics):
+        self.brokers = brokers
+
+        self.group_id = group_id
+
         self.topics = topics
 
         self.msgList = list()
         self.condition = asyncio.Condition()
 
-        config = { 'bootstrap.servers': brokers,
+        config = { 'bootstrap.servers': self.brokers,
                  'client.id': socket.gethostname,
-                 'group.id': group_id,
+                 'group.id': self.group_id,
                  'auto.offset.reset': 'earliest',
                  'enable.auto.commit': True }
         self.consumer = Consumer(config)
