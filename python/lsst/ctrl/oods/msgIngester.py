@@ -67,7 +67,6 @@ class MsgIngester(object):
         else:
             self.max_messages = max_messages
 
-
         self.msgQueue = MsgQueue(brokers, group_id, topics, max_messages)
 
         butler_configs = self.config["butlers"]
@@ -81,7 +80,6 @@ class MsgIngester(object):
 
         self.tasks = []
         self.dequeue_task = None
-
 
     def get_butler_clean_tasks(self):
         """Get a list of all butler run_task methods

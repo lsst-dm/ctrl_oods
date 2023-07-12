@@ -49,14 +49,13 @@ class MsgQueue(object):
         self.msgList = list()
         self.condition = asyncio.Condition()
 
-        config = { 'bootstrap.servers': self.brokers,
-                 'client.id': socket.gethostname,
-                 'group.id': self.group_id,
-                 'auto.offset.reset': 'earliest',
-                 'enable.auto.commit': True }
+        config = {'bootstrap.servers': self.brokers,
+                  'client.id': socket.gethostname,
+                  'group.id': self.group_id,
+                  'auto.offset.reset': 'earliest',
+                  'enable.auto.commit': True}
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
-
 
     async def queue_files(self):
         """Queue all files in messages on the subscribed topics

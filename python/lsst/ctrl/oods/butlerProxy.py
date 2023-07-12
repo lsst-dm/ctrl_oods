@@ -45,6 +45,17 @@ class ButlerProxy(object):
 
         self.butlerInstance = butlerClass(butlerConfig, csc)
 
+        self.staging_dir = butlerConfig.get("stagingDirectory")
+
+    def getStagingDirectory(self):
+        """Return the path of the staging directory
+        Returns
+        -------
+        staging_dir : `str`
+            the staging directory
+        """
+        return self.staging_dir
+
     async def ingest(self, file_list):
         """Bulk ingest of a list of files
 
