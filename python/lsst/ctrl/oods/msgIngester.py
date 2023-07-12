@@ -43,20 +43,32 @@ class MsgIngester(object):
         self.SUCCESS = 0
         self.FAILURE = 1
         self.config = config
+        self.max_messages = 100
 
-        brokers = self.config["brokers"]
-        if len(brokers) == 0:
+        kafka_settings = self.config.get("kafka")
+        if kafka_settings is None:
+            raise Exception("section 'kafka' not configured; check configuration file")
+
+        brokers = kafka_settings.get("brokers")
+        if brokers is None:
             raise Exception("No brokers configured; check configuration file")
 
-        group_id = self.config["group_id"]
-        if self.group_id is None:
+        group_id = kafka_settings.get("group_id")
+        if group_id is None:
             raise Exception("No group_id configured; check configuration file")
 
-        topics = self.config["topics"]
-        if len(topics) == 0:
+        topics = kafka_settings.get("topics")
+        if topics is None:
             raise Exception("No topics configured; check configuration file")
 
-        self.msgQueue = MsgQueue(brokers, group_id, topics)
+        max_messages = kafka_settings.get("max_messages")
+        if max_messages is None:
+            LOGGER.warn("max_messages not set; using default of {self.max_messages}")
+        else:
+            self.max_messages = max_messages
+
+
+        self.msgQueue = MsgQueue(brokers, group_id, topics, max_messages)
 
         butler_configs = self.config["butlers"]
         if len(butler_configs) == 0:
@@ -69,6 +81,7 @@ class MsgIngester(object):
 
         self.tasks = []
         self.dequeue_task = None
+
 
     def get_butler_clean_tasks(self):
         """Get a list of all butler run_task methods

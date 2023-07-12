@@ -40,12 +40,11 @@ class MsgQueue(object):
         The topics to listen on
     """
 
-    def __init__(self, brokers, group_id, topics):
+    def __init__(self, brokers, group_id, topics, max_messages):
         self.brokers = brokers
-
         self.group_id = group_id
-
         self.topics = topics
+        self.max_messages = max_messages
 
         self.msgList = list()
         self.condition = asyncio.Condition()
@@ -58,21 +57,22 @@ class MsgQueue(object):
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
 
-    async def queue_messages(self, max_messages):
-        """Queue all messages on the subscribed topics
+
+    async def queue_files(self):
+        """Queue all files in messages on the subscribed topics
         """
         loop = asyncio.get_running_loop()
         # now, add all the currently known files to the queue
         while True:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                message_list = await loop.run_in_executor(pool, self.get_messages(max_messages))
+                message_list = await loop.run_in_executor(pool, self.get_messages())
 
             if message_list:
                 async with self.condition:
                     self.msgList.extend(message_list)
                     self.condition.notify_all()
 
-    def get_messages(self, max_messages):
+    def get_messages(self):
         """Return up to max_messages at a time from Kafka
 
         Parameters
@@ -89,12 +89,12 @@ class MsgQueue(object):
         m = self.consumer.consume(num_messages=1)
         return_list = self._extract_all_urls(m)
 
-        if max_messages == 1:
+        if self.max_messages == 1:
             return return_list
 
         # we we'd like to get more messages, so grab as many as we can
         # before timing out.
-        mlist = self.consumer(num_messages=max_messages-1, timeout=0.1)
+        mlist = self.consumer(num_messages=self.max_messages-1, timeout=0.5)
 
         # if we didn't get any additional messages, just return
         if len(mlist) == 0:
