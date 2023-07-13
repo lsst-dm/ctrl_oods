@@ -49,7 +49,7 @@ class MsgQueue(object):
         self.msgList = list()
         self.condition = asyncio.Condition()
 
-        config = {'bootstrap.servers': self.brokers,
+        config = {'bootstrap.servers': ",".join(self.brokers),
                   'client.id': socket.gethostname,
                   'group.id': self.group_id,
                   'auto.offset.reset': 'earliest',
