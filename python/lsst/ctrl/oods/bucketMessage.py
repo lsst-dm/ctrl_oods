@@ -59,6 +59,7 @@ class BucketMessage(object):
                 arn = record["s3"]["bucket"]["arn"]
                 key = record["s3"]["object"]["key"]
                 if not key.endswith(".json"):
-                    yield f"s3://{arn}/{key}"
+                    url = f"s3://{arn}/{key}"
+                    yield url
             except KeyError as e:
                 LOGGER.error(f"Invalid S3 bucket notification: {e}")

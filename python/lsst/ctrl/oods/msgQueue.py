@@ -24,7 +24,6 @@ import concurrent
 import logging
 import socket
 from confluent_kafka import Consumer
-from lsst.ctrl.oods.bucketMessage import BucketMessage
 
 LOGGER = logging.getLogger(__name__)
 
@@ -61,15 +60,19 @@ class MsgQueue(object):
         """Queue all files in messages on the subscribed topics
         """
         loop = asyncio.get_running_loop()
-        # now, add all the currently known files to the queue
-        while True:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                message_list = await loop.run_in_executor(pool, self.get_messages())
+        try:
+            # now, add all the currently known files to the queue
+            while True:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    message_list = await loop.run_in_executor(pool, self.get_messages())
 
-            if message_list:
-                async with self.condition:
-                    self.msgList.extend(message_list)
-                    self.condition.notify_all()
+                if message_list:
+                    async with self.condition:
+                        self.msgList.extend(message_list)
+                        self.condition.notify_all()
+        finally:
+            LOGGER.info("consumer unsubscribing")
+            self.consumer.unsubscribe()
 
     def get_messages(self):
         """Return up to max_messages at a time from Kafka
@@ -99,22 +102,8 @@ class MsgQueue(object):
         if len(mlist) == 0:
             return return_list
 
-        # we got a list of messages.  Extract the url list from
-        # each message, appending each list to the return_list
-        # and when we're done return that list.
-        for m in mlist:
-            msg_list = self._extract_all_urls(m)
-            return_list.extend(msg_list)
+        return_list.extend(mlist)
         return return_list
-
-    def _extract_all_urls(self, m):
-        # extract all urls within this message
-        msg = BucketMessage(m)
-
-        msg_list = list()
-        for url in msg.extract_urls():
-            msg_list.extend(url)
-        return msg_list
 
     async def dequeue_messages(self):
         """Return all of the messages retrieved so far"""
@@ -124,3 +113,6 @@ class MsgQueue(object):
             message_list = list(self.msgList)
             self.msgList.clear()
         return message_list
+
+    def commit(self, message):
+        self.consumer.commit(message=message)

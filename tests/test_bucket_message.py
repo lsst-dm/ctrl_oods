@@ -43,8 +43,14 @@ class BucketMessageTestCase(lsst.utils.tests.TestCase):
             message = f.read()
 
         bucket_message = BucketMessage(message)
+        url_list = list()
         for url in bucket_message.extract_urls():
-            print(f"url = {url}")
+            url_list.append(url)
+
+        self.assertEqual(len(url_list), 1)
+        self.assertEqual(url_list[0],
+                         "s3://arn:aws:s3::rubin:rubin-pp/HSC/73/2023061400090/0\
+/6140090/HSC-Z/HSC-2023061400090-0-6140090-HSC-Z-73.fz")
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):

@@ -21,9 +21,11 @@
 
 import asyncio
 import logging
+from lsst.resources import ResourcePath
 
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.msgQueue import MsgQueue
+from lsst.ctrl.oods.bucketMessage import BucketMessage
 
 LOGGER = logging.getLogger(__name__)
 
@@ -139,9 +141,22 @@ class MsgIngester(object):
 
     async def dequeue_and_ingest_files(self):
         while True:
-            butler_file_list = await self.msgQueue.dequeue_files()
+            message_list = await self.msgQueue.dequeue_files()
             # First move the files from the image staging area
             # to the area where they're staged for the OODS.
             # Files staged here so the scanning asyncio routine doesn't
             # queue them twice.
-            await self.ingest(butler_file_list)
+            for message in message_list:
+                rps = self._gather_all_resource_paths(message)
+                await self.ingest(rps)
+                self.msgQueue.commit(message=message)
+
+    def _gather_all_resource_paths(self, m):
+        # extract all urls within this message
+        msg = BucketMessage(m)
+
+        rp_list = list()
+        for url in msg.extract_all_urls():
+            rp = ResourcePath(url)
+            rp_list.append(rp)
+        return rp_list
