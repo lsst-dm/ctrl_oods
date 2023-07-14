@@ -89,20 +89,20 @@ class MsgQueue(object):
         # and then return with what we could get.
         #
         m = self.consumer.consume(num_messages=1)
-        return_list = self._extract_all_urls(m)
+        return_list = [m]
 
         if self.max_messages == 1:
             return return_list
 
         # we we'd like to get more messages, so grab as many as we can
         # before timing out.
-        mlist = self.consumer(num_messages=self.max_messages-1, timeout=0.5)
+        mlist = self.consumer.consume(num_messages=self.max_messages-1, timeout=0.5)
 
         # if we didn't get any additional messages, just return
         if len(mlist) == 0:
             return return_list
 
-        return_list.extend(mlist)
+        return_list.append(mlist)
         return return_list
 
     async def dequeue_messages(self):

@@ -65,11 +65,11 @@ class MsgIngester(object):
 
         max_messages = kafka_settings.get("max_messages")
         if max_messages is None:
-            LOGGER.warn("max_messages not set; using default of {self.max_messages}")
+            LOGGER.warn(f"max_messages not set; using default of {self.max_messages}")
         else:
             self.max_messages = max_messages
 
-        self.msgQueue = MsgQueue(brokers, group_id, topics, max_messages)
+        self.msgQueue = MsgQueue(brokers, group_id, topics, self.max_messages)
 
         butler_configs = self.config["butlers"]
         if len(butler_configs) == 0:
@@ -141,7 +141,7 @@ class MsgIngester(object):
 
     async def dequeue_and_ingest_files(self):
         while True:
-            message_list = await self.msgQueue.dequeue_files()
+            message_list = await self.msgQueue.dequeue_messages()
             # First move the files from the image staging area
             # to the area where they're staged for the OODS.
             # Files staged here so the scanning asyncio routine doesn't
