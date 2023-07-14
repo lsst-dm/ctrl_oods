@@ -134,7 +134,9 @@ class MsgIngester(object):
         return self.tasks
 
     def stop_tasks(self):
-        LOGGER.info("stopping file scanning and file cleanup")
+        LOGGER.info("stopping message scanning and file cleanup")
+        print("stopping message scanning and file cleanup")
+        self.msgQueue.stop()
         for task in self.tasks:
             task.cancel()
         self.tasks = []

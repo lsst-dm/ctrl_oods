@@ -60,50 +60,25 @@ class MsgQueue(object):
         """Queue all files in messages on the subscribed topics
         """
         loop = asyncio.get_running_loop()
-        try:
-            # now, add all the currently known files to the queue
-            while True:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    message_list = await loop.run_in_executor(pool, self.get_messages())
+        # now, add all the currently known files to the queue
+        while True:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                message_list = await loop.run_in_executor(pool, self.get_messages)
 
-                if message_list:
-                    async with self.condition:
-                        self.msgList.extend(message_list)
-                        self.condition.notify_all()
-        finally:
-            LOGGER.info("consumer unsubscribing")
-            self.consumer.unsubscribe()
+            if message_list:
+                async with self.condition:
+                    self.msgList.extend(message_list)
+                    self.condition.notify_all()
 
     def get_messages(self):
         """Return up to max_messages at a time from Kafka
-
-        Parameters
-        ----------
-        max_messages: `int`
-            maximum number of messages to retrieve at a time
         """
-        # idea here is to not busy loop.  Wait for an initial
-        # message, and after we get one, try and get the rest.
-        # If there other messages, retrieve up to 'max_messages'.
-        # If not, read as many as you can before the timeout,
-        # and then return with what we could get.
-        #
-        m = self.consumer.consume(num_messages=1)
-        return_list = [m]
-
-        if self.max_messages == 1:
-            return return_list
-
-        # we we'd like to get more messages, so grab as many as we can
-        # before timing out.
-        mlist = self.consumer.consume(num_messages=self.max_messages-1, timeout=0.5)
-
-        # if we didn't get any additional messages, just return
-        if len(mlist) == 0:
-            return return_list
-
-        return_list.append(mlist)
-        return return_list
+        while True:
+            m = self.consumer.consume(num_messages=self.max_messages, timeout=0.5)
+            if m is not None:
+                break
+        
+        return m
 
     async def dequeue_messages(self):
         """Return all of the messages retrieved so far"""
@@ -116,3 +91,6 @@ class MsgQueue(object):
 
     def commit(self, message):
         self.consumer.commit(message=message)
+
+    def stop(self):
+        self.consumer.close()

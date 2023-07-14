@@ -82,15 +82,22 @@ class standalone(object):
 
     async def stop_services(self):
         """Stop all cleanup and archiving services"""
+        print("calling stop_tasks")
         self.ingester.stop_tasks()
 
     async def done(self):
-        await asyncio.sleep(3600)
+        print("waiting...")
+        await asyncio.sleep(15)
+        print("done!")
 
     async def main(self):
         await self.start_services()
-        await asyncio.gather(self.done())
-
+        group = asyncio.gather(self.done())
+        print("gathering")
+        await group
+        print("finished")
+        await self.stop_services()
+        print("complete")
 
 if __name__ == "__main__":
     alone = standalone()
