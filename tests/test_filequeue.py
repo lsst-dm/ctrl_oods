@@ -22,12 +22,12 @@
 import asyncio
 import os
 import tempfile
+import unittest
 
-import asynctest
 from lsst.ctrl.oods.fileQueue import FileQueue
 
 
-class FileQueueTestCase(asynctest.TestCase):
+class FileQueueTestCase(unittest.IsolatedAsyncioTestCase):
     """Test FileQueue object"""
 
     def setUp(self):

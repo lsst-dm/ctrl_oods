@@ -23,10 +23,10 @@ import asyncio
 import logging
 import os
 import tempfile
+import unittest
 from pathlib import PurePath
 from shutil import copyfile
 
-import asynctest
 import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
@@ -35,7 +35,7 @@ from lsst.daf.butler import Butler
 from lsst.daf.butler.registry import CollectionType
 
 
-class TaggingTestCase(asynctest.TestCase):
+class TaggingTestCase(unittest.IsolatedAsyncioTestCase):
     """Test TAGGED deletion
 
     This test simulates the OODS asyncio cleanup and a secondary associate
