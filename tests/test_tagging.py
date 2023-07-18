@@ -24,7 +24,6 @@ import logging
 import os
 import tempfile
 import unittest
-
 from pathlib import PurePath
 from shutil import copyfile
 
