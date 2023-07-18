@@ -23,8 +23,8 @@ import asyncio
 import os
 import shutil
 import tempfile
+import unittest
 
-import asynctest
 import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
@@ -32,7 +32,7 @@ from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.utils import Utils
 
 
-class BadTestCase(asynctest.TestCase):
+class BadTestCase(unittest.IsolatedAsyncioTestCase):
     """Test Gen3 Butler Ingest"""
 
     def createConfig(self, config_name, fits_name):
