@@ -50,7 +50,9 @@ class BucketMessage(object):
         oid : `str`
             The filename referred to by each message.
         """
-        msg = json.loads(self.message)
+        print(f"{self.message=}")
+        value = self.message.value()
+        msg = json.loads(value)
         for record in msg["Records"]:
             if not record["eventName"].startswith("ObjectCreated"):
                 LOGGER.warning(f"Unexpected non-creation notification in topic: {record}")

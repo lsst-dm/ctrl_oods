@@ -45,7 +45,7 @@ class MsgIngester(object):
         self.SUCCESS = 0
         self.FAILURE = 1
         self.config = config
-        self.max_messages = 100
+        self.max_messages = 1
 
         kafka_settings = self.config.get("kafka")
         if kafka_settings is None:
@@ -110,7 +110,7 @@ class MsgIngester(object):
         # will send out via a CSC logevent.
         try:
             for butler in self.butlers:
-                await butler.ingest(butler_file_list[butler])
+                await butler.ingest(butler_file_list)
         except Exception as e:
             LOGGER.warn("Exception: %s", e)
 
@@ -148,17 +148,29 @@ class MsgIngester(object):
             # to the area where they're staged for the OODS.
             # Files staged here so the scanning asyncio routine doesn't
             # queue them twice.
-            for message in message_list:
-                rps = self._gather_all_resource_paths(message)
+            print("di: 1")
+            for m in message_list:
+                print("1")
+                rps = self._gather_all_resource_paths(m)
+                print("2")
                 await self.ingest(rps)
-                self.msgQueue.commit(message=message)
+                print("3")
+                self.msgQueue.commit(message=m)
+                print("4")
 
     def _gather_all_resource_paths(self, m):
         # extract all urls within this message
+        print("a")
         msg = BucketMessage(m)
+        print("b")
 
         rp_list = list()
-        for url in msg.extract_all_urls():
+        print("c")
+        for url in msg.extract_urls():
+            print(f"c1: {url=}")
             rp = ResourcePath(url)
+            print("c2")
             rp_list.append(rp)
+            print("c3")
+        print("d")
         return rp_list

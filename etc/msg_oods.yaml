@@ -9,10 +9,8 @@ ingester:
         brokers:
             - localhost:29092
         topics: 
-            - test1
             - test2
-            - test3
-        group_id: 1
+        group_id: ATOODS
     butlers: 
         - butler:
             instrument: lsst.obs.lsst.Latiss

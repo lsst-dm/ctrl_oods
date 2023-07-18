@@ -170,6 +170,7 @@ class S3ButlerIngester(ButlerIngester):
         datasets: `list`
             list of DatasetRefs
         """
+        print("on_success")
         for dataset in datasets:
             LOGGER.info("file %s successfully ingested", dataset.path.ospath)
             image_data = ImageData(dataset)
@@ -188,6 +189,7 @@ class S3ButlerIngester(ButlerIngester):
             Exception which explains what happened
 
         """
+        print("on_ingest_failure")
         for f in exposures.files:
             cause = self.extract_cause(exc)
             info = self.rawexposure_info(f)
@@ -204,6 +206,7 @@ class S3ButlerIngester(ButlerIngester):
         exc: `Exception`
             Exception which explains what happened
         """
+        print("on_metadata_failure")
         real_file = filename.ospath
         cause = self.extract_cause(exc)
         info = self.undef_metadata(real_file)
@@ -219,12 +222,15 @@ class S3ButlerIngester(ButlerIngester):
         """
 
         # Ingest image.
+        print(f"S3: 1 - {file_list=}")
         try:
             loop = asyncio.get_running_loop()
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 await loop.run_in_executor(pool, self.task.run, file_list)
+            print("S3: 1a")
         except Exception as e:
             LOGGER.info("Ingestion failure: %s", e)
+        print("S3: 2")
 
     def getName(self):
         """Return the name of this ingester

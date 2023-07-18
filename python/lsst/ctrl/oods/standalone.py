@@ -87,7 +87,7 @@ class standalone(object):
 
     async def done(self):
         print("waiting...")
-        await asyncio.sleep(15)
+        await asyncio.sleep(3600)
         print("done!")
 
     async def main(self):

@@ -49,12 +49,14 @@ class MsgQueue(object):
         self.condition = asyncio.Condition()
 
         config = {'bootstrap.servers': ",".join(self.brokers),
-                  'client.id': socket.gethostname,
                   'group.id': self.group_id,
-                  'auto.offset.reset': 'earliest',
-                  'enable.auto.commit': True}
+                  'auto.offset.reset': 'earliest'}
+        print(config)
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
+
+        print(",".join(self.brokers))
+        print(f"{group_id=}, {topics=}")
 
     async def queue_files(self):
         """Queue all files in messages on the subscribed topics
@@ -65,20 +67,25 @@ class MsgQueue(object):
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 message_list = await loop.run_in_executor(pool, self.get_messages)
 
+            print("message_list")
             if message_list:
                 async with self.condition:
+                    print("A")
                     self.msgList.extend(message_list)
+                    print("B")
                     self.condition.notify_all()
 
     def get_messages(self):
         """Return up to max_messages at a time from Kafka
         """
+        print("getting messages")
         while True:
-            m = self.consumer.consume(num_messages=self.max_messages, timeout=0.5)
-            if m is not None:
-                break
-        
-        return m
+            m_list = self.consumer.consume(num_messages=self.max_messages, timeout=0.5)
+    
+            if len(m_list) == 0:
+                continue
+            print("returning m_list")
+            return m_list
 
     async def dequeue_messages(self):
         """Return all of the messages retrieved so far"""
@@ -87,6 +94,7 @@ class MsgQueue(object):
             await self.condition.wait()
             message_list = list(self.msgList)
             self.msgList.clear()
+        print("Dequeueing messages")
         return message_list
 
     def commit(self, message):
