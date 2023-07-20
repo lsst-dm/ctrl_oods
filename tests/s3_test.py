@@ -33,6 +33,23 @@ from lsst.resources import ResourcePath
 
 LOGGER = logging.getLogger(__name__)
 
+def on_metadata_failure(filename, exc):
+    """Callback used on metadata extraction failure. Used to transmit
+    unsuccessful data ingestion status
+
+    Parameters
+    ----------
+    filename: `ButlerURI`
+        ButlerURI that failed in ingest
+    exc: `Exception`
+        Exception which explains what happened
+    """
+    print("on_metadata_failure")
+    real_file = filename.ospath
+    cause = self.extract_cause(exc)
+    info = self.undef_metadata(real_file)
+    self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
+
 
 repo = "/tmp/repo"
 instrument = "lsst.obs.lsst.Latiss"
@@ -52,9 +69,10 @@ cfg = RawIngestConfig()
 cfg.transfer = "direct"
 task = RawIngestTask(
     config=cfg,
-    butler=butler
+    butler=butler,
+    on_metadata_failure=on_metadata_failure
 )
 
-file_list=[ResourcePath("s3://arn:aws:s3::rubin:rubin-pp/HSC/73/2023061400090/0/6140090/HSC-Z/HSC-2023061400090-0-6140090-HSC-Z-73.fz")]
+file_list=[ResourcePath("file:///tmp/2020032700020-det000.fits.fz")]
         
 task.run(file_list)

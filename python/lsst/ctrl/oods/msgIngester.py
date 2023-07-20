@@ -110,6 +110,7 @@ class MsgIngester(object):
         # will send out via a CSC logevent.
         try:
             for butler in self.butlers:
+                print(f"{butler_file_list=}")
                 await butler.ingest(butler_file_list)
         except Exception as e:
             LOGGER.warn("Exception: %s", e)
