@@ -92,6 +92,7 @@ class MsgQueue(object):
         # get a list of messages, clear the msgList
         async with self.condition:
             await self.condition.wait()
+            print("dequeue_messages: 1")
             message_list = list(self.msgList)
             self.msgList.clear()
         print("Dequeueing messages")
