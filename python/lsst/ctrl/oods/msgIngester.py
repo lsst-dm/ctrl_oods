@@ -110,7 +110,6 @@ class MsgIngester(object):
         # will send out via a CSC logevent.
         try:
             for butler in self.butlers:
-                print(f"{butler_file_list=}")
                 await butler.ingest(butler_file_list)
         except Exception as e:
             LOGGER.warn("Exception: %s", e)
@@ -136,7 +135,6 @@ class MsgIngester(object):
 
     def stop_tasks(self):
         LOGGER.info("stopping message scanning and file cleanup")
-        print("stopping message scanning and file cleanup")
         self.msgQueue.stop()
         for task in self.tasks:
             task.cancel()
@@ -149,29 +147,17 @@ class MsgIngester(object):
             # to the area where they're staged for the OODS.
             # Files staged here so the scanning asyncio routine doesn't
             # queue them twice.
-            print("di: 1")
             for m in message_list:
-                print("1")
                 rps = self._gather_all_resource_paths(m)
-                print("2")
                 await self.ingest(rps)
-                print("3")
                 self.msgQueue.commit(message=m)
-                print("4")
 
     def _gather_all_resource_paths(self, m):
         # extract all urls within this message
-        print("a")
         msg = BucketMessage(m)
-        print("b")
 
         rp_list = list()
-        print("c")
         for url in msg.extract_urls():
-            print(f"c1: {url=}")
             rp = ResourcePath(url)
-            print("c2")
             rp_list.append(rp)
-            print("c3")
-        print("d")
         return rp_list

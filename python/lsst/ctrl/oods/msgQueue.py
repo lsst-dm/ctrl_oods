@@ -51,12 +51,8 @@ class MsgQueue(object):
         config = {'bootstrap.servers': ",".join(self.brokers),
                   'group.id': self.group_id,
                   'auto.offset.reset': 'earliest'}
-        print(config)
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
-
-        print(",".join(self.brokers))
-        print(f"{group_id=}, {topics=}")
 
     async def queue_files(self):
         """Queue all files in messages on the subscribed topics
@@ -67,24 +63,19 @@ class MsgQueue(object):
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 message_list = await loop.run_in_executor(pool, self.get_messages)
 
-            print("message_list")
             if message_list:
                 async with self.condition:
-                    print("A")
                     self.msgList.extend(message_list)
-                    print("B")
                     self.condition.notify_all()
 
     def get_messages(self):
         """Return up to max_messages at a time from Kafka
         """
-        print("getting messages")
         while True:
             m_list = self.consumer.consume(num_messages=self.max_messages, timeout=0.5)
     
             if len(m_list) == 0:
                 continue
-            print("returning m_list")
             return m_list
 
     async def dequeue_messages(self):
@@ -92,10 +83,8 @@ class MsgQueue(object):
         # get a list of messages, clear the msgList
         async with self.condition:
             await self.condition.wait()
-            print("dequeue_messages: 1")
             message_list = list(self.msgList)
             self.msgList.clear()
-        print("Dequeueing messages")
         return message_list
 
     def commit(self, message):
