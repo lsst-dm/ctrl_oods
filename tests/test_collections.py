@@ -43,10 +43,14 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
     when specifying cleanCollections in the yaml configuration file
 
     """
+
     def setUp(self):
+        """create a butler and ingest one file into it, outside
+        of the OODS process.
+        """
         self.repoDir = tempfile.mkdtemp()
         collections = ["LATISS/runs/quickLook"]
-        print(f"{self.repoDir=}")
+
         config = Butler.makeRepo(self.repoDir)
         instr = Instrument.from_string("lsst.obs.lsst.Latiss")
         run = instr.makeDefaultRawIngestRunName()
