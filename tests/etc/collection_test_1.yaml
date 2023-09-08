@@ -4,39 +4,32 @@ defaultInterval: &interval
     minutes: 0
     seconds: 0
 
-archiver:
-    name: "CCArchiver"
-
 ingester:
-    FILE_INGEST_REQUEST: CC_FILE_INGEST_REQUEST
-    CONSUME_QUEUE: cc_publish_to_oods
-    PUBLISH_QUEUE: oods_publish_to_cc
-    imageStagingDirectory: image_staging
+    imageStagingDirectory: data
     butlers:
         - butler:
-            collections:
-                - FARG/raw/all
-            cleanCollections:
-                - FARG/raw/all
-                - FARG/runs/quickLook
-            instrument: lsst.obs.lsst.LsstComCam
             class:
                 import : lsst.ctrl.oods.gen3ButlerIngester
                 name : Gen3ButlerIngester
-            stagingDirectory : staging2
-            repoDirectory : repo2
-            badFileDirectory: bad2
+            repoDirectory : repo
+            instrument: lsst.obs.lsst.Latiss
+            badFileDirectory: /tmp/bad
+            stagingDirectory: /tmp/staging
+            collections:
+                - LATISS/runs/quickLook
+            cleanCollections:
+                - LATISS/raw/all
+                - LATISS/runs/quickLook
             scanInterval:
                 <<: *interval
-                minutes: 1
+                seconds: 20
             filesOlderThan:
                 <<: *interval
-                days: 30
-
+                seconds: 5
     batchSize: 20
     scanInterval:
         <<: *interval
-        seconds: 1
+        seconds: 15 
 
 cacheCleaner:
     clearEmptyDirectoriesAndOldFiles:
@@ -49,4 +42,4 @@ cacheCleaner:
         days: 30 
     directoriesEmptyForMoreThan:
         <<: *interval
-        days: 2
+        days: 1

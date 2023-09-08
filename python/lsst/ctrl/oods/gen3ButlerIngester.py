@@ -59,6 +59,7 @@ class Gen3ButlerIngester(ButlerIngester):
         self.scanInterval = self.config["scanInterval"]
         self.olderThan = self.config["filesOlderThan"]
         self.collections = self.config["collections"]
+        self.cleanCollections = self.config.get("cleanCollections", None)
 
         self.staging_dir = self.config["stagingDirectory"]
         self.bad_file_dir = self.config["badFileDirectory"]
@@ -88,6 +89,7 @@ class Gen3ButlerIngester(ButlerIngester):
     def createButler(self):
         instr = Instrument.from_string(self.instrument)
         run = instr.makeDefaultRawIngestRunName()
+        LOGGER.info(f"createButler: {run=}")
         opts = dict(run=run, writeable=True, collections=self.collections)
         butler = Butler(self.butlerConfig, **opts)
 
@@ -285,10 +287,11 @@ class Gen3ButlerIngester(ButlerIngester):
         butler.registry.refresh()
 
         # get all datasets in these collections
+        allCollections = self.collections if self.cleanCollections is None else self.cleanCollections
         all_datasets = set(
             butler.registry.queryDatasets(
                 datasetType=...,
-                collections=self.collections,
+                collections=allCollections,
                 where="ingest_date < ref_date",
                 bind={"ref_date": t},
             )
