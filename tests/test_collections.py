@@ -190,7 +190,7 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
         self.check_exposure_count("2020032700020", "LATISS/runs/quickLook", 0)
         self.check_exposure_count("2022112200951", "LATISS/raw/all", 0)
 
-    async def testCollectionsTestCase(self):
+    async def testDoNoDeleteCollectionsTestCase(self):
         fits_name = "AT_O_20221122_000951_R00_S00.fits.fz"
         stage_file, butler_tasks = await self.load(fits_name, "collection_test_2.yaml")
 
