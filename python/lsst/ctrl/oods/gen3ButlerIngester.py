@@ -89,7 +89,6 @@ class Gen3ButlerIngester(ButlerIngester):
     def createButler(self):
         instr = Instrument.from_string(self.instrument)
         run = instr.makeDefaultRawIngestRunName()
-        LOGGER.info(f"createButler: {run=}")
         opts = dict(run=run, writeable=True, collections=self.collections)
         butler = Butler(self.butlerConfig, **opts)
 

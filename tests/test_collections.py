@@ -41,7 +41,6 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
 
     These tests check whether or not files are deleted properly
     when specifying cleanCollections in the yaml configuration file
-
     """
 
     def setUp(self):
@@ -70,6 +69,13 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
     async def load(self, fits_name, config_name):
         """stage test data and set up ingester tasks
 
+        Parameters
+        ----------
+        fits_name : `str`
+            name of the fits file to load
+        config_name : `str`
+            name of the OODS configuration file to load
+
         Returns
         -------
         staged_file : `str`
@@ -95,7 +101,7 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
 
         # extract parts of the ingester configuration
         # and alter the image staging directory to point
-        # at the temporary directories created for his test
+        # at the temporary directories created for this test
 
         ingesterConfig = config["ingester"]
         self.imageStagingDir = tempfile.mkdtemp()
@@ -130,11 +136,6 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
         # create the tasks
         ingester = FileIngester(ingesterConfig)
         butler_tasks = ingester.getButlerCleanTasks()
-
-        # task_list = []
-        # for butler_task in butler_tasks:
-        #     task = asyncio.create_task(butler_task())
-        #     task_list.append(task)
 
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
@@ -222,9 +223,9 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
         ----------
         filename : `str`
             name of the file to check
-        wait : `int`
+        wait : `int`, optional
             seconds to wait until the file is checked
-        exists : `bool`
+        exists : `bool`, optional
             If True, file is checked that it exists
             If False, file is checked that it doesn't exist
         """
@@ -257,6 +258,10 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
         ----------
         exposure : `str`
             the name of the exposure to check
+        collections : `list`
+            a list of collections to check
+        num_expected : `int`
+            the number of matches to expect to find in all the collections
         """
 
         butler = Butler(self.repoDir, writeable=True)
