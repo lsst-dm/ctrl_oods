@@ -83,15 +83,15 @@ class FileIngester(object):
             tasks.append(butler.clean_task)
         return tasks
 
-    def create_link_to_file(self, filename, dirname):
-        """Create a link from filename to a new file in directory dirname
+    def move_staged_file(self, filename, dirname):
+        """Move from filename to a new file in directory dirname
 
         Parameters
         ----------
         filename : `str`
-            Existing file to link to
+            Existing file to move
         dirname : `str`
-            Directory where new link will be located
+            Directory where new file will be located
         """
         # remove the staging area portion from the filepath; note that
         # we don't use os.path.basename here because the file might be
@@ -100,16 +100,15 @@ class FileIngester(object):
 
         basefile = Utils.strip_prefix(filename, self.image_staging_dir)
 
-        # create a new full path to where the file will be linked for the OODS
+        # create a new full path to where the file will be moved for the OODS
         new_file = os.path.join(dirname, basefile)
 
-        # hard link the file in the staging area
-        # create the directory path where the file will be linked for the OODS
+        # create the directory path where the file will be moved for the OODS
         new_dir = os.path.dirname(new_file)
         os.makedirs(new_dir, exist_ok=True)
-        # hard link the file in the staging area
-        os.link(filename, new_file)
-        LOGGER.debug("created link to %s", new_file)
+        # hard move the file in the staging area
+        os.rename(filename, new_file)
+        LOGGER.debug(f"moved {filename} to {new_file}")
 
         return new_file
 
@@ -124,12 +123,11 @@ class FileIngester(object):
             try:
                 for butlerProxy in self.butlers:
                     local_staging_dir = butlerProxy.getStagingDirectory()
-                    newfile = self.create_link_to_file(filename, local_staging_dir)
+                    newfile = self.move_staged_file(filename, local_staging_dir)
                     files[butlerProxy].append(newfile)
             except Exception as e:
                 LOGGER.info("error staging files butler for %s, %s", filename, e)
                 continue
-            os.unlink(filename)
         return files
 
     async def ingest(self, butler_file_list):

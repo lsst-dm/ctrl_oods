@@ -21,15 +21,15 @@
 import os
 import shutil
 import tempfile
+import unittest
 
-import asynctest
 import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 
 
-class MultiComCamIngesterTestCase(asynctest.TestCase):
+class MultiComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
     """Test multiple butler ingest"""
 
     def createConfig(self, config_name, fits_name):
