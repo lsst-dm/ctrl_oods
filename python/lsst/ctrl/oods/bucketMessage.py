@@ -50,7 +50,7 @@ class BucketMessage(object):
         oid : `str`
             The filename referred to by each message.
         """
-        value = self.message.value()
+        value = self.message
         msg = json.loads(value)
         for record in msg["Records"]:
             if not record["eventName"].startswith("ObjectCreated"):
