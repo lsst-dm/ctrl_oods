@@ -29,7 +29,7 @@ from lsst.ctrl.oods.msgIngester import MsgIngester
 LOGGER = logging.getLogger(__name__)
 
 
-class standalone(object):
+class Standalone(object):
     """Standalone class to run tests without CSC requirements.
     """
 
@@ -100,5 +100,5 @@ class standalone(object):
         print("complete")
 
 if __name__ == "__main__":
-    alone = standalone()
+    alone = Standalone()
     asyncio.run(alone.main())

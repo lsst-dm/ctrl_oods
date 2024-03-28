@@ -22,7 +22,6 @@
 import asyncio
 import concurrent
 import logging
-import socket
 from confluent_kafka import Consumer
 
 LOGGER = logging.getLogger(__name__)
@@ -73,7 +72,7 @@ class MsgQueue(object):
         """
         while True:
             m_list = self.consumer.consume(num_messages=self.max_messages, timeout=0.5)
-    
+
             if len(m_list) == 0:
                 continue
             return m_list
