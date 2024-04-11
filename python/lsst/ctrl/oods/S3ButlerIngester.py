@@ -171,7 +171,7 @@ class S3ButlerIngester(ButlerIngester):
             list of DatasetRefs
         """
         for dataset in datasets:
-            LOGGER.info("file %s successfully ingested", dataset.path.ospath)
+            LOGGER.info("file %s successfully ingested", dataset.path)
             image_data = ImageData(dataset)
             LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
             self.transmit_status(image_data.get_info(), code=0, description="file ingested")

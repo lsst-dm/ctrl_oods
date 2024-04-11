@@ -23,10 +23,17 @@ import asyncio
 import logging
 import os
 
+
 import yaml
 from lsst.ctrl.oods.msgIngester import MsgIngester
+import lsst.log as lsstlog
+
+lsstlog.usePythonLogging()
 
 LOGGER = logging.getLogger(__name__)
+F = "%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s"
+logging.basicConfig(level=logging.INFO, format=(F), datefmt="%Y-%m-%d %H:%M:%S")
+
 
 
 class Standalone(object):

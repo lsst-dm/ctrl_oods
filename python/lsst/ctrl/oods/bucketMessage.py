@@ -50,17 +50,13 @@ class BucketMessage(object):
         oid : `str`
             The filename referred to by each message.
         """
-        value = self.message
+        value = self.message.value()
         msg = json.loads(value)
         for record in msg["Records"]:
-            if not record["eventName"].startswith("ObjectCreated"):
-                LOGGER.warning(f"Unexpected non-creation notification in topic: {record}")
-                continue
             try:
-                arn = record["s3"]["bucket"]["arn"]
+                bucket_name = record["s3"]["bucket"]["name"]
                 key = record["s3"]["object"]["key"]
-                if not key.endswith(".json"):
-                    url = f"s3://{arn}/{key}"
-                    yield url
+                url = f"s3://{bucket_name}/{key}"
+                yield url
             except KeyError as e:
-                LOGGER.error(f"Invalid S3 bucket notification: {e}")
+                LOGGER.error(f"Invalid S3 bucket notification: {e} for {record=}")

@@ -7,9 +7,9 @@ defaultInterval: &interval
 ingester:
     kafka:
         brokers:
-            - localhost:29092
+            - kafka:9092
         topics: 
-            - test2
+            - atoods
         group_id: ATOODS
     butlers: 
         - butler:
@@ -17,7 +17,7 @@ ingester:
             class:
                 import : lsst.ctrl.oods.S3ButlerIngester
                 name : S3ButlerIngester
-            repoDirectory : /repo/LATISS
+            repoDirectory : /tmp/repo/LATISS
             collections:
                 - LATISS/raw/all
             scanInterval:
