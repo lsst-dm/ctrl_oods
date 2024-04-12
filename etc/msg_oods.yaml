@@ -11,6 +11,7 @@ ingester:
         topics: 
             - atoods
         group_id: ATOODS
+        max_messages: 10
     butlers: 
         - butler:
             instrument: lsst.obs.lsst.Latiss

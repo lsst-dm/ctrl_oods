@@ -68,6 +68,7 @@ class MsgIngester(object):
             LOGGER.warn(f"max_messages not set; using default of {self.max_messages}")
         else:
             self.max_messages = max_messages
+            LOGGER.info(f"max_messages set to {self.max_messages}")
 
         self.msgQueue = MsgQueue(brokers, group_id, topics, self.max_messages)
 
@@ -143,13 +144,13 @@ class MsgIngester(object):
     async def dequeue_and_ingest_files(self):
         while True:
             message_list = await self.msgQueue.dequeue_messages()
-            # First move the files from the image staging area
-            # to the area where they're staged for the OODS.
-            # Files staged here so the scanning asyncio routine doesn't
-            # queue them twice.
+            resources = []
             for m in message_list:
                 rps = self._gather_all_resource_paths(m)
-                await self.ingest(rps)
+                resources.extend(rps)
+            await self.ingest(resources)
+            # XXX - commit on success, failure, or metadata_failure
+            for m in message_list:
                 self.msgQueue.commit(message=m)
 
     def _gather_all_resource_paths(self, m):

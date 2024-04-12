@@ -111,7 +111,7 @@ class S3ButlerIngester(ButlerIngester):
         """
         info = dict()
         dataset = data.datasets[0]
-        info["FILENAME"] = os.path.basename(data.filename.ospath)
+        info["FILENAME"] = f"{data.filename}"
         data_id = dataset.dataId
         info["CAMERA"] = data_id.get("instrument", "??")
         info["OBSID"] = data_id.get("exposure", "??")
@@ -133,7 +133,7 @@ class S3ButlerIngester(ButlerIngester):
             Dictionary containing file name and placeholders
         """
         info = dict()
-        info["FILENAME"] = os.path.basename(filename)
+        info["FILENAME"] = filename
         info["CAMERA"] = "UNDEF"
         info["OBSID"] = "??"
         info["RAFT"] = "R??"
@@ -170,10 +170,11 @@ class S3ButlerIngester(ButlerIngester):
         datasets: `list`
             list of DatasetRefs
         """
+        LOGGER.info("on_success")
         for dataset in datasets:
-            LOGGER.info("file %s successfully ingested", dataset.path)
+            LOGGER.info(f"file {dataset.path} successfully ingested")
             image_data = ImageData(dataset)
-            LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
+            LOGGER.debug(f"{image_data.get_info()=}")
             self.transmit_status(image_data.get_info(), code=0, description="file ingested")
 
     def on_ingest_failure(self, exposures, exc):
@@ -188,23 +189,25 @@ class S3ButlerIngester(ButlerIngester):
             Exception which explains what happened
 
         """
+        LOGGER.info("on_ingest_failure")
         for f in exposures.files:
             cause = self.extract_cause(exc)
             info = self.rawexposure_info(f)
             self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
 
-    def on_metadata_failure(self, filename, exc):
+    def on_metadata_failure(self, resource_path, exc):
         """Callback used on metadata extraction failure. Used to transmit
         unsuccessful data ingestion status
 
         Parameters
         ----------
-        filename: `ButlerURI`
-            ButlerURI that failed in ingest
+        filename: `ResourcePath`
+            ResourcePath that failed in ingest
         exc: `Exception`
             Exception which explains what happened
         """
-        real_file = filename.ospath
+        LOGGER.info("on_metadata_failure")
+        real_file = f"{resource_path}"
         cause = self.extract_cause(exc)
         info = self.undef_metadata(real_file)
         self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
@@ -219,6 +222,7 @@ class S3ButlerIngester(ButlerIngester):
         """
 
         # Ingest image.
+        LOGGER.info(f"ingest {file_list=}")
         try:
             loop = asyncio.get_running_loop()
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
