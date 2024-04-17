@@ -55,6 +55,7 @@ class S3ButlerIngester(ButlerIngester):
 
         repo = self.config["repoDirectory"]
         self.scanInterval = self.config["scanInterval"]
+        self.olderThan = self.config["filesOlderThan"]
         self.instrument = self.config["instrument"]
         self.collections = self.config["collections"]
 

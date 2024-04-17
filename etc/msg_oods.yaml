@@ -23,8 +23,8 @@ ingester:
                 - LATISS/raw/all
             scanInterval:
                 <<: *interval
-                hours: 1
+                seconds: 10
             filesOlderThan:
                 <<: *interval
-                days: 30
+                seconds: 30
     batchSize: 20
