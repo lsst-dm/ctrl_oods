@@ -58,6 +58,7 @@ class S3ButlerIngester(ButlerIngester):
         self.olderThan = self.config["filesOlderThan"]
         self.instrument = self.config["instrument"]
         self.collections = self.config["collections"]
+        self.cleanCollections = self.config.get("cleanCollections", None)
 
         try:
             self.butlerConfig = Butler.makeRepo(repo)
@@ -274,10 +275,11 @@ class S3ButlerIngester(ButlerIngester):
         butler.registry.refresh()
 
         # get all datasets in these collections
+        allCollections = self.collections if self.cleanCollections is None else self.cleanCollections
         all_datasets = set(
             butler.registry.queryDatasets(
                 datasetType=...,
-                collections=self.collections,
+                collections=allCollections,
                 where="ingest_date < ref_date",
                 bind={"ref_date": t},
             )
@@ -309,12 +311,16 @@ class S3ButlerIngester(ButlerIngester):
         for x in ref:
             uri = None
             try:
-                uri = butler.getURI(x, collections=x.run)
+                #uri = butler.getURI(x, collections=x.run)
+                uri = butler.getURI(x)
             except Exception as e:
                 LOGGER.warning("butler is missing uri for %s: %s", x, e)
 
             if uri is not None:
                 LOGGER.info("removing %s", uri)
-                uri.remove()
+                try:
+                    uri.remove()
+                except Exception as e:
+                    LOGGER.warning("couldn't remove %s: %s", uri, e)
 
         butler.pruneDatasets(ref, purge=True, unstore=True)
