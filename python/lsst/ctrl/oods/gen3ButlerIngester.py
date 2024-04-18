@@ -86,22 +86,6 @@ class Gen3ButlerIngester(ButlerIngester):
             on_metadata_failure=self.on_metadata_failure,
         )
 
-    def createButler(self):
-        instr = Instrument.from_string(self.instrument)
-        run = instr.makeDefaultRawIngestRunName()
-        opts = dict(run=run, writeable=True, collections=self.collections)
-        butler = Butler(self.butlerConfig, **opts)
-
-        # Register an instrument.
-        instr.register(butler.registry)
-
-        return butler
-
-    def extract_info_val(self, dataId, key, prefix):
-        if key in dataId:
-            return f"{prefix}{dataId[key]:02d}"
-        return f"{prefix}??"
-
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary
 
@@ -145,27 +129,6 @@ class Gen3ButlerIngester(ButlerIngester):
         info["RAFT"] = "R??"
         info["SENSOR"] = "S??"
         return info
-
-    def transmit_status(self, metadata, code, description):
-        """Transmit a message with given metadata, status code and description
-
-        Parameters
-        ----------
-        metadata: `dict`
-            dictionary containing meta data about the image
-        code: `int`
-            status code
-        description: `str`
-            description of the ingestion status
-        """
-        msg = dict(metadata)
-        msg["MSG_TYPE"] = "IMAGE_IN_OODS"
-        msg["STATUS_CODE"] = code
-        msg["DESCRIPTION"] = description
-        LOGGER.info("msg: %s, code: %s, description: %s", msg, code, description)
-        if self.csc is None:
-            return
-        asyncio.run(self.csc.send_imageInOods(msg))
 
     def on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
@@ -225,109 +188,3 @@ class Gen3ButlerIngester(ButlerIngester):
             shutil.move(filename, bad_dir)
         except Exception as e:
             LOGGER.info("Failed to move %s to %s: %s", filename, bad_dir, e)
-
-    async def ingest(self, file_list):
-        """Ingest a list of files into a butler
-
-        Parameters
-        ----------
-        file_list: `list`
-            files to ingest
-        """
-
-        # Ingest image.
-        try:
-            loop = asyncio.get_running_loop()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                await loop.run_in_executor(pool, self.task.run, file_list)
-        except Exception as e:
-            LOGGER.info("Ingestion failure: %s", e)
-
-    def getName(self):
-        """Return the name of this ingester
-
-        Returns
-        -------
-        ret: `str`
-            name of this ingester
-        """
-        return "gen3"
-
-    async def clean_task(self):
-        """run the clean() method at the configured interval"""
-        seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
-        while True:
-            LOGGER.debug("cleaning")
-            try:
-                loop = asyncio.get_running_loop()
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    await loop.run_in_executor(pool, self.clean)
-            except Exception as e:
-                LOGGER.info("Exception: %s", e)
-            LOGGER.debug("sleeping for %d seconds", seconds)
-            await asyncio.sleep(seconds)
-
-    def clean(self):
-        """Remove all the datasets in the butler that
-        were ingested before the configured Interval
-        """
-
-        # calculate the time value which is Time.now - the
-        # "olderThan" configuration
-        t = Time.now()
-        interval = collections.namedtuple("Interval", self.olderThan.keys())(*self.olderThan.values())
-        td = TimeDelta(
-            interval.days * u.d + interval.hours * u.h + interval.minutes * u.min + interval.seconds * u.s
-        )
-        t = t - td
-
-        butler = self.createButler()
-
-        butler.registry.refresh()
-
-        # get all datasets in these collections
-        allCollections = self.collections if self.cleanCollections is None else self.cleanCollections
-        all_datasets = set(
-            butler.registry.queryDatasets(
-                datasetType=...,
-                collections=allCollections,
-                where="ingest_date < ref_date",
-                bind={"ref_date": t},
-            )
-        )
-
-        # get all TAGGED collections
-        tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
-
-        # Note: The code below is to get around an issue where passing
-        # an empty list as the collections argument to queryDatasets
-        # returns all datasets.
-        if tagged_cols:
-            # get all TAGGED datasets
-            tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
-
-            # get a set of datasets in all_datasets, but not in tagged_datasets
-            ref = all_datasets.difference(tagged_datasets)
-        else:
-            # no TAGGED collections, so use all_datasets
-            ref = all_datasets
-
-        # References outside of the Butler's datastore
-        # need to be cleaned up, since the Butler will
-        # not delete those file artifacts.
-        #
-        # retrieve the URI,  prune the dataset from
-        # the Butler, and if the URI was available,
-        # remove it.
-        for x in ref:
-            uri = None
-            try:
-                uri = butler.getURI(x, collections=x.run)
-            except Exception as e:
-                LOGGER.warning("butler is missing uri for %s: %s", x, e)
-
-            if uri is not None:
-                LOGGER.info("removing %s", uri)
-                uri.remove()
-
-        butler.pruneDatasets(ref, purge=True, unstore=True)
