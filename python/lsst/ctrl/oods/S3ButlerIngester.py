@@ -64,6 +64,7 @@ class S3ButlerIngester(ButlerIngester):
         datasets: `list`
             list of DatasetRefs
         """
+        self.definer_run(datasets)
         for dataset in datasets:
             LOGGER.info("file %s successfully ingested", dataset.path)
             image_data = ImageData(dataset)

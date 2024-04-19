@@ -89,6 +89,7 @@ class Gen3ButlerIngester(ButlerIngester):
         datasets: `list`
             list of DatasetRefs
         """
+        self.definer_run(datasets)
         for dataset in datasets:
             LOGGER.info("file %s successfully ingested", dataset.path.ospath)
             image_data = ImageData(dataset)

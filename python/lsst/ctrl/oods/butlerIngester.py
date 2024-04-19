@@ -27,6 +27,7 @@ from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.daf.butler.registry import CollectionType
 from lsst.daf.butler import Butler
 from lsst.pipe.base import Instrument
+from lsst.obs.base import DefineVisitsTask
 from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
 import asyncio
 import collections
@@ -79,6 +80,9 @@ class ButlerIngester:
             on_ingest_failure=self.on_ingest_failure,
             on_metadata_failure=self.on_metadata_failure,
         )
+        define_visits_config = DefineVisitsTask.ConfigClass()
+        define_visits_config.groupExposures = "one-to-one"
+        self.visit_definer = DefineVisitsTask(config=define_visits_config, butler=self.butler)
 
     def createButler(self):
         instr = Instrument.from_string(self.instrument)
@@ -122,6 +126,7 @@ class ButlerIngester:
         datasets: `list`
             list of DatasetRefs
         """
+        self.definer_run(datasets)
         for dataset in datasets:
             LOGGER.info("file %s successfully ingested", dataset.path.ospath)
             image_data = ImageData(dataset)
@@ -330,3 +335,10 @@ class ButlerIngester:
         info["RAFT"] = "R??"
         info["SENSOR"] = "S??"
         return info
+
+    def definer_run(self, file_datasets):
+        for fds in file_datasets:
+            refs = fds.refs
+            ids = [ref.dataId for ref in refs]
+            self.visit_definer.run(ids)
+            LOGGER.info("Defined visits for %s", ids)
