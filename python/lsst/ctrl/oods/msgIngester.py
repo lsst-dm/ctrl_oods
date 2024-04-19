@@ -155,7 +155,7 @@ class MsgIngester(object):
 
     def _gather_all_resource_paths(self, m):
         # extract all urls within this message
-        msg = BucketMessage(m)
+        msg = BucketMessage(m.value())
 
         rp_list = list()
         for url in msg.extract_urls():

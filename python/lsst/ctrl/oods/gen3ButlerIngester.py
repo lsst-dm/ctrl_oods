@@ -19,22 +19,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import asyncio
-import collections
-import concurrent
 import logging
 import os
 import shutil
 
-import astropy.units as u
-from astropy.time import Time, TimeDelta
 from lsst.ctrl.oods.butlerIngester import ButlerIngester
 from lsst.ctrl.oods.imageData import ImageData
-from lsst.ctrl.oods.timeInterval import TimeInterval
-from lsst.daf.butler import Butler
-from lsst.daf.butler.registry import CollectionType
-from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
-from lsst.pipe.base import Instrument
 
 LOGGER = logging.getLogger(__name__)
 

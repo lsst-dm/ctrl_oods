@@ -43,15 +43,12 @@ class BucketMessage(object):
         If one record is invalid, an error is logged but the function tries to
         process the remaining records.
 
-        Do not return notifications from "sidecar" JSON files.
-
         Yields
         ------
         oid : `str`
             The filename referred to by each message.
         """
-        value = self.message.value()
-        msg = json.loads(value)
+        msg = json.loads(self.message)
         for record in msg["Records"]:
             try:
                 bucket_name = record["s3"]["bucket"]["name"]

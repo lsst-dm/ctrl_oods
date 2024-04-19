@@ -22,6 +22,7 @@
 
 import astropy.units as u
 from astropy.time import Time, TimeDelta
+from lsst.ctrl.oods.imageData import ImageData
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.daf.butler.registry import CollectionType
 from lsst.daf.butler import Butler
@@ -33,7 +34,6 @@ import concurrent
 import logging
 import os
 import os.path
-from abc import ABC, abstractmethod
 
 from lsst.ctrl.oods.utils import Utils
 
@@ -41,7 +41,7 @@ from lsst.ctrl.oods.utils import Utils
 LOGGER = logging.getLogger(__name__)
 
 
-class ButlerIngester(ABC):
+class ButlerIngester:
     """Interface class for processing files for a butler."""
 
     SUCCESS = 0
