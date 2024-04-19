@@ -51,40 +51,10 @@ class Gen3ButlerIngester(ButlerIngester):
     """
 
     def __init__(self, config, csc=None):
-        self.csc = csc
-        self.config = config
-
-        repo = self.config["repoDirectory"]
-        self.instrument = self.config["instrument"]
-        self.scanInterval = self.config["scanInterval"]
-        self.olderThan = self.config["filesOlderThan"]
-        self.collections = self.config["collections"]
-        self.cleanCollections = self.config.get("cleanCollections", None)
+        super().__init__(config=config, csc=csc)
 
         self.staging_dir = self.config["stagingDirectory"]
         self.bad_file_dir = self.config["badFileDirectory"]
-
-        try:
-            self.butlerConfig = Butler.makeRepo(repo)
-        except FileExistsError:
-            self.butlerConfig = repo
-
-        try:
-            self.butler = self.createButler()
-        except Exception as exc:
-            cause = self.extract_cause(exc)
-            asyncio.create_task(self.csc.call_fault(code=2, report=f"failure: {cause}"))
-            return
-
-        cfg = RawIngestConfig()
-        cfg.transfer = "direct"
-        self.task = RawIngestTask(
-            config=cfg,
-            butler=self.butler,
-            on_success=self.on_success,
-            on_ingest_failure=self.on_ingest_failure,
-            on_metadata_failure=self.on_metadata_failure,
-        )
 
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary
@@ -99,14 +69,8 @@ class Gen3ButlerIngester(ButlerIngester):
         info: `dict`
             Dictionary with file name and dataId elements
         """
-        info = dict()
-        dataset = data.datasets[0]
+        info = super().rawexposure_info(data=data)
         info["FILENAME"] = os.path.basename(data.filename.ospath)
-        dataId = dataset.dataId
-        info["CAMERA"] = dataId.get("instrument", "??")
-        info["OBSID"] = dataId.get("exposure", "??")
-        info["RAFT"] = self.extract_info_val(dataId, "raft", "R")
-        info["SENSOR"] = self.extract_info_val(dataId, "detector", "S")
         return info
 
     def undef_metadata(self, filename):
@@ -122,12 +86,8 @@ class Gen3ButlerIngester(ButlerIngester):
         info: `dict`
             Dictionary containing file name and placeholders
         """
-        info = dict()
+        info = super().under_metadata(filename=filename)
         info["FILENAME"] = os.path.basename(filename)
-        info["CAMERA"] = "UNDEF"
-        info["OBSID"] = "??"
-        info["RAFT"] = "R??"
-        info["SENSOR"] = "S??"
         return info
 
     def on_success(self, datasets):
@@ -159,7 +119,7 @@ class Gen3ButlerIngester(ButlerIngester):
         """
         for f in exposures.files:
             real_file = f.filename.ospath
-            self.move_file_to_bad_dir(real_file)
+            self._move_file_to_bad_dir(real_file)
             cause = self.extract_cause(exc)
             info = self.rawexposure_info(f)
             self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
@@ -176,13 +136,13 @@ class Gen3ButlerIngester(ButlerIngester):
             Exception which explains what happened
         """
         real_file = filename.ospath
-        self.move_file_to_bad_dir(real_file)
+        self._move_file_to_bad_dir(real_file)
 
         cause = self.extract_cause(exc)
         info = self.undef_metadata(real_file)
         self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
 
-    def move_file_to_bad_dir(self, filename):
+    def _move_file_to_bad_dir(self, filename):
         bad_dir = self.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
         try:
             shutil.move(filename, bad_dir)

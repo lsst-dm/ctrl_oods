@@ -47,15 +47,16 @@ class MsgQueue(object):
         self.msgList = list()
         self.condition = asyncio.Condition()
 
-        config = {'bootstrap.servers': ",".join(self.brokers),
-                  'group.id': self.group_id,
-                  'auto.offset.reset': 'earliest'}
+        config = {
+            "bootstrap.servers": ",".join(self.brokers),
+            "group.id": self.group_id,
+            "auto.offset.reset": "earliest",
+        }
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
 
     async def queue_files(self):
-        """Queue all files in messages on the subscribed topics
-        """
+        """Queue all files in messages on the subscribed topics"""
         loop = asyncio.get_running_loop()
         # now, add all the currently known files to the queue
         while True:
@@ -68,8 +69,7 @@ class MsgQueue(object):
                     self.condition.notify_all()
 
     def get_messages(self):
-        """Return up to max_messages at a time from Kafka
-        """
+        """Return up to max_messages at a time from Kafka"""
         while True:
             m_list = self.consumer.consume(num_messages=self.max_messages, timeout=0.5)
 

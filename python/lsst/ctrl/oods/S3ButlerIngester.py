@@ -49,39 +49,6 @@ class S3ButlerIngester(ButlerIngester):
         Observatory Operations Data Service Commandable SAL component
     """
 
-    def __init__(self, config, csc=None):
-        self.csc = csc
-        self.config = config
-
-        repo = self.config["repoDirectory"]
-        self.scanInterval = self.config["scanInterval"]
-        self.olderThan = self.config["filesOlderThan"]
-        self.instrument = self.config["instrument"]
-        self.collections = self.config["collections"]
-        self.cleanCollections = self.config.get("cleanCollections", None)
-
-        try:
-            self.butlerConfig = Butler.makeRepo(repo)
-        except FileExistsError:
-            self.butlerConfig = repo
-
-        try:
-            self.butler = self.createButler()
-        except Exception as exc:
-            cause = self.extract_cause(exc)
-            asyncio.create_task(self.csc.call_fault(code=2, report=f"failed to create Butler: {cause}"))
-            return
-
-        cfg = RawIngestConfig()
-        cfg.transfer = "direct"
-        self.task = RawIngestTask(
-            config=cfg,
-            butler=self.butler,
-            on_success=self.on_success,
-            on_ingest_failure=self.on_ingest_failure,
-            on_metadata_failure=self.on_metadata_failure,
-        )
-
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary
 
@@ -95,35 +62,8 @@ class S3ButlerIngester(ButlerIngester):
         info: `dict`
             Dictionary with file name and data_id elements
         """
-        info = dict()
-        dataset = data.datasets[0]
+        info = super().rawexposure_info(data=data)
         info["FILENAME"] = f"{data.filename}"
-        data_id = dataset.dataId
-        info["CAMERA"] = data_id.get("instrument", "??")
-        info["OBSID"] = data_id.get("exposure", "??")
-        info["RAFT"] = self.extract_info_val(data_id, "raft", "R")
-        info["SENSOR"] = self.extract_info_val(data_id, "detector", "S")
-        return info
-
-    def undef_metadata(self, filename):
-        """Return a sparsely initialized metadata dictionary
-
-        Parameters
-        ----------
-        filename: `str`
-            name of the file specified by ingest
-
-        Returns
-        -------
-        info: `dict`
-            Dictionary containing file name and placeholders
-        """
-        info = dict()
-        info["FILENAME"] = filename
-        info["CAMERA"] = "UNDEF"
-        info["OBSID"] = "??"
-        info["RAFT"] = "R??"
-        info["SENSOR"] = "S??"
         return info
 
     def on_success(self, datasets):
@@ -135,11 +75,10 @@ class S3ButlerIngester(ButlerIngester):
         datasets: `list`
             list of DatasetRefs
         """
-        LOGGER.info("on_success")
         for dataset in datasets:
-            LOGGER.info(f"file {dataset.path} successfully ingested")
+            LOGGER.info("file %s successfully ingested", dataset.path)
             image_data = ImageData(dataset)
-            LOGGER.debug(f"{image_data.get_info()=}")
+            LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
             self.transmit_status(image_data.get_info(), code=0, description="file ingested")
 
     def on_ingest_failure(self, exposures, exc):
@@ -154,7 +93,6 @@ class S3ButlerIngester(ButlerIngester):
             Exception which explains what happened
 
         """
-        LOGGER.info("on_ingest_failure")
         for f in exposures.files:
             cause = self.extract_cause(exc)
             info = self.rawexposure_info(f)
@@ -162,7 +100,6 @@ class S3ButlerIngester(ButlerIngester):
 
     def on_metadata_failure(self, resource_path, exc):
         """Callback used on metadata extraction failure. Used to transmit
-        unsuccessful data ingestion status
 
         Parameters
         ----------
@@ -171,7 +108,6 @@ class S3ButlerIngester(ButlerIngester):
         exc: `Exception`
             Exception which explains what happened
         """
-        LOGGER.info("on_metadata_failure")
         real_file = f"{resource_path}"
         cause = self.extract_cause(exc)
         info = self.undef_metadata(real_file)

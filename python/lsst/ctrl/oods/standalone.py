@@ -35,10 +35,8 @@ F = "%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(
 logging.basicConfig(level=logging.INFO, format=(F), datefmt="%Y-%m-%d %H:%M:%S")
 
 
-
 class Standalone(object):
-    """Standalone class to run tests without CSC requirements.
-    """
+    """Standalone class to run tests without CSC requirements."""
 
     def __init__(self):
         self.config = None
@@ -94,7 +92,8 @@ class Standalone(object):
 
     async def done(self):
         print("waiting...")
-        await asyncio.sleep(3600)
+        while True:
+            await asyncio.sleep(3600)
         print("done!")
 
     async def main(self):
@@ -105,6 +104,7 @@ class Standalone(object):
         print("finished")
         await self.stop_services()
         print("complete")
+
 
 if __name__ == "__main__":
     alone = Standalone()

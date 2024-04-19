@@ -26,6 +26,7 @@ from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.daf.butler.registry import CollectionType
 from lsst.daf.butler import Butler
 from lsst.pipe.base import Instrument
+from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
 import asyncio
 import collections
 import concurrent
@@ -39,12 +40,45 @@ from lsst.ctrl.oods.utils import Utils
 
 LOGGER = logging.getLogger(__name__)
 
+
 class ButlerIngester(ABC):
     """Interface class for processing files for a butler."""
 
     SUCCESS = 0
     FAILURE = 1
 
+    def __init__(self, config, csc=None):
+        self.csc = csc
+        self.config = config
+
+        repo = self.config["repoDirectory"]
+        self.instrument = self.config["instrument"]
+        self.scanInterval = self.config["scanInterval"]
+        self.olderThan = self.config["filesOlderThan"]
+        self.collections = self.config["collections"]
+        self.cleanCollections = self.config.get("cleanCollections", None)
+
+        try:
+            self.butlerConfig = Butler.makeRepo(repo)
+        except FileExistsError:
+            self.butlerConfig = repo
+
+        try:
+            self.butler = self.createButler()
+        except Exception as exc:
+            cause = self.extract_cause(exc)
+            asyncio.create_task(self.csc.call_fault(code=2, report=f"failed to create Butler: {cause}"))
+            return
+
+        cfg = RawIngestConfig()
+        cfg.transfer = "direct"
+        self.task = RawIngestTask(
+            config=cfg,
+            butler=self.butler,
+            on_success=self.on_success,
+            on_ingest_failure=self.on_ingest_failure,
+            on_metadata_failure=self.on_metadata_failure,
+        )
 
     def createButler(self):
         instr = Instrument.from_string(self.instrument)
@@ -79,9 +113,20 @@ class ButlerIngester(ABC):
         except Exception as e:
             LOGGER.info("Ingestion failure: %s", e)
 
-    async def cleaner_task(self):
-        """Run task that require periodical attention"""
-        await asyncio.sleep(60)
+    def on_success(self, datasets):
+        """Callback used on successful ingest. Used to transmit
+        successful data ingestion status
+
+        Parameters
+        ----------
+        datasets: `list`
+            list of DatasetRefs
+        """
+        for dataset in datasets:
+            LOGGER.info("file %s successfully ingested", dataset.path.ospath)
+            image_data = ImageData(dataset)
+            LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
+            self.transmit_status(image_data.get_info(), code=0, description="file ingested")
 
     def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
         """Create a full path to a directory contained in the
@@ -228,7 +273,7 @@ class ButlerIngester(ABC):
         for x in ref:
             uri = None
             try:
-                #uri = butler.getURI(x, collections=x.run)
+                # uri = butler.getURI(x, collections=x.run)
                 uri = butler.getURI(x)
             except Exception as e:
                 LOGGER.warn("butler is missing uri for %s: %s", x, e)
@@ -241,3 +286,47 @@ class ButlerIngester(ABC):
                     LOGGER.warn("couldn't remove %s: %s", uri, e)
 
         butler.pruneDatasets(ref, purge=True, unstore=True)
+
+    def rawexposure_info(self, data):
+        """Return a sparsely initialized dictionary
+
+        Parameters
+        ----------
+        data: `RawFileData`
+            information about the raw file
+
+        Returns
+        -------
+        info: `dict`
+            Dictionary with file name and dataId elements
+        """
+        info = dict()
+        dataset = data.datasets[0]
+        info["FILENAME"] = "??"
+        dataId = dataset.dataId
+        info["CAMERA"] = dataId.get("instrument", "??")
+        info["OBSID"] = dataId.get("exposure", "??")
+        info["RAFT"] = self.extract_info_val(dataId, "raft", "R")
+        info["SENSOR"] = self.extract_info_val(dataId, "detector", "S")
+        return info
+
+    def undef_metadata(self, filename):
+        """Return a sparsely initialized metadata dictionary
+
+        Parameters
+        ----------
+        filename: `str`
+            name of the file specified by ingest
+
+        Returns
+        -------
+        info: `dict`
+            Dictionary containing file name and placeholders
+        """
+        info = dict()
+        info["FILENAME"] = filename
+        info["CAMERA"] = "UNDEF"
+        info["OBSID"] = "??"
+        info["RAFT"] = "R??"
+        info["SENSOR"] = "S??"
+        return info
