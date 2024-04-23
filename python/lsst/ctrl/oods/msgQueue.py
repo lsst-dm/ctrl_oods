@@ -52,6 +52,12 @@ class MsgQueue(object):
             "group.id": self.group_id,
             "auto.offset.reset": "earliest",
         }
+        # note: this is done because mocking a cimpl is...tricky
+        self.createConsumer(config, topics)
+
+    def createConsumer(self, config, topics):
+        """Create a Kafka Consumer
+        """
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
 
