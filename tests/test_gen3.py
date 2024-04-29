@@ -35,15 +35,13 @@ from lsst.ctrl.oods.utils import Utils
 class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
     """Test Gen3 Butler Ingest"""
 
-    def createConfig(self, config_name, fits_name):
+    def createConfig(self, config_name):
         """create a standard configuration file, using temporary directories
 
         Parameters
         ----------
         config_name: `str`
             name of the OODS configuration file
-        fits_name: `str`
-            name of the test FITS file
 
         Returns
         -------
@@ -55,10 +53,6 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
 
         testdir = os.path.abspath(os.path.dirname(__file__))
         configFile = os.path.join(testdir, "etc", config_name)
-
-        # path to the FITS file to ingest
-
-        fitsFile = os.path.join(testdir, "data", fits_name)
 
         # load the YAML configuration
 
@@ -85,10 +79,23 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         # copy the FITS file to it's test location
 
         self.subDir = tempfile.mkdtemp(dir=self.imageStagingDir)
-        self.destFile = os.path.join(self.subDir, fits_name)
-        shutil.copyfile(fitsFile, self.destFile)
 
         return config
+
+    def placeFitsFile(self, subDir, fits_name):
+        """Place a fits file in a subdirectory
+
+        Parameters
+        ----------
+        fits_name: `str`
+            name of the test FITS file
+
+        """
+        testdir = os.path.abspath(os.path.dirname(__file__))
+        fitsFile = os.path.join(testdir, "data", fits_name)
+        destFile = os.path.join(subDir, fits_name)
+        shutil.copyfile(fitsFile, destFile)
+        return destFile
 
     def tearDown(self):
         shutil.rmtree(self.destFile, ignore_errors=True)
@@ -101,7 +108,8 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
     async def testAuxTelIngest(self):
         """test ingesting an auxtel file"""
         fits_name = "2020032700020-det000.fits.fz"
-        config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
+        config = self.createConfig("ingest_auxtel_gen3.yaml")
+        self.destFile = self.placeFitsFile(self.subDir, fits_name)
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
@@ -127,7 +135,8 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def testComCamIngest(self):
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
-        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
+        config = self.createConfig("ingest_comcam_gen3.yaml")
+        self.destFile = self.placeFitsFile(self.subDir, fits_name)
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
@@ -158,7 +167,7 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(files), 0)
 
         # Check to see that the file was ingested.
-        # Recall that files start in teh image staging area, and are
+        # Recall that files start in the image staging area, and are
         # moved to the OODS staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
@@ -194,9 +203,87 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         bad_path = os.path.join(self.badDir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
+    async def testCleanTask(self):
+        fits_name = "2020032700020-det000.fits.fz"
+        fits_name2 = "AT_O_20221122_000951_R00_S00.fits.fz"
+        config = self.createConfig("ingest_auxtel_clean.yaml")
+        self.destFile = self.placeFitsFile(self.subDir, fits_name)
+        self.destFile2 = self.placeFitsFile(self.subDir, fits_name2)
+
+        # setup directory to scan for files in the image staging directory
+        # and ensure one file is there
+        ingesterConfig = config["ingester"]
+        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        scanner = DirectoryScanner([image_staging_dir])
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 2)
+
+        # create the file ingester, get all tasks associated with it, and
+        # create the tasks
+        ingester = FileIngester(ingesterConfig)
+
+        # check to see that the file is there before ingestion
+        self.assertTrue(os.path.exists(self.destFile))
+        self.assertTrue(os.path.exists(self.destFile2))
+
+        staged_files = ingester.stageFiles([self.destFile, self.destFile2])
+        await ingester.ingest(staged_files)
+
+        # make sure staging area is now empty
+        files = scanner.getAllFiles()
+        self.assertEqual(len(files), 0)
+
+        keyList = list(staged_files.keys())
+        self.assertEqual(len(keyList), 1)
+
+        key = keyList[0]
+
+        self.assertTrue(os.path.exists(staged_files[key][0]))
+        self.assertTrue(os.path.exists(staged_files[key][1]))
+
+        # remove these files;  the cleaner task should
+        # be able to handle files that don't exist, and continue
+        os.remove(staged_files[key][0])
+        os.remove(staged_files[key][1])
+
+        clean_tasks = ingester.getButlerCleanTasks()
+
+        task_list = []
+        for clean_task in clean_tasks:
+            task = asyncio.create_task(clean_task())
+            task_list.append(task)
+
+        # add one more task, whose sole purpose is to interrupt the others by
+        # throwing an acception
+        task_list.append(asyncio.create_task(self.interrupt_me()))
+
+        # gather all the tasks, until one (the "interrupt_me" task)
+        # throws an exception
+        try:
+            await asyncio.gather(*task_list)
+        except Exception:
+            for task in task_list:
+                task.cancel()
+
+        # that should have been enough time to run the "real" tasks,
+        # which performed the ingestion, and the clean up task, which
+        # was set to clean it up right away.  (That "clean up" time
+        # is set in the config file loaded for this FileIngester).
+        # And, when "cleaned up", the file that was originally there
+        # is now gone.  Check for that.
+
+        keyList = list(staged_files.keys())
+        self.assertEqual(len(keyList), 1)
+
+        key = keyList[0]
+
+        self.assertFalse(os.path.exists(staged_files[key][0]))
+        self.assertFalse(os.path.exists(staged_files[key][1]))
+
     async def testBadIngest(self):
         fits_name = "bad.fits.fz"
-        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
+        config = self.createConfig("ingest_comcam_gen3.yaml")
+        self.destFile = self.placeFitsFile(self.subDir, fits_name)
 
         # setup directory to scan for files in the image staging directory
         ingesterConfig = config["ingester"]
@@ -219,14 +306,15 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def testRepoExists(self):
         fits_name = "bad.fits.fz"
-        config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
+        config = self.createConfig("ingest_comcam_gen3.yaml")
+        self.destFile = self.placeFitsFile(self.subDir, fits_name)
 
         FileIngester(config["ingester"])
         # tests the path that the previously created repo (above) exists
         FileIngester(config["ingester"])
 
     async def interrupt_me(self):
-        await asyncio.sleep(20)
+        await asyncio.sleep(10)
         raise RuntimeError("I'm interrupting")
 
 

@@ -111,7 +111,7 @@ class ButlerIngester(ABC):
             A string containing the cause of an exception
         """
         if e.__cause__ is None:
-            return None
+            return f"{e}"
         cause = self.extract_cause(e.__cause__)
         if cause is None:
             return f"{str(e.__cause__)}"
