@@ -64,7 +64,7 @@ class OodsCsc(DmCsc):
         self.ingester_config = self.config["ingester"]
 
         cache_config = self.config["cacheCleaner"]
-        self.cache_cleaner = CacheCleaner(cache_config)
+        self.cache_cleaner = CacheCleaner(cache_config, self)
 
     async def send_imageInOODS(self, info):
         """Send SAL message that the images has been ingested into the OODS

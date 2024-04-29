@@ -257,14 +257,17 @@ class Gen3ButlerIngester(ButlerIngester):
         """run the clean() method at the configured interval"""
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
-            LOGGER.info("butler repo cleaning started")
+            if self.csc:
+                self.csc.log.info("butler repo cleaning started")
             try:
                 loop = asyncio.get_running_loop()
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                     await loop.run_in_executor(pool, self.clean)
             except Exception as e:
-                LOGGER.info("Exception: %s", e)
-            LOGGER.info("done cleaning butler repo; sleeping for %d seconds", seconds)
+                if self.csc:
+                    self.csc.log.info("Exception: %s", e)
+            if self.csc:
+                self.csc.log.info("done cleaning butler repo; sleeping for %d seconds", seconds)
             await asyncio.sleep(seconds)
 
     def clean(self):

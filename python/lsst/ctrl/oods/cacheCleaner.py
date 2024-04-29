@@ -38,8 +38,9 @@ class CacheCleaner(object):
         details on which directories to clean, and how often
     """
 
-    def __init__(self, config):
+    def __init__(self, config, csc=None):
         self.config = config
+        self.csc = csc
         self.files_and_directories = self.config["clearEmptyDirectoriesAndOldFiles"]
         self.only_empty_directories = []
         if "clearEmptyDirectories" in self.config:
@@ -55,13 +56,16 @@ class CacheCleaner(object):
         self.terminate = False
         loop = asyncio.get_running_loop()
         while True:
-            LOGGER.info("Cleaning %s", self.files_and_directories)
+            if self.csc:
+                self.csc.log.info("Cleaning %s", self.files_and_directories)
             try:
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                     await loop.run_in_executor(pool, self.clean)
             except Exception as e:
-                LOGGER.info("Clean failure: %s", e)
-            LOGGER.info("done cleaning; waiting %d seconds", self.seconds)
+                if self.csc:
+                    self.csc.log.info("Clean failure: %s", e)
+            if self.csc:
+                self.csc.log.info("done cleaning; waiting %d seconds", self.seconds)
             await asyncio.sleep(self.seconds)
             if self.terminate:
                 return
