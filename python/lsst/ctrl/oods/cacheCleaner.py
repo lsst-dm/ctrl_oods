@@ -38,8 +38,9 @@ class CacheCleaner(object):
         details on which directories to clean, and how often
     """
 
-    def __init__(self, config):
+    def __init__(self, config, csc=None):
         self.config = config
+        self.csc = csc
         self.files_and_directories = self.config["clearEmptyDirectoriesAndOldFiles"]
         self.only_empty_directories = []
         if "clearEmptyDirectories" in self.config:
@@ -55,11 +56,16 @@ class CacheCleaner(object):
         self.terminate = False
         loop = asyncio.get_running_loop()
         while True:
+            if self.csc:
+                self.csc.log.info("Cleaning %s", self.files_and_directories)
             try:
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                     await loop.run_in_executor(pool, self.clean)
             except Exception as e:
-                LOGGER.info("Clean failure: %s", e)
+                if self.csc:
+                    self.csc.log.info("Clean failure: %s", e)
+            if self.csc:
+                self.csc.log.info("done cleaning; waiting %d seconds", self.seconds)
             await asyncio.sleep(self.seconds)
             if self.terminate:
                 return
@@ -86,8 +92,11 @@ class CacheCleaner(object):
 
         files = self.getAllFilesOlderThan(seconds, self.files_and_directories)
         for name in files:
-            LOGGER.info("removing file %s", name)
-            os.unlink(name)
+            LOGGER.info("removing %s", name)
+            try:
+                os.unlink(name)
+            except Exception as e:
+                LOGGER.info("Couldn't remove %s: %s", name, e)
 
         # remove empty directories
         seconds = TimeInterval.calculateTotalSeconds(self.emptyDirsInterval)
@@ -199,4 +208,7 @@ class CacheCleaner(object):
         for directory in sorted(directories, reverse=True):
             if not os.listdir(directory):
                 LOGGER.info("removing %s", directory)
-                os.rmdir(directory)
+                try:
+                    os.rmdir(directory)
+                except Exception as e:
+                    LOGGER.info("Couldn't remove %s: %s", directory, e)
