@@ -39,9 +39,10 @@ class FileQueue(object):
         The number of seconds to wait between directory scans. Defaults to 1.
     """
 
-    def __init__(self, dir_path, scanInterval=1):
+    def __init__(self, dir_path, scanInterval=1, csc=None):
         self.dir_path = dir_path
         self.scanInterval = scanInterval
+        self.csc = csc
 
         self.fileSet = set()
         self.condition = asyncio.Condition()
@@ -57,13 +58,19 @@ class FileQueue(object):
         loop = asyncio.get_running_loop()
         # now, add all the currently known files to the queue
         while True:
+            if self.csc:
+                self.csc.log.debug("Scanning for new files to ingest")
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 file_list = await loop.run_in_executor(pool, scanner.getAllFiles)
+            if self.csc:
+                self.csc.log.debug("done scanning for new files")
 
             if file_list:
                 async with self.condition:
                     self.fileSet.update(file_list)
                     self.condition.notify_all()
+            if self.csc:
+                self.csc.log.debug("waiting %d seconds", self.scanInterval)
             await asyncio.sleep(self.scanInterval)
 
     async def dequeue_files(self):
