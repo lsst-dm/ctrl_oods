@@ -22,7 +22,6 @@ import asyncio
 import os
 from unittest.mock import MagicMock, patch
 from lsst.ctrl.oods.msgQueue import MsgQueue
-from confluent_kafka import Consumer
 import unittest
 
 import lsst.utils.tests
@@ -51,17 +50,26 @@ class MsgQueueTestCase(unittest.IsolatedAsyncioTestCase):
         mq.consumer.commit = MagicMock()
         mq.consumer.close = MagicMock()
 
-
         task_list = []
         task_list.append(asyncio.create_task(mq.queue_files()))
         task_list.append(asyncio.create_task(self.interrupt_me()))
+        msg = mq.get_messages()
+        self.assertEqual(len(msg), 1)
+
         try:
             await asyncio.gather(*task_list)
         except Exception:
             for task in task_list:
                 task.cancel()
 
-
     async def interrupt_me(self):
         await asyncio.sleep(5)
         raise RuntimeError("I'm interrupting")
+
+
+class MemoryTester(lsst.utils.tests.MemoryTestCase):
+    pass
+
+
+def setup_module(module):
+    lsst.utils.tests.init()
