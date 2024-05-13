@@ -187,7 +187,7 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
             for task in task_list:
                 task.cancel()
 
-        await asyncio.create_task(self.check_file(stage_file, wait=30, exists=False))
+        await asyncio.create_task(self.check_file_does_not_exist(stage_file, wait=30))
         self.check_exposure_count("2020032700020", "LATISS/runs/quickLook", 0)
         self.check_exposure_count("2022112200951", "LATISS/raw/all", 0)
 
@@ -212,11 +212,11 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
             for task in task_list:
                 task.cancel()
 
-        await asyncio.create_task(self.check_file(stage_file, wait=30, exists=False))
+        await asyncio.create_task(self.check_file_does_not_exist(stage_file, wait=30))
         self.check_exposure_count("2020032700020", "LATISS/runs/quickLook", 1)
         self.check_exposure_count("2022112200951", "LATISS/raw/all", 0)
 
-    async def check_file(self, filename, wait=25, exists=True):
+    async def check_file_does_not_exist(self, filename, wait=25):
         """Check that the existance of a file
 
         Parameters
@@ -231,12 +231,8 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
         """
 
         await asyncio.sleep(wait)
-        if exists:
-            self.assertTrue(os.path.exists(filename))
-            logging.info("file was there, as expected")
-        else:
-            self.assertFalse(os.path.exists(filename))
-            logging.info("file was not there, as expected")
+        self.assertFalse(os.path.exists(filename))
+        logging.info("file was not there, as expected")
 
     def copy_to_test_location(self, fits_name):
         # location of test file
@@ -269,17 +265,13 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
         # get the dataset
         logging.info(f"{collections=}")
         logging.info(f"{exposure=}")
-        try:
-            results = set(
-                butler.registry.queryDatasets(
-                    datasetType=...,
-                    collections=collections,
-                    where=f"exposure={exposure} and instrument='LATISS'",
-                )
+        results = set(
+            butler.registry.queryDatasets(
+                datasetType=...,
+                collections=collections,
+                where=f"exposure={exposure} and instrument='LATISS'",
             )
-        except Exception as e:
-            logging.info(e)
-            return
+        )
 
         # should just be "num_expected")
         self.assertEqual(len(results), num_expected)

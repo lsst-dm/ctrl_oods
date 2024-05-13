@@ -22,7 +22,6 @@
 
 import astropy.units as u
 from astropy.time import Time, TimeDelta
-from lsst.ctrl.oods.imageData import ImageData
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.daf.butler.registry import CollectionType
 from lsst.daf.butler import Butler
@@ -118,20 +117,7 @@ class ButlerIngester:
             LOGGER.info("Ingestion failure: %s", e)
 
     def on_success(self, datasets):
-        """Callback used on successful ingest. Used to transmit
-        successful data ingestion status
-
-        Parameters
-        ----------
-        datasets: `list`
-            list of DatasetRefs
-        """
-        self.definer_run(datasets)
-        for dataset in datasets:
-            LOGGER.info("file %s successfully ingested", dataset.path.ospath)
-            image_data = ImageData(dataset)
-            LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
-            self.transmit_status(image_data.get_info(), code=0, description="file ingested")
+        pass
 
     def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
         """Create a full path to a directory contained in the
@@ -212,6 +198,7 @@ class ButlerIngester:
     async def clean_task(self):
         """run the clean() method at the configured interval"""
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
+        LOGGER.info("clean_task created!")
         while True:
             LOGGER.debug("cleaning")
             try:

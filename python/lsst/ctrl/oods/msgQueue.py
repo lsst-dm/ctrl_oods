@@ -65,20 +65,23 @@ class MsgQueue(object):
         """Queue all files in messages on the subscribed topics"""
         loop = asyncio.get_running_loop()
         # now, add all the currently known files to the queue
-        while True:
+        self.running = True
+        while self.running:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                message_list = await loop.run_in_executor(pool, self.get_messages)
+                message_list = await loop.run_in_executor(pool, self._get_messages)
 
             if message_list:
                 async with self.condition:
                     self.msgList.extend(message_list)
                     self.condition.notify_all()
 
-    def get_messages(self):
+    def _get_messages(self):
         """Return up to max_messages at a time from Kafka"""
-        while True:
-            m_list = self.consumer.consume(num_messages=self.max_messages, timeout=0.5)
-
+        while self.running:
+            try:
+                m_list = self.consumer.consume(num_messages=self.max_messages, timeout=1.0)
+            except Exception:
+                return
             if len(m_list) == 0:
                 continue
             return m_list
@@ -96,4 +99,5 @@ class MsgQueue(object):
         self.consumer.commit(message=message)
 
     def stop(self):
+        self.running = False
         self.consumer.close()

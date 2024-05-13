@@ -76,7 +76,7 @@ class Gen3ButlerIngester(ButlerIngester):
         info: `dict`
             Dictionary containing file name and placeholders
         """
-        info = super().under_metadata(filename=filename)
+        info = super().undef_metadata(filename=filename)
         info["FILENAME"] = os.path.basename(filename)
         return info
 

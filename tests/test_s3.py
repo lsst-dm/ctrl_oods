@@ -23,14 +23,15 @@ import asyncio
 import os
 import shutil
 import tempfile
+import time
 import unittest
 from lsst.ctrl.oods.msgQueue import MsgQueue
-from unittest.mock import MagicMock, patch
+from lsst.ctrl.oods.bucketMessage import BucketMessage
+from unittest.mock import MagicMock
 
 import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.msgIngester import MsgIngester
-from lsst.ctrl.oods.utils import Utils
 
 class S3AuxtelIngesterTestCase(unittest.IsolatedAsyncioTestCase):
     """Test S3 Butler Ingest"""
@@ -69,23 +70,39 @@ class S3AuxtelIngesterTestCase(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         shutil.rmtree(self.repoDir, ignore_errors=True)
 
+    def returnVal(self, num_messages, timeout):
+        if self.attempts == 0:
+            self.attempts += 1
+            return [self.fakeKafkaMessage]
+        time.sleep(1)
+        return []
+
     async def testAuxTelIngest(self):
+        """test ingesting an auxtel file"""
         test_dir = os.path.abspath(os.path.dirname(__file__))
         msg_file = os.path.join(test_dir, "data", "kafka_msg.json")
         with open(msg_file, 'r') as f:
             message = f.read()
 
-        fakeKafkaMessage = MagicMock()
-        fakeKafkaMessage.value = MagicMock(return_value=message)
+        fits_name = "2020032700020-det000.fits.fz"
+        file_url = f'file://{os.path.join(test_dir, "data", fits_name)}'
+
+        fits_name = "bad.fits.fz"
+        bad_file_url = f'file://{os.path.join(test_dir, "data", fits_name)}'
+
+        self.attempts = 0
+        self.fakeKafkaMessage = MagicMock()
+        self.fakeKafkaMessage.value = MagicMock(return_value=message)
 
         MsgQueue.createConsumer = MagicMock()
         MsgQueue.consumer = MagicMock()
-        MsgQueue.consumer.consume = MagicMock(return_value=[fakeKafkaMessage])
+        #MsgQueue.consumer.consume = MagicMock(return_value=[fakeKafkaMessage])
+        MsgQueue.consumer.consume = MagicMock(side_effect=self.returnVal)
 
-        """test ingesting an auxtel file"""
-        fits_name = "2020032700020-det000.fits.fz"
+
+        BucketMessage.extract_urls = MagicMock(return_value=[file_url, bad_file_url])
+
         config = self.createConfig("ingest_auxtel_s3.yaml")
-
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
         ingesterConfig = config["ingester"]
@@ -103,12 +120,13 @@ class S3AuxtelIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         try:
             await asyncio.gather(*task_list)
         except Exception:
+            ingester.stop_tasks()
             for task in task_list:
                 task.cancel()
 
     async def interrupt_me(self):
         await asyncio.sleep(5)
-        raise RuntimeError("I'm interrupting")
+        raise Exception("I'm interrupting")
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):

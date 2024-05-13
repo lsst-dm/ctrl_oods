@@ -135,14 +135,15 @@ class MsgIngester(object):
         return self.tasks
 
     def stop_tasks(self):
-        LOGGER.info("stopping message scanning and file cleanup")
+        self.running = False
         self.msgQueue.stop()
         for task in self.tasks:
             task.cancel()
         self.tasks = []
 
     async def dequeue_and_ingest_files(self):
-        while True:
+        self.running = True
+        while self.running:
             message_list = await self.msgQueue.dequeue_messages()
             resources = []
             for m in message_list:
