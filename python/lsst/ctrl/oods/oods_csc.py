@@ -61,7 +61,7 @@ class OodsCsc(DmCsc):
 
         self.ingester_config = self.config["ingester"]
 
-    async def send_imageInOods(self, info):
+    async def send_imageInOODS(self, info):
         """Send SAL message that the images has been ingested into the OODS
 
         Parameters

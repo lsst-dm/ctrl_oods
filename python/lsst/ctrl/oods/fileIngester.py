@@ -52,7 +52,7 @@ class FileIngester(object):
         scanInterval = self.config["scanInterval"]
         seconds = TimeInterval.calculateTotalSeconds(scanInterval)
 
-        self.fileQueue = FileQueue(self.image_staging_dir, seconds)
+        self.fileQueue = FileQueue(self.image_staging_dir, seconds, csc)
 
         butlerConfigs = self.config["butlers"]
         if len(butlerConfigs) == 0:
