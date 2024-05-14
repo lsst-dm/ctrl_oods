@@ -80,8 +80,9 @@ class MsgQueue(object):
         while self.running:
             try:
                 m_list = self.consumer.consume(num_messages=self.max_messages, timeout=1.0)
-            except Exception:
-                return
+            except Exception as e:
+                LOGGER.info(f"Exception: {e}")
+                raise e
             if len(m_list) == 0:
                 continue
             return m_list
