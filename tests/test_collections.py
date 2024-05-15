@@ -134,7 +134,7 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
 
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
-        ingester = FileIngester(ingesterConfig)
+        ingester = FileIngester(config)
         butler_tasks = ingester.getButlerCleanTasks()
 
         # check to see that the file is there before ingestion

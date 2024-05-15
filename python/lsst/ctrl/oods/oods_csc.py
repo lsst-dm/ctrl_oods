@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from importlib import import_module
 import logging
 import os
 
@@ -95,11 +96,28 @@ class OodsCsc(DmCsc):
     async def start_services(self):
         """Start all cleanup and archiving services"""
 
-        # self added here, and by the time it's utilized by MsgIngester
+        # self added here, and by the time it's utilized by Ingester
         # the CSC will be up and running
-        self.ingester = MsgIngester(self.ingester_config, self)
+        self.ingester = self.createIngester()
 
         self.task_list = self.ingester.run_tasks()
+
+
+    def createIngester(self):
+        if "ingesterClass" not in self.config:
+            ingester = MsgIngester(self.config, self)
+            return ingester
+
+        # this is a fall back, in case we want to use another
+        # ingestion type (like FileIngester)
+        classConfig = self.config["ingesterClass"]
+        importFile = classConfig["ingesterType"]
+        name = classConfig["ingesterName"]
+
+        mod = import_module(importFile)
+        ingesterClass = getattr(mod, name)
+        ingester = ingesterClass(self.config, self)
+        return ingester
 
     async def stop_services(self):
         """Stop all cleanup and archiving services"""

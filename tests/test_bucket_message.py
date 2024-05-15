@@ -28,14 +28,16 @@ from lsst.ctrl.oods.bucketMessage import BucketMessage
 class BucketMessageTestCase(lsst.utils.tests.TestCase):
     """Test Bucket Message"""
 
-    def testBucketMessage(self):
+    def createBucketMessage(self, msg_file):
+
+
         # create a path to the test directory
 
         testdir = os.path.abspath(os.path.dirname(__file__))
 
         # path to the data file
 
-        dataFile = os.path.join(testdir, "data", "kafka_msg.json")
+        dataFile = os.path.join(testdir, "data", msg_file)
 
         # load the YAML configuration
 
@@ -43,12 +45,24 @@ class BucketMessageTestCase(lsst.utils.tests.TestCase):
             message = f.read()
 
         bucket_message = BucketMessage(message)
+        return bucket_message
+
+    def testBucketMessage(self):
+        bucket_message = self.createBucketMessage("kafka_msg.json")
         url_list = list()
         for url in bucket_message.extract_urls():
             url_list.append(url)
 
         self.assertEqual(len(url_list), 1)
         self.assertEqual(url_list[0], "s3://rubin-pp/HSC/73/2023061400090/0/6140090/HSC-Z/HSC-2023061400090-0-6140090-HSC-Z-73.fz")
+
+    def testBadBucketMessage(self):
+        bucket_message = self.createBucketMessage("bad_kafka_msg.json")
+
+        with self.assertRaises(Exception):
+            assert next(bucket_message.extract_urls(), None) is None
+
+
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):

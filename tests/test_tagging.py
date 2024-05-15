@@ -140,7 +140,7 @@ class TaggingTestCase(unittest.IsolatedAsyncioTestCase):
 
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
-        ingester = FileIngester(ingesterConfig)
+        ingester = FileIngester(config)
         butler_tasks = ingester.getButlerCleanTasks()
 
         task_list = []

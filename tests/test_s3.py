@@ -103,12 +103,9 @@ class S3AuxtelIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         BucketMessage.extract_urls = MagicMock(return_value=[file_url, bad_file_url])
 
         config = self.createConfig("ingest_auxtel_s3.yaml")
-        # setup directory to scan for files in the image staging directory
-        # and ensure one file is there
-        ingesterConfig = config["ingester"]
 
         # create a MsgIngester
-        ingester = MsgIngester(ingesterConfig, None)
+        ingester = MsgIngester(config, None)
 
         task_list = ingester.run_tasks()
         # add one more task, whose sole purpose is to interrupt the others by

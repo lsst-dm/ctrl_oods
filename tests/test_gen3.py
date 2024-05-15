@@ -120,7 +120,7 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(files), 1)
 
         # create a FileIngester
-        ingester = FileIngester(ingesterConfig)
+        ingester = FileIngester(config)
 
         staged_files = ingester.stageFiles([self.destFile])
         await ingester.ingest(staged_files)
@@ -148,7 +148,7 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
 
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
-        ingester = FileIngester(ingesterConfig)
+        ingester = FileIngester(config)
         clean_tasks = ingester.getButlerCleanTasks()
 
         task_list = []
@@ -220,7 +220,7 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
 
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
-        ingester = FileIngester(ingesterConfig)
+        ingester = FileIngester(config)
 
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
@@ -292,7 +292,7 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(config["ingester"])
+        ingester = FileIngester(config)
 
         staged_files = ingester.stageFiles([self.destFile])
         print(f"{staged_files=}")
@@ -312,9 +312,9 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         config = self.createConfig("ingest_comcam_gen3.yaml")
         self.destFile = self.placeFitsFile(self.subDir, fits_name)
 
-        FileIngester(config["ingester"])
+        FileIngester(config)
         # tests the path that the previously created repo (above) exists
-        FileIngester(config["ingester"])
+        FileIngester(config)
 
     async def interrupt_me(self):
         await asyncio.sleep(10)

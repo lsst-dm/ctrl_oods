@@ -56,4 +56,6 @@ class BucketMessage(object):
                 url = f"s3://{bucket_name}/{key}"
                 yield url
             except KeyError as e:
-                LOGGER.error(f"Invalid S3 bucket notification: {e} for {record=}")
+                LOGGER.error(f"Invalid msg: Couldn't find key {e} in {record=}")
+                raise e
+

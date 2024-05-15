@@ -41,10 +41,10 @@ class MsgIngester(object):
         A butler configuration dictionary
     """
 
-    def __init__(self, config, csc=None):
+    def __init__(self, mainConfig, csc=None):
         self.SUCCESS = 0
         self.FAILURE = 1
-        self.config = config
+        self.config = mainConfig["ingester"]
         self.max_messages = 1
 
         kafka_settings = self.config.get("kafka")
@@ -70,6 +70,8 @@ class MsgIngester(object):
             self.max_messages = max_messages
             LOGGER.info(f"max_messages set to {self.max_messages}")
 
+        LOGGER.info("listening to brokers %s", brokers)
+        LOGGER.info("listening on topics %s", topics)
         self.msgQueue = MsgQueue(brokers, group_id, topics, self.max_messages)
 
         butler_configs = self.config["butlers"]
