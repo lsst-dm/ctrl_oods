@@ -297,7 +297,7 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def interrupt_me(self):
         """Throw an exception after waiting.  Used to break out of gather()"""
-        await asyncio.sleep(70)
+        await asyncio.sleep(15)
         logging.info("About to interrupt all tasks")
         raise RuntimeError("I'm interrupting")
 
