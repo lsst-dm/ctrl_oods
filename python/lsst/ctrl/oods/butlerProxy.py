@@ -45,13 +45,10 @@ class ButlerProxy(object):
 
         self.butlerInstance = butlerClass(butlerConfig, csc)
 
-        # load configuration info for the repository, staging,
-        # and bad file areas
-        self.staging_dir = butlerConfig["stagingDirectory"]
+        self.staging_dir = butlerConfig.get("stagingDirectory")
 
     def getStagingDirectory(self):
         """Return the path of the staging directory
-
         Returns
         -------
         staging_dir : `str`

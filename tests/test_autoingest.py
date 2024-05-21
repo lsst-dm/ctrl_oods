@@ -112,7 +112,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(files), 1)
 
         # create a FileIngester
-        ingester = FileIngester(ingesterConfig)
+        ingester = FileIngester(config)
 
         staged_files = ingester.stageFiles([self.destFile])
         await ingester.ingest(staged_files)
@@ -140,7 +140,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
 
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
-        ingester = FileIngester(ingesterConfig)
+        ingester = FileIngester(config)
         clean_tasks = ingester.getButlerCleanTasks()
 
         task_list = []
@@ -207,11 +207,11 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(config["ingester"])
+        ingester = FileIngester(config)
 
         staged_files = ingester.stageFiles([self.destFile])
         await ingester.ingest(staged_files)
-
+        await asyncio.sleep(0) # appease coverage
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
@@ -224,9 +224,9 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
-        FileIngester(config["ingester"])
+        FileIngester(config)
         # tests the path that the previously created repo (above) exists
-        FileIngester(config["ingester"])
+        FileIngester(config)
 
     async def interrupt_me(self):
         """Used to interrupt asyncio.gather() so that test can be halted"""

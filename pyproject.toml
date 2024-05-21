@@ -5,3 +5,37 @@ target-version = ["py38"]
 [tool.isort]
 profile = "black"
 line_length = 110
+
+[tool.ruff]
+exclude = [
+    "__init__.py",
+    "bin",
+    "doc",
+    "version.py",
+    "tests/.tests",
+]
+ignore = [
+    "E226",
+    "E228",
+    "N802",
+    "N803",
+    "N806",
+    "N999",
+]
+line-length = 110
+select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "N",  # pep8-naming
+    "W",  # pycodestyle
+]
+target-version = "py310"
+extend-select = [
+    "RUF100", # Warn about unused noqa
+]
+
+[tool.ruff.pycodestyle]
+max-doc-length = 79
+
+[tool.ruff.pydocstyle]
+convention = "numpy"

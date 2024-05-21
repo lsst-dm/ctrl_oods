@@ -1,0 +1,30 @@
+defaultInterval: &interval
+    days: 0
+    hours: 0
+    minutes: 0
+    seconds: 0
+
+ingester:
+    kafka:
+        brokers:
+            - kafka:9092
+        topics: 
+            - atoods
+        group_id: ATOODS
+        max_messages: 10
+    butlers: 
+        - butler:
+            instrument: lsst.obs.lsst.Latiss
+            class:
+                import : lsst.ctrl.oods.messageAttendant
+                name : MessageAttendant
+            repoDirectory : /tmp/repo/LATISS
+            collections:
+                - LATISS/raw/all
+            scanInterval:
+                <<: *interval
+                seconds: 10
+            filesOlderThan:
+                <<: *interval
+                seconds: 30
+    batchSize: 20

@@ -21,8 +21,8 @@ ingester:
                 - FARG/runs/quickLook
             instrument: lsst.obs.lsst.LsstComCam
             class:
-                import : lsst.ctrl.oods.gen3ButlerIngester
-                name : Gen3ButlerIngester
+                import : lsst.ctrl.oods.fileAttendant
+                name : FileAttendant
             stagingDirectory : staging2
             repoDirectory : repo2
             badFileDirectory: bad2
