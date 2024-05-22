@@ -25,13 +25,13 @@ import shutil
 import tempfile
 import time
 import unittest
-from lsst.ctrl.oods.msgQueue import MsgQueue
-from lsst.ctrl.oods.bucketMessage import BucketMessage
 from unittest.mock import MagicMock
 
 import lsst.utils.tests
 import yaml
+from lsst.ctrl.oods.bucketMessage import BucketMessage
 from lsst.ctrl.oods.msgIngester import MsgIngester
+from lsst.ctrl.oods.msgQueue import MsgQueue
 
 
 class S3AuxtelIngesterTestCase(unittest.IsolatedAsyncioTestCase):

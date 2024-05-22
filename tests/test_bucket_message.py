@@ -21,6 +21,7 @@
 
 import os
 import os.path
+
 import lsst.utils.tests
 from lsst.ctrl.oods.bucketMessage import BucketMessage
 
@@ -53,8 +54,8 @@ class BucketMessageTestCase(lsst.utils.tests.TestCase):
             url_list.append(url)
 
         self.assertEqual(len(url_list), 1)
-        self.assertEqual(url_list[0], 
-            "s3://rubin-pp/HSC/73/2023061400090/0/6140090/HSC-Z/HSC-2023061400090-0-6140090-HSC-Z-73.fz")
+        f = "s3://rubin-pp/HSC/73/2023061400090/0/6140090/HSC-Z/HSC-2023061400090-0-6140090-HSC-Z-73.fz"
+        self.assertEqual(url_list[0], f)
 
     def testBadBucketMessage(self):
         bucket_message = self.createBucketMessage("bad_kafka_msg.json")

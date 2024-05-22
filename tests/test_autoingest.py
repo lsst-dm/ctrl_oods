@@ -211,7 +211,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
 
         staged_files = ingester.stageFiles([self.destFile])
         await ingester.ingest(staged_files)
-        await asyncio.sleep(0) #  appease coverage
+        await asyncio.sleep(0)  # appease coverage
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 

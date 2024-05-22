@@ -24,10 +24,9 @@ import asyncio
 import logging
 import os
 
-
+import lsst.log as lsstlog
 import yaml
 from lsst.ctrl.oods.msgIngester import MsgIngester
-import lsst.log as lsstlog
 
 lsstlog.usePythonLogging()
 

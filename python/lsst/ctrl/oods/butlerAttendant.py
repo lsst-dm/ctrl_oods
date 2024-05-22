@@ -20,14 +20,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import astropy.units as u
-from astropy.time import Time, TimeDelta
-from lsst.ctrl.oods.timeInterval import TimeInterval
-from lsst.daf.butler.registry import CollectionType
-from lsst.daf.butler import Butler
-from lsst.pipe.base import Instrument
-from lsst.obs.base import DefineVisitsTask
-from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
 import asyncio
 import collections
 import concurrent
@@ -35,8 +27,15 @@ import logging
 import os
 import os.path
 
+import astropy.units as u
+from astropy.time import Time, TimeDelta
+from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.utils import Utils
-
+from lsst.daf.butler import Butler
+from lsst.daf.butler.registry import CollectionType
+from lsst.obs.base import DefineVisitsTask
+from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
+from lsst.pipe.base import Instrument
 
 LOGGER = logging.getLogger(__name__)
 

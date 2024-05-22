@@ -19,9 +19,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from importlib import import_module
 import logging
 import os
+from importlib import import_module
 
 import yaml
 from lsst.ctrl.oods.dm_csc import DmCsc

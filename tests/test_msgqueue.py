@@ -20,11 +20,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import asyncio
 import os
-from unittest.mock import MagicMock, patch
-from lsst.ctrl.oods.msgQueue import MsgQueue
 import unittest
+from unittest.mock import MagicMock, patch
 
 import lsst.utils.tests
+from lsst.ctrl.oods.msgQueue import MsgQueue
 
 
 class MsgQueueTestCase(unittest.IsolatedAsyncioTestCase):

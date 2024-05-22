@@ -21,11 +21,11 @@
 
 import asyncio
 import logging
-from lsst.resources import ResourcePath
 
+from lsst.ctrl.oods.bucketMessage import BucketMessage
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.msgQueue import MsgQueue
-from lsst.ctrl.oods.bucketMessage import BucketMessage
+from lsst.resources import ResourcePath
 
 LOGGER = logging.getLogger(__name__)
 

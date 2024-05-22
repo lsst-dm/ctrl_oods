@@ -22,6 +22,7 @@
 import asyncio
 import concurrent
 import logging
+
 from confluent_kafka import Consumer
 
 LOGGER = logging.getLogger(__name__)
