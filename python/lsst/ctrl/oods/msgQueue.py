@@ -57,8 +57,7 @@ class MsgQueue(object):
         self.createConsumer(config, topics)
 
     def createConsumer(self, config, topics):
-        """Create a Kafka Consumer
-        """
+        """Create a Kafka Consumer"""
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
 

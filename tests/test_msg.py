@@ -82,7 +82,7 @@ class S3AuxtelIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         """test ingesting an auxtel file"""
         test_dir = os.path.abspath(os.path.dirname(__file__))
         msg_file = os.path.join(test_dir, "data", "kafka_msg.json")
-        with open(msg_file, 'r') as f:
+        with open(msg_file, "r") as f:
             message = f.read()
 
         fits_name = "2020032700020-det000.fits.fz"
