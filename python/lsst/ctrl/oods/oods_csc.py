@@ -102,7 +102,6 @@ class OodsCsc(DmCsc):
 
         self.task_list = self.ingester.run_tasks()
 
-
     def createIngester(self):
         if "ingesterClass" not in self.config:
             ingester = MsgIngester(self.config, self)

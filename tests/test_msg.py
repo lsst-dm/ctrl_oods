@@ -33,6 +33,7 @@ import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.msgIngester import MsgIngester
 
+
 class S3AuxtelIngesterTestCase(unittest.IsolatedAsyncioTestCase):
     """Test S3 Butler Ingest"""
 
@@ -96,9 +97,7 @@ class S3AuxtelIngesterTestCase(unittest.IsolatedAsyncioTestCase):
 
         MsgQueue.createConsumer = MagicMock()
         MsgQueue.consumer = MagicMock()
-        #MsgQueue.consumer.consume = MagicMock(return_value=[fakeKafkaMessage])
         MsgQueue.consumer.consume = MagicMock(side_effect=self.returnVal)
-
 
         BucketMessage.extract_urls = MagicMock(return_value=[file_url, bad_file_url])
 

@@ -194,14 +194,13 @@ class TaggingTestCase(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(40)
         self.check_file(file_to_ingest, exists=False)
 
-        ## wait until the "interrupt_me" task
-        ## throws an exception
+        # wait until the "interrupt_me" task
+        # throws an exception
         try:
             await asyncio.gather(*task_list)
         except Exception:
             for task in task_list:
                 task.cancel()
-
 
     def check_file(self, filename, exists=True):
         """Check that the existance of a file

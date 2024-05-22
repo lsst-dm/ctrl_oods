@@ -299,7 +299,7 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         print(f"{ingester=}")
 
         await ingester.ingest(staged_files)
-        await asyncio.sleep(0) # appease coverage
+        await asyncio.sleep(0)  # appease coverage
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 

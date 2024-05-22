@@ -175,7 +175,7 @@ class FileIngester(object):
 
     def stop_tasks(self):
         LOGGER.info("stopping file scanning and file cleanup")
-        self.cache_cleaner.stop_tasks() # XXX - this might be redundan
+        self.cache_cleaner.stop_tasks()  # XXX - this might be redundant
         for task in self.tasks:
             task.cancel()
         self.tasks = []

@@ -58,4 +58,3 @@ class BucketMessage(object):
             except KeyError as e:
                 LOGGER.error(f"Invalid msg: Couldn't find key {e} in {record=}")
                 raise e
-
