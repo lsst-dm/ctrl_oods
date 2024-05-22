@@ -267,14 +267,14 @@ class ButlerAttendant:
                 # uri = butler.getURI(x, collections=x.run)
                 uri = butler.getURI(x)
             except Exception as e:
-                LOGGER.warn("butler is missing uri for %s: %s", x, e)
+                LOGGER.warning("butler is missing uri for %s: %s", x, e)
 
             if uri is not None:
                 LOGGER.info("removing %s", uri)
                 try:
                     uri.remove()
                 except Exception as e:
-                    LOGGER.warn("couldn't remove %s: %s", uri, e)
+                    LOGGER.warning("couldn't remove %s: %s", uri, e)
 
         butler.pruneDatasets(ref, purge=True, unstore=True)
 
