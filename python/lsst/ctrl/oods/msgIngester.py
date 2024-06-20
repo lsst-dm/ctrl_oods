@@ -32,8 +32,6 @@ LOGGER = logging.getLogger(__name__)
 
 class MsgIngester(object):
     """Ingest files into the butler specified in the configuration.
-    Files must be removed from the directory as part of the ingest
-    or there will be an attempt to ingest them again later.
 
     Parameters
     ----------
@@ -49,19 +47,19 @@ class MsgIngester(object):
 
         kafka_settings = self.config.get("kafka")
         if kafka_settings is None:
-            raise Exception("section 'kafka' not configured; check configuration file")
+            raise ValueError("section 'kafka' not configured; check configuration file")
 
         brokers = kafka_settings.get("brokers")
         if brokers is None:
-            raise Exception("No brokers configured; check configuration file")
+            raise ValueError("No brokers configured; check configuration file")
 
         group_id = kafka_settings.get("group_id")
         if group_id is None:
-            raise Exception("No group_id configured; check configuration file")
+            raise ValueError("No group_id configured; check configuration file")
 
         topics = kafka_settings.get("topics")
         if topics is None:
-            raise Exception("No topics configured; check configuration file")
+            raise ValueError("No topics configured; check configuration file")
 
         max_messages = kafka_settings.get("max_messages")
         if max_messages is None:
@@ -152,16 +150,14 @@ class MsgIngester(object):
                 rps = self._gather_all_resource_paths(m)
                 resources.extend(rps)
             await self.ingest(resources)
+
             # XXX - commit on success, failure, or metadata_failure
-            for m in message_list:
-                self.msgQueue.commit(message=m)
+            self.msgQueue.commit(message=message_list[-1])
 
     def _gather_all_resource_paths(self, m):
         # extract all urls within this message
         msg = BucketMessage(m.value())
 
-        rp_list = list()
-        for url in msg.extract_urls():
-            rp = ResourcePath(url)
-            rp_list.append(rp)
+        rp_list = [ResourcePath(url) for url in msg.extract_urls()]
+
         return rp_list

@@ -79,7 +79,7 @@ class ButlerAttendant:
             on_metadata_failure=self.on_metadata_failure,
         )
         define_visits_config = DefineVisitsTask.ConfigClass()
-        define_visits_config.groupExposures = "one-to-one"
+        define_visits_config.groupExposures = "one-to-one-and-by-counter"
         self.visit_definer = DefineVisitsTask(config=define_visits_config, butler=self.butler)
 
     def createButler(self):
@@ -130,7 +130,7 @@ class ButlerAttendant:
         staging_dir_root : `str`
             Root of the staging directory hierarchy
         original : `str`
-            Original directory location
+            Original directory location of bad file
 
         Returns
         -------
@@ -323,7 +323,10 @@ class ButlerAttendant:
 
     def definer_run(self, file_datasets):
         for fds in file_datasets:
-            refs = fds.refs
-            ids = [ref.dataId for ref in refs]
-            self.visit_definer.run(ids)
-            LOGGER.info("Defined visits for %s", ids)
+            try:
+                refs = fds.refs
+                ids = [ref.dataId for ref in refs]
+                self.visit_definer.run(ids)
+                LOGGER.info("Defined visits for %s", ids)
+            except Exception as e:
+                LOGGER.exception(e)
