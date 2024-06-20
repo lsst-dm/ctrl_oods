@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # This file is part of ctrl_oods
 #
 # Developed for the LSST Data Management System.
@@ -19,35 +20,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 import logging
 import os
-from importlib import import_module
 
+import lsst.log as lsstlog
 import yaml
-from lsst.ctrl.oods.dm_csc import DmCsc
 from lsst.ctrl.oods.msgIngester import MsgIngester
-from lsst.ts import salobj
 
 LOGGER = logging.getLogger(__name__)
+F = "%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s"
+logging.basicConfig(level=logging.INFO, format=F, datefmt="%Y-%m-%d %H:%M:%S")
 
 
-class OodsCsc(DmCsc):
-    """Base OODS class used for OODS Commandable SAL Components (CSC)
+class Standalone(object):
+    """Standalone class to run tests without CSC requirements."""
 
-    Parameters
-    ----------
-    name : `str`
-        Name of SAL component.
-    index : `int` or `None`
-        SAL component index, or 0 or None if the component is not indexed.
-    initial_state : `State` or `int`, optional
-        The initial state of the CSC. This is provided for unit testing,
-        as real CSCs should start up in `State.STANDBY`, the default.
-
-    """
-
-    def __init__(self, name, initial_state=salobj.State.STANDBY):
-        super().__init__(name, initial_state=initial_state)
+    def __init__(self):
         self.config = None
         # import YAML file here
         if "CTRL_OODS_CONFIG_FILE" in os.environ:
@@ -81,43 +70,40 @@ class OodsCsc(DmCsc):
         status_code = info["STATUS_CODE"]
         description = info["DESCRIPTION"]
 
-        s = f"sending camera={camera} obsid={obsid} raft={raft} sensor={sensor} "
+        s = f"would send camera={camera} obsid={obsid} raft={raft} sensor={sensor} "
         s = s + f"statusCode={status_code}, description={description}"
         LOGGER.info(s)
-        await self.evt_imageInOODS.set_write(
-            camera=camera,
-            obsid=obsid,
-            raft=raft,
-            sensor=sensor,
-            statusCode=status_code,
-            description=description,
-        )
 
     async def start_services(self):
         """Start all cleanup and archiving services"""
 
-        # self added here, and by the time it's utilized by Ingester
+        # self added here, and by the time it's utilized by MsgIngester
         # the CSC will be up and running
-        self.ingester = self.createIngester()
+        self.ingester = MsgIngester(self.config, self)
 
         self.task_list = self.ingester.run_tasks()
 
-    def createIngester(self):
-        if "ingesterClass" not in self.config:
-            ingester = MsgIngester(self.config, self)
-            return ingester
-
-        # this is a fall back, in case we want to use another
-        # ingestion type (like FileIngester)
-        classConfig = self.config["ingesterClass"]
-        importFile = classConfig["ingesterType"]
-        name = classConfig["ingesterName"]
-
-        mod = import_module(importFile)
-        ingesterClass = getattr(mod, name)
-        ingester = ingesterClass(self.config, self)
-        return ingester
-
     async def stop_services(self):
         """Stop all cleanup and archiving services"""
+        print("calling stop_tasks")
         self.ingester.stop_tasks()
+
+    async def done(self):
+        print("waiting...")
+        while True:
+            await asyncio.sleep(3600)
+        print("done!")
+
+    async def main(self):
+        await self.start_services()
+        group = asyncio.gather(self.done())
+        print("gathering")
+        await group
+        print("finished")
+        await self.stop_services()
+        print("complete")
+
+
+if __name__ == "__main__":
+    alone = Standalone()
+    asyncio.run(alone.main())

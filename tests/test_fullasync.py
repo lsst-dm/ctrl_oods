@@ -113,7 +113,7 @@ class AsyncIngestTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(files), 1)
 
         # create a FileIngester
-        ingester = FileIngester(ingesterConfig)
+        ingester = FileIngester(config)
 
         # start all the ingester tasks
         task_list = ingester.run_tasks()

@@ -87,7 +87,7 @@ class MultiComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         files = scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        ingester = FileIngester(ingesterConfig)
+        ingester = FileIngester(config)
 
         staged_files = ingester.stageFiles([destFile])
         await ingester.ingest(staged_files)

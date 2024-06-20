@@ -25,6 +25,7 @@ import os
 import os.path
 
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
+from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.fileQueue import FileQueue
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.utils import Utils
@@ -43,10 +44,10 @@ class FileIngester(object):
         A butler configuration dictionary
     """
 
-    def __init__(self, config, csc=None):
+    def __init__(self, mainConfig, csc=None):
         self.SUCCESS = 0
         self.FAILURE = 1
-        self.config = config
+        self.config = mainConfig["ingester"]
 
         self.image_staging_dir = self.config["imageStagingDirectory"]
         scanInterval = self.config["scanInterval"]
@@ -62,6 +63,9 @@ class FileIngester(object):
         for butlerConfig in butlerConfigs:
             butler = ButlerProxy(butlerConfig["butler"], csc)
             self.butlers.append(butler)
+
+        cache_config = mainConfig["cacheCleaner"]
+        self.cache_cleaner = CacheCleaner(cache_config, csc)
 
         self.tasks = []
         self.dequeue_task = None
@@ -165,10 +169,13 @@ class FileIngester(object):
             task = asyncio.create_task(cleanTask())
             self.tasks.append(task)
 
+        self.tasks.append(asyncio.create_task(self.cache_cleaner.run_tasks()))
+
         return self.tasks
 
     def stop_tasks(self):
         LOGGER.info("stopping file scanning and file cleanup")
+        self.cache_cleaner.stop_tasks()  # XXX - this might be redundant
         for task in self.tasks:
             task.cancel()
         self.tasks = []

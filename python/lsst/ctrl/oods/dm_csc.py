@@ -45,6 +45,7 @@ class DmCsc(BaseCsc):
 
     valid_simulation_modes = [0]
     version = __version__
+    LOGGER.info(f"{version=}")
 
     def __init__(self, name, initial_state):
         super().__init__(name, initial_state=initial_state)
@@ -120,7 +121,7 @@ class DmCsc(BaseCsc):
 
         # if current_state hasn't been set, and the summary_state is STANDBY,
         # we're just starting up, so don't do anything but set the current
-        # state to STANBY
+        # state to STANDBY
         if (self.current_state is None) and (self.summary_state == State.STANDBY):
             self.current_state = State.STANDBY
             self.transitioning_to_fault_evt.clear()

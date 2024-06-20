@@ -5,25 +5,29 @@ defaultInterval: &interval
     seconds: 0
 
 ingester:
-    FILE_INGEST_REQUEST: CC_FILE_INGEST_REQUEST
-    CONSUME_QUEUE: cc_publish_to_oods
-    PUBLISH_QUEUE: oods_publish_to_cc
-    forwarderStagingDirectory: forwarder_staging
     butlers:
         - butler:
+            collections:
+                - LATISS/raw/all
             class:
-                import : lsst.ctrl.oods.gen2ButlerIngester
-                name : Gen2ButlerIngester
+                import : lsst.ctrl.oods.fileAttendant
+                name : FileAttendant
             stagingDirectory : staging
             repoDirectory : repo
             badFileDirectory: bad
+            scanInterval:
+                <<: *interval
+                minutes: 10
+            filesOlderThan:
+                <<: *interval
+                days: 90
         - butler:
             collections:
                 - LATISS/raw/all
             instrument: lsst.obs.lsst.LsstComCam
             class:
-                import : lsst.ctrl.oods.gen3ButlerIngester
-                name : Gen3ButlerIngester
+                import : lsst.ctrl.oods.fileAttendant
+                name : FileAttendant
             stagingDirectory : staging2
             repoDirectory : repo2
             badFileDirectory: bad2

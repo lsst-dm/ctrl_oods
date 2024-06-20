@@ -140,7 +140,7 @@ class TaggingTestCase(unittest.IsolatedAsyncioTestCase):
 
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
-        ingester = FileIngester(ingesterConfig)
+        ingester = FileIngester(config)
         butler_tasks = ingester.getButlerCleanTasks()
 
         task_list = []
@@ -188,13 +188,13 @@ class TaggingTestCase(unittest.IsolatedAsyncioTestCase):
         exposure = "3019053000001"
         file_to_ingest, task_list = await self.stage()
 
-        # add an extra task, which runs after ingestion
-        task_list.append(asyncio.create_task(self.associate_file(exposure)))
-        task_list.append(asyncio.create_task(self.check_file(file_to_ingest)))
-        task_list.append(asyncio.create_task(self.disassociate_file(exposure)))
-        task_list.append(asyncio.create_task(self.check_file(file_to_ingest, wait=50, exists=False)))
+        await self.associate_file(exposure)
+        self.check_file(file_to_ingest)
+        await self.disassociate_file(exposure)
+        await asyncio.sleep(40)
+        self.check_file(file_to_ingest, exists=False)
 
-        # kick off all the tasks, until one (the "interrupt_me" task)
+        # wait until the "interrupt_me" task
         # throws an exception
         try:
             await asyncio.gather(*task_list)
@@ -202,7 +202,7 @@ class TaggingTestCase(unittest.IsolatedAsyncioTestCase):
             for task in task_list:
                 task.cancel()
 
-    async def check_file(self, filename, wait=25, exists=True):
+    def check_file(self, filename, exists=True):
         """Check that the existance of a file
 
         Parameters
@@ -216,7 +216,6 @@ class TaggingTestCase(unittest.IsolatedAsyncioTestCase):
             If False, file is checked that it doesn't exist
         """
 
-        await asyncio.sleep(wait)
         if exists:
             self.assertTrue(os.path.exists(filename))
             logging.info("file was there, as expected")
@@ -275,17 +274,13 @@ class TaggingTestCase(unittest.IsolatedAsyncioTestCase):
         logging.info("about to disassociate file")
         butler = Butler(self.repoDir, writeable=True)
 
-        # get the dataset
-        try:
-            results = set(
-                butler.registry.queryDatasets(
-                    datasetType=...,
-                    collections=self.collections,
-                    where=f"exposure={exposure} and instrument='LSSTComCam'",
-                )
+        results = set(
+            butler.registry.queryDatasets(
+                datasetType=...,
+                collections=self.collections,
+                where=f"exposure={exposure} and instrument='LSSTComCam'",
             )
-        except Exception as e:
-            logging.info(e)
+        )
 
         # should just be one...
         self.assertEqual(len(results), 1)
@@ -315,7 +310,7 @@ class TaggingTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def interrupt_me(self):
         """Throw an exception after waiting.  Used to break out of gather()"""
-        await asyncio.sleep(70)
+        await asyncio.sleep(30)
         logging.info("About to interrupt all tasks")
         raise RuntimeError("I'm interrupting")
 

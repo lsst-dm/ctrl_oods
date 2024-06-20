@@ -12,8 +12,8 @@ ingester:
     butlers:
         - butler:
             class:
-                import : lsst.ctrl.oods.gen3ButlerIngester
-                name : Gen3ButlerIngester
+                import : lsst.ctrl.oods.fileAttendant
+                name : FileAttendant
             repoDirectory : repo
             instrument: lsst.obs.lsst.LsstComCam
             badFileDirectory: /tmp/bad

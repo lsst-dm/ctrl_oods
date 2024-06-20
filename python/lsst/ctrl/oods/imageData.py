@@ -20,7 +20,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
-import os
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ class ImageData:
         """
         self.info = {"CAMERA": "", "RAFT": "", "SENSOR": "", "OBSID": ""}
         try:
-            self.info["FILENAME"] = os.path.basename(dataset.path.ospath)
+            self.info["FILENAME"] = f"{dataset.path}"
         except Exception as e:
             LOGGER.info("Failed to extract filename for %s: %s", dataset, e)
             return
