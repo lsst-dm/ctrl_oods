@@ -129,7 +129,7 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
         ingesterConfig = config["ingester"]
         image_staging_dir = ingesterConfig["imageStagingDirectory"]
         scanner = DirectoryScanner([image_staging_dir])
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         # create the file ingester, get all tasks associated with it, and
@@ -145,7 +145,7 @@ class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
         await ingester.ingest(staged_files)
 
         # make sure staging area is now empty
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         # Check to see that the file was ingested.

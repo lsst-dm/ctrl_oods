@@ -108,7 +108,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         ingesterConfig = config["ingester"]
         image_staging_dir = ingesterConfig["imageStagingDirectory"]
         scanner = DirectoryScanner([image_staging_dir])
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         # create a FileIngester
@@ -118,7 +118,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         await ingester.ingest(staged_files)
 
         # check to make sure file was moved from image staging directory
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         # check to be sure the file didn't land in the "bad file" directory
@@ -135,7 +135,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         ingesterConfig = config["ingester"]
         image_staging_dir = ingesterConfig["imageStagingDirectory"]
         scanner = DirectoryScanner([image_staging_dir])
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         # create the file ingester, get all tasks associated with it, and
@@ -155,7 +155,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         await ingester.ingest(staged_files)
 
         # make sure image staging area is now empty
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         # Check to see that the file was ingested.
@@ -204,7 +204,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         ingesterConfig = config["ingester"]
         image_staging_dir = ingesterConfig["imageStagingDirectory"]
         scanner = DirectoryScanner([image_staging_dir])
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         ingester = FileIngester(config["ingester"])
@@ -212,7 +212,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         staged_files = ingester.stageFiles([self.destFile])
         await ingester.ingest(staged_files)
 
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         name = Utils.strip_prefix(self.destFile, image_staging_dir)
