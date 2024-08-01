@@ -236,12 +236,8 @@ class Gen3ButlerIngester(ButlerIngester):
         """
 
         # Ingest image.
-        try:
-            loop = asyncio.get_running_loop()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                await loop.run_in_executor(pool, self.task.run, file_list)
-        except Exception as e:
-            LOGGER.info("Ingestion failure: %s", e)
+        asyncio.sleep(0)
+        self.task.run(file_list)
 
     def getName(self):
         """Return the name of this ingester
