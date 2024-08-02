@@ -19,10 +19,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 import asyncio
 import collections
-import concurrent
 import logging
 import os
 import os.path
@@ -107,12 +105,8 @@ class ButlerAttendant:
         """
 
         # Ingest images.
-        try:
-            loop = asyncio.get_running_loop()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                await loop.run_in_executor(pool, self.task.run, file_list)
-        except Exception as e:
-            LOGGER.info("Ingestion issue %s", e)
+        await asyncio.sleep(0)
+        await self.task.run(file_list)
 
     def on_success(self, datasets):
         pass
@@ -199,16 +193,11 @@ class ButlerAttendant:
         LOGGER.info("clean_task created!")
         while True:
             LOGGER.debug("cleaning")
-            try:
-                loop = asyncio.get_running_loop()
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    await loop.run_in_executor(pool, self.clean)
-            except Exception as e:
-                LOGGER.info("Exception: %s", e)
+            await self.clean()
             LOGGER.debug("sleeping for %d seconds", seconds)
             await asyncio.sleep(seconds)
 
-    def clean(self):
+    async def clean(self):
         """Remove all the datasets in the butler that
         were ingested before the configured Interval
         """
@@ -224,7 +213,9 @@ class ButlerAttendant:
 
         butler = self.createButler()
 
+        await asyncio.sleep(0)
         butler.registry.refresh()
+        await asyncio.sleep(0)
 
         # get all datasets in these collections
         allCollections = self.collections if self.cleanCollections is None else self.cleanCollections
@@ -236,10 +227,12 @@ class ButlerAttendant:
                 bind={"ref_date": t},
             )
         )
+        await asyncio.sleep(0)
 
         # get all TAGGED collections
         tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
 
+        await asyncio.sleep(0)
         # Note: The code below is to get around an issue where passing
         # an empty list as the collections argument to queryDatasets
         # returns all datasets.
@@ -261,6 +254,7 @@ class ButlerAttendant:
         # the Butler, and if the URI was available,
         # remove it.
         for x in ref:
+            await asyncio.sleep(0)
             uri = None
             try:
                 # uri = butler.getURI(x, collections=x.run)
@@ -275,6 +269,7 @@ class ButlerAttendant:
                 except Exception as e:
                     LOGGER.warning("couldn't remove %s: %s", uri, e)
 
+        await asyncio.sleep(0)
         butler.pruneDatasets(ref, purge=True, unstore=True)
 
     def rawexposure_info(self, data):

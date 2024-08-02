@@ -20,7 +20,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
-import concurrent
 import logging
 
 from confluent_kafka import Consumer
@@ -63,21 +62,20 @@ class MsgQueue(object):
 
     async def queue_files(self):
         """Queue all files in messages on the subscribed topics"""
-        loop = asyncio.get_running_loop()
-        # now, add all the currently known files to the queue
+
+        # add all the currently known files to the queue
         self.running = True
         while self.running:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                message_list = await loop.run_in_executor(pool, self._get_messages)
-
+            message_list = await self._get_messages()
             if message_list:
                 async with self.condition:
                     self.msgList.extend(message_list)
                     self.condition.notify_all()
 
-    def _get_messages(self):
+    async def _get_messages(self):
         """Return up to max_messages at a time from Kafka"""
         while self.running:
+            await asyncio.sleep(0.01)
             try:
                 m_list = self.consumer.consume(num_messages=self.max_messages, timeout=1.0)
             except Exception as e:

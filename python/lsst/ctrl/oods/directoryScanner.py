@@ -18,6 +18,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import asyncio
 import os
 
 
@@ -33,7 +35,7 @@ class DirectoryScanner(object):
     def __init__(self, directories):
         self.directories = directories
 
-    def getAllFiles(self):
+    async def getAllFiles(self):
         """Retrieve all files from a set of directories
 
         Parameters
@@ -48,11 +50,11 @@ class DirectoryScanner(object):
         """
         allFiles = []
         for directory in self.directories:
-            files = self.getFiles(directory)
+            files = await self.getFiles(directory)
             allFiles.extend(files)
         return allFiles
 
-    def getFiles(self, directory):
+    async def getFiles(self, directory):
         """Retrieve all files from a directory
 
         Parameters
@@ -67,6 +69,7 @@ class DirectoryScanner(object):
         """
         files = []
         for dirName, subdirs, fileList in os.walk(directory):
+            await asyncio.sleep(0)
             for fname in fileList:
                 fullName = os.path.join(dirName, fname)
                 files.append(fullName)

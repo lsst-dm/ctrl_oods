@@ -109,7 +109,7 @@ class AsyncIngestTestCase(unittest.IsolatedAsyncioTestCase):
         ingesterConfig = config["ingester"]
         image_staging_dir = ingesterConfig["imageStagingDirectory"]
         scanner = DirectoryScanner([image_staging_dir])
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         # create a FileIngester
@@ -122,7 +122,7 @@ class AsyncIngestTestCase(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(2)
 
         # check to make sure file was moved from image staging directory
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         # check to be sure the file didn't land in the "bad file" directory

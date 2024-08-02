@@ -63,7 +63,7 @@ class MsgIngester(object):
 
         max_messages = kafka_settings.get("max_messages")
         if max_messages is None:
-            LOGGER.warn(f"max_messages not set; using default of {self.max_messages}")
+            LOGGER.warning(f"max_messages not set; using default of {self.max_messages}")
         else:
             self.max_messages = max_messages
             LOGGER.info(f"max_messages set to {self.max_messages}")
@@ -113,7 +113,7 @@ class MsgIngester(object):
             for butler in self.butlers:
                 await butler.ingest(butler_file_list)
         except Exception as e:
-            LOGGER.warn("Exception: %s", e)
+            LOGGER.warning("Exception: %s", e)
 
     def run_tasks(self):
         """run tasks to queue files and ingest them"""

@@ -84,7 +84,7 @@ class MultiComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         ingesterConfig = config["ingester"]
         image_staging_dir = ingesterConfig["imageStagingDirectory"]
         scanner = DirectoryScanner([image_staging_dir])
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         ingester = FileIngester(config)
@@ -92,7 +92,7 @@ class MultiComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         staged_files = ingester.stageFiles([destFile])
         await ingester.ingest(staged_files)
 
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
 
