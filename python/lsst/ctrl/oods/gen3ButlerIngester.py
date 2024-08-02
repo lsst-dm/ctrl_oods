@@ -235,7 +235,7 @@ class Gen3ButlerIngester(ButlerIngester):
         """
 
         # Ingest image.
-        asyncio.sleep(0)
+        await asyncio.sleep(0)
         self.task.run(file_list)
 
     def getName(self):
