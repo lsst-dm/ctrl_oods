@@ -30,6 +30,7 @@ import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.utils import Utils
+from lsst.daf.butler import Butler
 
 
 class AsyncIngestTestCase(unittest.IsolatedAsyncioTestCase):
@@ -80,6 +81,7 @@ class AsyncIngestTestCase(unittest.IsolatedAsyncioTestCase):
         butlerConfig["stagingDirectory"] = self.stagingDirectory
 
         self.repoDir = tempfile.mkdtemp()
+        Butler.makeRepo(self.repoDir)
         butlerConfig["repoDirectory"] = self.repoDir
 
         # copy the FITS file to it's test location

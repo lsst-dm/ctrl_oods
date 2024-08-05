@@ -57,10 +57,8 @@ class ButlerAttendant:
         self.collections = self.config["collections"]
         self.cleanCollections = self.config.get("cleanCollections", None)
 
-        try:
-            self.butlerConfig = Butler.makeRepo(repo)
-        except FileExistsError:
-            self.butlerConfig = repo
+        LOGGER.info(f"Using Butler repo located at {repo}")
+        self.butlerConfig = repo
 
         try:
             self.butler = self.createButler()
