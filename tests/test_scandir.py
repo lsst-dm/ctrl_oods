@@ -20,19 +20,20 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import tempfile
+import unittest
 
 import lsst.utils.tests
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 
 
-class ScanDirTestCase(lsst.utils.tests.TestCase):
+class ScanDirTestCase(unittest.IsolatedAsyncioTestCase):
     """Test Scanning directory"""
 
-    def testScanDir(self):
+    async def testScanDir(self):
         dirPath = tempfile.mkdtemp()
 
         scanner = DirectoryScanner([dirPath])
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
 
         self.assertEqual(len(files), 0)
 
@@ -40,13 +41,13 @@ class ScanDirTestCase(lsst.utils.tests.TestCase):
         (fh2, filename2) = tempfile.mkstemp(dir=dirPath)
         (fh3, filename3) = tempfile.mkstemp(dir=dirPath)
 
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 3)
 
         os.close(fh1)
         os.remove(filename1)
 
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 2)
 
         os.close(fh2)
@@ -54,7 +55,7 @@ class ScanDirTestCase(lsst.utils.tests.TestCase):
         os.close(fh3)
         os.remove(filename3)
 
-        files = scanner.getAllFiles()
+        files = await scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
         os.rmdir(dirPath)
