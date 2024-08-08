@@ -32,6 +32,7 @@ import yaml
 from lsst.ctrl.oods.bucketMessage import BucketMessage
 from lsst.ctrl.oods.msgIngester import MsgIngester
 from lsst.ctrl.oods.msgQueue import MsgQueue
+from lsst.daf.butler import Butler
 
 
 class S3AuxtelIngesterTestCase(unittest.IsolatedAsyncioTestCase):
@@ -63,8 +64,12 @@ class S3AuxtelIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         with open(configFile, "r") as f:
             config = yaml.safe_load(f)
 
+        ingesterConfig = config["ingester"]
+        butlerConfig = ingesterConfig["butlers"][0]["butler"]
+
         self.repoDir = tempfile.mkdtemp()
-        config["repoDirectory"] = self.repoDir
+        Butler.makeRepo(self.repoDir)
+        butlerConfig["repoDirectory"] = self.repoDir
 
         return config
 

@@ -120,6 +120,7 @@ class TaggingTestCase(unittest.IsolatedAsyncioTestCase):
         butlerConfig["stagingDirectory"] = self.stagingDirectory
 
         self.repoDir = tempfile.mkdtemp()
+        Butler.makeRepo(self.repoDir)
         butlerConfig["repoDirectory"] = self.repoDir
 
         self.collections = butlerConfig["collections"]

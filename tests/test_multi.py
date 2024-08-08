@@ -27,6 +27,7 @@ import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.daf.butler import Butler
 
 
 class MultiComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
@@ -56,6 +57,7 @@ class MultiComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
             butlerConfig["stagingDirectory"] = self.stagingRootDir
 
             self.repoDir = tempfile.mkdtemp()
+            Butler.makeRepo(self.repoDir)
 
             butlerConfig["repoDirectory"] = self.repoDir
 
