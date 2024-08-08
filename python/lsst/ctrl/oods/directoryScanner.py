@@ -68,8 +68,8 @@ class DirectoryScanner(object):
         """
         files = []
         for dirName, subdirs, fileList in os.walk(directory):
-            await asyncio.sleep(0.01)
             for fname in fileList:
+                await asyncio.sleep(0)
                 fullName = os.path.join(dirName, fname)
                 files.append(fullName)
         return files
