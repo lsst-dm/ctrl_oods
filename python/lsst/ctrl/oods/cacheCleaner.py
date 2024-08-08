@@ -88,6 +88,7 @@ class CacheCleaner(object):
 
         files = await self.getAllFilesOlderThan(seconds, self.files_and_directories)
         for name in files:
+            await asyncio.sleep(0)
             LOGGER.info("removing %s", name)
             try:
                 os.unlink(name)
@@ -140,8 +141,8 @@ class CacheCleaner(object):
         files = []
 
         for dirName, subdirs, fileList in os.walk(directory):
-            await asyncio.sleep(0)
             for fname in fileList:
+                await asyncio.sleep(0)
                 fullName = os.path.join(dirName, fname)
                 stat_info = os.stat(fullName)
                 modification_time = stat_info.st_mtime
@@ -186,8 +187,8 @@ class CacheCleaner(object):
         directories = []
 
         for root, dirs, files in os.walk(directory, topdown=False):
-            await asyncio.sleep(0)
             for name in dirs:
+                await asyncio.sleep(0)
                 full_name = os.path.join(root, name)
                 stat_info = os.stat(full_name)
                 mtime = stat_info.st_mtime
