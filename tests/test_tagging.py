@@ -31,8 +31,7 @@ import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
-from lsst.daf.butler import Butler
-from lsst.daf.butler.registry import CollectionType
+from lsst.daf.butler import Butler, CollectionType
 
 
 class TaggingTestCase(unittest.IsolatedAsyncioTestCase):
