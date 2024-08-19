@@ -234,7 +234,6 @@ class Gen3ButlerIngester(ButlerIngester):
         """
 
         # Ingest image.
-        await asyncio.sleep(0)
         self.task.run(file_list)
 
     def getName(self):
@@ -276,10 +275,8 @@ class Gen3ButlerIngester(ButlerIngester):
 
         butler = self.createButler()
 
-        await asyncio.sleep(0)
         butler.registry.refresh()
 
-        await asyncio.sleep(0)
         # get all datasets in these collections
         allCollections = self.collections if self.cleanCollections is None else self.cleanCollections
         all_datasets = set(
