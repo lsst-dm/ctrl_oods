@@ -21,7 +21,6 @@
 
 import asyncio
 import collections
-import concurrent
 import logging
 import os
 import shutil
@@ -31,8 +30,7 @@ from astropy.time import Time, TimeDelta
 from lsst.ctrl.oods.butlerIngester import ButlerIngester
 from lsst.ctrl.oods.imageData import ImageData
 from lsst.ctrl.oods.timeInterval import TimeInterval
-from lsst.daf.butler import Butler
-from lsst.daf.butler.registry import CollectionType
+from lsst.daf.butler import Butler, CollectionType
 from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
 from lsst.pipe.base import Instrument
 
@@ -236,12 +234,7 @@ class Gen3ButlerIngester(ButlerIngester):
         """
 
         # Ingest image.
-        try:
-            loop = asyncio.get_running_loop()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                await loop.run_in_executor(pool, self.task.run, file_list)
-        except Exception as e:
-            LOGGER.info("Ingestion failure: %s", e)
+        self.task.run(file_list)
 
     def getName(self):
         """Return the name of this ingester
@@ -259,18 +252,14 @@ class Gen3ButlerIngester(ButlerIngester):
         while True:
             if self.csc:
                 self.csc.log.info("butler repo cleaning started")
-            try:
-                loop = asyncio.get_running_loop()
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    await loop.run_in_executor(pool, self.clean)
-            except Exception as e:
-                if self.csc:
-                    self.csc.log.info("Exception: %s", e)
+
+            await self.clean()
+
             if self.csc:
                 self.csc.log.info("done cleaning butler repo; sleeping for %d seconds", seconds)
             await asyncio.sleep(seconds)
 
-    def clean(self):
+    async def clean(self):
         """Remove all the datasets in the butler that
         were ingested before the configured Interval
         """
@@ -298,10 +287,12 @@ class Gen3ButlerIngester(ButlerIngester):
                 bind={"ref_date": t},
             )
         )
+        await asyncio.sleep(0)
 
         # get all TAGGED collections
         tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
 
+        await asyncio.sleep(0)
         # Note: The code below is to get around an issue where passing
         # an empty list as the collections argument to queryDatasets
         # returns all datasets.
@@ -323,6 +314,7 @@ class Gen3ButlerIngester(ButlerIngester):
         # the Butler, and if the URI was available,
         # remove it.
         for x in ref:
+            await asyncio.sleep(0)
             uri = None
             try:
                 uri = butler.getURI(x, collections=x.run)
@@ -336,4 +328,5 @@ class Gen3ButlerIngester(ButlerIngester):
                 except Exception as e:
                     LOGGER.info("error removing %s: %s", uri, e)
 
+        await asyncio.sleep(0)
         butler.pruneDatasets(ref, purge=True, unstore=True)

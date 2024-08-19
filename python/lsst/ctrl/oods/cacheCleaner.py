@@ -19,7 +19,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import asyncio
-import concurrent
 import logging
 import os
 import time
@@ -54,16 +53,12 @@ class CacheCleaner(object):
     async def run_tasks(self):
         """Check and clean directories at regular intervals"""
         self.terminate = False
-        loop = asyncio.get_running_loop()
         while True:
             if self.csc:
                 self.csc.log.info("Cleaning %s", self.files_and_directories)
-            try:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    await loop.run_in_executor(pool, self.clean)
-            except Exception as e:
-                if self.csc:
-                    self.csc.log.info("Clean failure: %s", e)
+
+            await self.clean()
+
             if self.csc:
                 self.csc.log.info("done cleaning; waiting %d seconds", self.seconds)
             await asyncio.sleep(self.seconds)
@@ -74,7 +69,7 @@ class CacheCleaner(object):
         """Set flag to stop coroutines"""
         self.terminate = True
 
-    def clean(self):
+    async def clean(self):
         """Remove files older than a given interval, and directories
         that have been empty for a given interval.
         """
@@ -90,8 +85,9 @@ class CacheCleaner(object):
         seconds = TimeInterval.calculateTotalSeconds(self.fileInterval)
         seconds = now - seconds
 
-        files = self.getAllFilesOlderThan(seconds, self.files_and_directories)
+        files = await self.getAllFilesOlderThan(seconds, self.files_and_directories)
         for name in files:
+            await asyncio.sleep(0)
             LOGGER.info("removing %s", name)
             try:
                 os.unlink(name)
@@ -102,10 +98,10 @@ class CacheCleaner(object):
         seconds = TimeInterval.calculateTotalSeconds(self.emptyDirsInterval)
         seconds = now - seconds
 
-        self.clearEmptyDirectories(seconds, self.files_and_directories)
-        self.clearEmptyDirectories(seconds, self.only_empty_directories)
+        await self.clearEmptyDirectories(seconds, self.files_and_directories)
+        await self.clearEmptyDirectories(seconds, self.only_empty_directories)
 
-    def getAllFilesOlderThan(self, seconds, directories):
+    async def getAllFilesOlderThan(self, seconds, directories):
         """Get files in directories older than 'seconds'.
 
         Parameters
@@ -122,11 +118,11 @@ class CacheCleaner(object):
         """
         allFiles = []
         for name in directories:
-            files = self.getFilesOlderThan(seconds, name)
+            files = await self.getFilesOlderThan(seconds, name)
             allFiles.extend(files)
         return allFiles
 
-    def getFilesOlderThan(self, seconds, directory):
+    async def getFilesOlderThan(self, seconds, directory):
         """Get files in one directory older than 'seconds'.
 
         Parameters
@@ -145,6 +141,7 @@ class CacheCleaner(object):
 
         for dirName, subdirs, fileList in os.walk(directory):
             for fname in fileList:
+                await asyncio.sleep(0)
                 fullName = os.path.join(dirName, fname)
                 stat_info = os.stat(fullName)
                 modification_time = stat_info.st_mtime
@@ -152,7 +149,7 @@ class CacheCleaner(object):
                     files.append(fullName)
         return files
 
-    def clearEmptyDirectories(self, seconds, directories):
+    async def clearEmptyDirectories(self, seconds, directories):
         """Get files in one directory older than 'seconds'.
 
         Parameters
@@ -163,11 +160,11 @@ class CacheCleaner(object):
             directories to observe
         """
         for directory in directories:
-            dirs = self.getDirectoriesOlderThan(seconds=seconds, directory=directory)
+            dirs = await self.getDirectoriesOlderThan(seconds=seconds, directory=directory)
             if len(dirs) != 0:
-                self.removeEmptyDirectories(dirs)
+                await self.removeEmptyDirectories(dirs)
 
-    def getDirectoriesOlderThan(self, seconds, directory):
+    async def getDirectoriesOlderThan(self, seconds, directory):
         """Get subdirectories older than "seconds"; Note that
         we get the list of all these directories now, and delete
         later. If we delete in place here, the parent directory modification
@@ -190,6 +187,7 @@ class CacheCleaner(object):
 
         for root, dirs, files in os.walk(directory, topdown=False):
             for name in dirs:
+                await asyncio.sleep(0)
                 full_name = os.path.join(root, name)
                 stat_info = os.stat(full_name)
                 mtime = stat_info.st_mtime
@@ -197,7 +195,7 @@ class CacheCleaner(object):
                     directories.append(full_name)
         return directories
 
-    def removeEmptyDirectories(self, directories):
+    async def removeEmptyDirectories(self, directories):
         """Remove these directories, if they're empty.
 
         Parameters
@@ -206,6 +204,7 @@ class CacheCleaner(object):
             directories to remove, if they're empty
         """
         for directory in sorted(directories, reverse=True):
+            await asyncio.sleep(0)
             if not os.listdir(directory):
                 LOGGER.info("removing %s", directory)
                 try:
