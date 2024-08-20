@@ -259,7 +259,7 @@ class Gen3ButlerIngester(ButlerIngester):
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
             if self.csc:
-                self.csc.log.info("butler repo cleaning started")
+                self.csc.log.info("calling butler repo clean started")
 
             await self.clean()
 
@@ -272,6 +272,7 @@ class Gen3ButlerIngester(ButlerIngester):
         were ingested before the configured Interval
         """
 
+        LOGGER.info("butler repo clean started")
         # calculate the time value which is Time.now - the
         # "olderThan" configuration
         t = Time.now()
@@ -283,8 +284,13 @@ class Gen3ButlerIngester(ButlerIngester):
 
         butler = self.createButler()
 
+        await asyncio.sleep(0)
+        LOGGER.info("about to refresh")
         butler.registry.refresh()
+        LOGGER.info("done with refresh")
+        await asyncio.sleep(0)
 
+        LOGGER.info("about to run queryDatasets")
         # get all datasets in these collections
         allCollections = self.collections if self.cleanCollections is None else self.cleanCollections
         all_datasets = set(
@@ -295,10 +301,13 @@ class Gen3ButlerIngester(ButlerIngester):
                 bind={"ref_date": t},
             )
         )
+        LOGGER.info("done running queryDatasets")
         await asyncio.sleep(0)
 
+        LOGGER.info("about to run queryCollections")
         # get all TAGGED collections
         tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
+        LOGGER.info("done running queryCollections")
 
         await asyncio.sleep(0)
         # Note: The code below is to get around an issue where passing
@@ -306,7 +315,9 @@ class Gen3ButlerIngester(ButlerIngester):
         # returns all datasets.
         if tagged_cols:
             # get all TAGGED datasets
+            LOGGER.info("about to run queryDatasets for TAGGED collections")
             tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
+            LOGGER.info("done running queryDatasets for TAGGED collections")
 
             # get a set of datasets in all_datasets, but not in tagged_datasets
             ref = all_datasets.difference(tagged_datasets)
@@ -337,4 +348,6 @@ class Gen3ButlerIngester(ButlerIngester):
                     LOGGER.info("error removing %s: %s", uri, e)
 
         await asyncio.sleep(0)
+        LOGGER.info("about to run pruneDatasets")
         butler.pruneDatasets(ref, purge=True, unstore=True)
+        LOGGER.info("done running pruneDatasets")
