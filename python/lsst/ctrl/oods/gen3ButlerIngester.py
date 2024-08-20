@@ -174,6 +174,9 @@ class Gen3ButlerIngester(ButlerIngester):
         asyncio.create_task(self.csc.send_imageInOODS(msg))
 
     def on_success(self, datasets):
+        asyncio.create_task(self._on_success(datasets))
+
+    async def _on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
         successful data ingestion status
 
@@ -183,6 +186,7 @@ class Gen3ButlerIngester(ButlerIngester):
             list of DatasetRefs
         """
         for dataset in datasets:
+            await asyncio.sleep(0)
             LOGGER.info("file %s successfully ingested", dataset.path.ospath)
             image_data = ImageData(dataset)
             LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
