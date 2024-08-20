@@ -144,6 +144,13 @@ class Gen3ButlerIngester(ButlerIngester):
         info["SENSOR"] = "S??"
         return info
 
+    async def print_msg(self, msg):
+        """Print message dictionary - this is used if a CSC has not been created
+        """
+
+        LOGGER.info(f"would have sent {msg=}")
+        await asyncio.sleep(0)
+
     def transmit_status(self, metadata, code, description):
         """Transmit a message with given metadata, status code and description
 
@@ -162,8 +169,9 @@ class Gen3ButlerIngester(ButlerIngester):
         msg["DESCRIPTION"] = description
         LOGGER.info("msg: %s, code: %s, description: %s", msg, code, description)
         if self.csc is None:
+            asyncio.create_task(self.print_msg(msg))
             return
-        asyncio.run(self.csc.send_imageInOODS(msg))
+        asyncio.create_task(self.csc.send_imageInOODS(msg))
 
     def on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
