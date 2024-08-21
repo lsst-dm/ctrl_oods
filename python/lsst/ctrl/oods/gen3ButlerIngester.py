@@ -151,7 +151,7 @@ class Gen3ButlerIngester(ButlerIngester):
         LOGGER.info(f"would have sent {msg=}")
         await asyncio.sleep(0)
 
-    def transmit_status(self, metadata, code, description):
+    async def transmit_status(self, metadata, code, description):
         """Transmit a message with given metadata, status code and description
 
         Parameters
@@ -169,9 +169,9 @@ class Gen3ButlerIngester(ButlerIngester):
         msg["DESCRIPTION"] = description
         LOGGER.info("msg: %s, code: %s, description: %s", msg, code, description)
         if self.csc is None:
-            asyncio.create_task(self.print_msg(msg))
+            await self.print_msg(msg)
             return
-        asyncio.create_task(self.csc.send_imageInOODS(msg))
+        await self.csc.send_imageInOODS(msg)
 
     def on_success(self, datasets):
         asyncio.create_task(self._on_success(datasets))
@@ -190,9 +190,12 @@ class Gen3ButlerIngester(ButlerIngester):
             LOGGER.info("file %s successfully ingested", dataset.path.ospath)
             image_data = ImageData(dataset)
             LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
-            self.transmit_status(image_data.get_info(), code=0, description="file ingested")
+            await self.transmit_status(image_data.get_info(), code=0, description="file ingested")
 
     def on_ingest_failure(self, exposures, exc):
+        asyncio.create_task(self._on_ingest_failure(exposures, exc))
+
+    async def _on_ingest_failure(self, exposures, exc):
         """Callback used on ingest failure. Used to transmit
         unsuccessful data ingestion status
 
@@ -205,11 +208,12 @@ class Gen3ButlerIngester(ButlerIngester):
 
         """
         for f in exposures.files:
+            await asyncio.sleep(0)
             real_file = f.filename.ospath
             self.move_file_to_bad_dir(real_file)
             cause = self.extract_cause(exc)
             info = self.rawexposure_info(f)
-            self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
+            await self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
 
     def on_metadata_failure(self, filename, exc):
         """Callback used on metadata extraction failure. Used to transmit
@@ -227,7 +231,7 @@ class Gen3ButlerIngester(ButlerIngester):
 
         cause = self.extract_cause(exc)
         info = self.undef_metadata(real_file)
-        self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
+        asyncio.create_task(self.transmit_status(info, code=2, description=f"metadata failure: {cause}"))
 
     def move_file_to_bad_dir(self, filename):
         bad_dir = self.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
@@ -246,6 +250,7 @@ class Gen3ButlerIngester(ButlerIngester):
         """
 
         # Ingest image.
+        await asyncio.sleep(0)
         self.task.run(file_list)
 
     def getName(self):
@@ -276,7 +281,6 @@ class Gen3ButlerIngester(ButlerIngester):
         were ingested before the configured Interval
         """
 
-        LOGGER.info("butler repo clean started")
         # calculate the time value which is Time.now - the
         # "olderThan" configuration
         t = Time.now()
@@ -288,11 +292,7 @@ class Gen3ButlerIngester(ButlerIngester):
 
         butler = self.createButler()
 
-        await asyncio.sleep(0)
-        LOGGER.info("about to refresh")
         butler.registry.refresh()
-        LOGGER.info("done with refresh")
-        await asyncio.sleep(0)
 
         LOGGER.info("about to run queryDatasets")
         # get all datasets in these collections
