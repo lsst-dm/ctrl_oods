@@ -281,6 +281,7 @@ class Gen3ButlerIngester(ButlerIngester):
         were ingested before the configured Interval
         """
 
+        await asyncio.sleep(0)
         # calculate the time value which is Time.now - the
         # "olderThan" configuration
         t = Time.now()
@@ -290,9 +291,13 @@ class Gen3ButlerIngester(ButlerIngester):
         )
         t = t - td
 
+        LOGGER.info("createButler()")
         butler = self.createButler()
+        await asyncio.sleep(0)
 
+        LOGGER.info("refresh()")
         butler.registry.refresh()
+        await asyncio.sleep(0)
 
         LOGGER.info("about to run queryDatasets")
         # get all datasets in these collections
@@ -321,10 +326,13 @@ class Gen3ButlerIngester(ButlerIngester):
             # get all TAGGED datasets
             LOGGER.info("about to run queryDatasets for TAGGED collections")
             tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
-            LOGGER.info("done running queryDatasets for TAGGED collections")
+            LOGGER.info("done running queryDatasets for TAGGED collections; differencing datasets")
+            await asyncio.sleep(0)
 
             # get a set of datasets in all_datasets, but not in tagged_datasets
             ref = all_datasets.difference(tagged_datasets)
+            LOGGER.info("done differencing datasets")
+            await asyncio.sleep(0)
         else:
             # no TAGGED collections, so use all_datasets
             ref = all_datasets
