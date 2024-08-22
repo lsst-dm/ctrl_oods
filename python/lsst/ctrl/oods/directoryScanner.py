@@ -67,9 +67,22 @@ class DirectoryScanner(object):
             list of all files in the given directory
         """
         files = []
-        for dirName, subdirs, fileList in os.walk(directory):
-            for fname in fileList:
-                await asyncio.sleep(0)
-                fullName = os.path.join(dirName, fname)
-                files.append(fullName)
+        for entry in self._scanner(directory):
+            await asyncio.sleep(0)
+            files.append(entry)
         return files
+
+    def _scanner(self, directory):
+        """Retrieve all files from a directory, yielding on
+        each file that is found
+
+        Parameters
+        ----------
+        directory: `str`
+            directory to scan
+        """
+        for e in os.scandir(directory):
+            if e.is_dir(follow_symlinks=False):
+                yield from self._scanner(e.path)
+            else:
+                yield e.path
