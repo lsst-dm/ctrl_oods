@@ -23,6 +23,7 @@ import logging
 import os
 import time
 
+from lsst.ctrl.oods.scanner import Scanner
 from lsst.ctrl.oods.timeInterval import TimeInterval
 
 LOGGER = logging.getLogger(__name__)
@@ -139,14 +140,15 @@ class CacheCleaner(object):
         """
         files = []
 
-        for dirName, subdirs, fileList in os.walk(directory):
-            for fname in fileList:
-                await asyncio.sleep(0)
-                fullName = os.path.join(dirName, fname)
-                stat_info = os.stat(fullName)
-                modification_time = stat_info.st_mtime
-                if modification_time < seconds:
-                    files.append(fullName)
+        scanner = Scanner()
+        async for entry in scanner.scan(directory):
+            if entry.is_dir():
+                continue
+            fullName = entry.path
+            stat_info = os.stat(fullName)
+            modification_time = stat_info.st_mtime
+            if modification_time < seconds:
+                files.append(fullName)
         return files
 
     async def clearEmptyDirectories(self, seconds, directories):
@@ -185,14 +187,15 @@ class CacheCleaner(object):
         """
         directories = []
 
-        for root, dirs, files in os.walk(directory, topdown=False):
-            for name in dirs:
-                await asyncio.sleep(0)
-                full_name = os.path.join(root, name)
-                stat_info = os.stat(full_name)
-                mtime = stat_info.st_mtime
-                if mtime < seconds:
-                    directories.append(full_name)
+        scanner = Scanner()
+        async for entry in scanner.scan(directory):
+            if entry.is_file():
+                continue
+            full_name = entry.path
+            stat_info = os.stat(full_name)
+            mtime = stat_info.st_mtime
+            if mtime < seconds:
+                directories.append(full_name)
         return directories
 
     async def removeEmptyDirectories(self, directories):
@@ -205,9 +208,15 @@ class CacheCleaner(object):
         """
         for directory in sorted(directories, reverse=True):
             await asyncio.sleep(0)
-            if not os.listdir(directory):
+            if self._isEmpty(directory):
                 LOGGER.info("removing %s", directory)
                 try:
                     os.rmdir(directory)
                 except Exception as e:
                     LOGGER.info("Couldn't remove %s: %s", directory, e)
+
+    def _isEmpty(self, directory):
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                return False
+            return True
