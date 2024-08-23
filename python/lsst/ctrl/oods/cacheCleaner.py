@@ -23,6 +23,7 @@ import logging
 import os
 import time
 
+from lsst.ctrl.oods.scanner import Scanner
 from lsst.ctrl.oods.timeInterval import TimeInterval
 
 LOGGER = logging.getLogger(__name__)
@@ -139,7 +140,8 @@ class CacheCleaner(object):
         """
         files = []
 
-        async for entry in self._scanner(directory):
+        scanner = Scanner()
+        async for entry in scanner.scan(directory):
             if entry.is_dir():
                 continue
             fullName = entry.path
@@ -185,7 +187,8 @@ class CacheCleaner(object):
         """
         directories = []
 
-        async for entry in self._scanner(directory):
+        scanner = Scanner()
+        async for entry in scanner.scan(directory):
             if entry.is_file():
                 continue
             full_name = entry.path
@@ -217,12 +220,3 @@ class CacheCleaner(object):
             for entry in entries:
                 return False
             return True
-
-    async def _scanner(self, directory):
-        await asyncio.sleep(0)
-        for entry in os.scandir(directory):
-            await asyncio.sleep(0)
-            yield entry
-            if entry.is_dir(follow_symlinks=False):
-                async for sub_entry in self._scanner(entry.path):
-                    yield sub_entry

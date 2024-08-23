@@ -18,8 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import asyncio
-import os
+from lsst.ctrl.oods.scanner import Scanner
 
 
 class DirectoryScanner(object):
@@ -66,18 +65,10 @@ class DirectoryScanner(object):
         files: `list`
             list of all files in the given directory
         """
+        scanner = Scanner()
         files = []
-        async for entry in self._scanner(directory):
+        async for entry in scanner.scan(directory):
             if entry.is_dir():
                 continue
             files.append(entry.path)
         return files
-
-    async def _scanner(self, directory):
-        await asyncio.sleep(0)
-        for entry in os.scandir(directory):
-            await asyncio.sleep(0)
-            yield entry
-            if entry.is_dir(follow_symlinks=False):
-                async for sub_entry in self._scanner(entry.path):
-                    yield sub_entry
