@@ -145,8 +145,7 @@ class Gen3ButlerIngester(ButlerIngester):
         return info
 
     async def print_msg(self, msg):
-        """Print message dictionary - used if a CSC has not been created
-        """
+        """Print message dictionary - used if a CSC has not been created"""
 
         LOGGER.info(f"would have sent {msg=}")
         await asyncio.sleep(0)
