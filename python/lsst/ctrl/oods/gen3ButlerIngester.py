@@ -144,7 +144,19 @@ class Gen3ButlerIngester(ButlerIngester):
         info["SENSOR"] = "S??"
         return info
 
-    def transmit_status(self, metadata, code, description):
+    async def print_msg(self, msg):
+        """Print message dictionary - used if a CSC has not been created
+
+        Parameters
+        ----------
+        msg: `dict`
+            Dictionary to print
+        """
+
+        LOGGER.info(f"would have sent {msg=}")
+        await asyncio.sleep(0)
+
+    async def transmit_status(self, metadata, code, description):
         """Transmit a message with given metadata, status code and description
 
         Parameters
@@ -162,10 +174,14 @@ class Gen3ButlerIngester(ButlerIngester):
         msg["DESCRIPTION"] = description
         LOGGER.info("msg: %s, code: %s, description: %s", msg, code, description)
         if self.csc is None:
+            await self.print_msg(msg)
             return
-        asyncio.run(self.csc.send_imageInOODS(msg))
+        await self.csc.send_imageInOODS(msg)
 
     def on_success(self, datasets):
+        asyncio.create_task(self._on_success(datasets))
+
+    async def _on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
         successful data ingestion status
 
@@ -175,12 +191,16 @@ class Gen3ButlerIngester(ButlerIngester):
             list of DatasetRefs
         """
         for dataset in datasets:
+            await asyncio.sleep(0)
             LOGGER.info("file %s successfully ingested", dataset.path.ospath)
             image_data = ImageData(dataset)
             LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
-            self.transmit_status(image_data.get_info(), code=0, description="file ingested")
+            await self.transmit_status(image_data.get_info(), code=0, description="file ingested")
 
     def on_ingest_failure(self, exposures, exc):
+        asyncio.create_task(self._on_ingest_failure(exposures, exc))
+
+    async def _on_ingest_failure(self, exposures, exc):
         """Callback used on ingest failure. Used to transmit
         unsuccessful data ingestion status
 
@@ -193,11 +213,12 @@ class Gen3ButlerIngester(ButlerIngester):
 
         """
         for f in exposures.files:
+            await asyncio.sleep(0)
             real_file = f.filename.ospath
             self.move_file_to_bad_dir(real_file)
             cause = self.extract_cause(exc)
             info = self.rawexposure_info(f)
-            self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
+            await self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
 
     def on_metadata_failure(self, filename, exc):
         """Callback used on metadata extraction failure. Used to transmit
@@ -215,7 +236,7 @@ class Gen3ButlerIngester(ButlerIngester):
 
         cause = self.extract_cause(exc)
         info = self.undef_metadata(real_file)
-        self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
+        asyncio.create_task(self.transmit_status(info, code=2, description=f"metadata failure: {cause}"))
 
     def move_file_to_bad_dir(self, filename):
         bad_dir = self.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)
@@ -234,6 +255,7 @@ class Gen3ButlerIngester(ButlerIngester):
         """
 
         # Ingest image.
+        await asyncio.sleep(0)
         self.task.run(file_list)
 
     def getName(self):
@@ -251,7 +273,7 @@ class Gen3ButlerIngester(ButlerIngester):
         seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
         while True:
             if self.csc:
-                self.csc.log.info("butler repo cleaning started")
+                self.csc.log.info("calling butler repo clean started")
 
             await self.clean()
 
@@ -264,6 +286,7 @@ class Gen3ButlerIngester(ButlerIngester):
         were ingested before the configured Interval
         """
 
+        await asyncio.sleep(0)
         # calculate the time value which is Time.now - the
         # "olderThan" configuration
         t = Time.now()
@@ -273,10 +296,15 @@ class Gen3ButlerIngester(ButlerIngester):
         )
         t = t - td
 
+        LOGGER.info("about to createButler()")
         butler = self.createButler()
+        await asyncio.sleep(0)
 
+        LOGGER.info("about to refresh()")
         butler.registry.refresh()
+        await asyncio.sleep(0)
 
+        LOGGER.info("about to run queryDatasets")
         # get all datasets in these collections
         allCollections = self.collections if self.cleanCollections is None else self.cleanCollections
         all_datasets = set(
@@ -287,10 +315,13 @@ class Gen3ButlerIngester(ButlerIngester):
                 bind={"ref_date": t},
             )
         )
+        LOGGER.info("done running queryDatasets")
         await asyncio.sleep(0)
 
+        LOGGER.info("about to run queryCollections")
         # get all TAGGED collections
         tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
+        LOGGER.info("done running queryCollections")
 
         await asyncio.sleep(0)
         # Note: The code below is to get around an issue where passing
@@ -298,10 +329,15 @@ class Gen3ButlerIngester(ButlerIngester):
         # returns all datasets.
         if tagged_cols:
             # get all TAGGED datasets
+            LOGGER.info("about to run queryDatasets for TAGGED collections")
             tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
+            LOGGER.info("done running queryDatasets for TAGGED collections; differencing datasets")
+            await asyncio.sleep(0)
 
             # get a set of datasets in all_datasets, but not in tagged_datasets
             ref = all_datasets.difference(tagged_datasets)
+            LOGGER.info("done differencing datasets")
+            await asyncio.sleep(0)
         else:
             # no TAGGED collections, so use all_datasets
             ref = all_datasets
@@ -329,4 +365,6 @@ class Gen3ButlerIngester(ButlerIngester):
                     LOGGER.info("error removing %s: %s", uri, e)
 
         await asyncio.sleep(0)
+        LOGGER.info("about to run pruneDatasets")
         butler.pruneDatasets(ref, purge=True, unstore=True)
+        LOGGER.info("done running pruneDatasets")
