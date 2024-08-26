@@ -25,6 +25,18 @@ import os
 class Scanner(object):
 
     async def scan(self, directory):
+        """Return entries in a directory tree
+
+        Parameters
+        ----------
+        directory: `str`
+            directory to scan
+
+        Returns
+        -------
+        entry: `DirEntry`
+            directory entry
+        """
         await asyncio.sleep(0)
         for entry in os.scandir(directory):
             await asyncio.sleep(0)

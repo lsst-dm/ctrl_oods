@@ -144,11 +144,11 @@ class CacheCleaner(object):
         async for entry in scanner.scan(directory):
             if entry.is_dir():
                 continue
-            fullName = entry.path
-            stat_info = os.stat(fullName)
+            full_name = entry.path
+            stat_info = os.stat(full_name)
             modification_time = stat_info.st_mtime
             if modification_time < seconds:
-                files.append(fullName)
+                files.append(full_name)
         return files
 
     async def clearEmptyDirectories(self, seconds, directories):
@@ -193,8 +193,8 @@ class CacheCleaner(object):
                 continue
             full_name = entry.path
             stat_info = os.stat(full_name)
-            mtime = stat_info.st_mtime
-            if mtime < seconds:
+            modification_time = stat_info.st_mtime
+            if modification_time < seconds:
                 directories.append(full_name)
         return directories
 
