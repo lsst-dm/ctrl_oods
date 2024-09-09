@@ -113,7 +113,7 @@ class MsgIngester(object):
             for butler in self.butlers:
                 await butler.ingest(butler_file_list)
         except Exception as e:
-            LOGGER.warn("Exception: %s", e)
+            LOGGER.warning("Exception: %s", e)
 
     def run_tasks(self):
         """run tasks to queue files and ingest them"""

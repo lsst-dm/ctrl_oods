@@ -22,7 +22,6 @@
 
 import asyncio
 import collections
-import concurrent
 import logging
 import os
 import os.path
@@ -105,15 +104,8 @@ class ButlerAttendant:
         """
 
         # Ingest images.
-        try:
-            loop = asyncio.get_running_loop()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                await loop.run_in_executor(pool, self.task.run, file_list)
-        except Exception as e:
-            LOGGER.info("Ingestion issue %s", e)
-
-    def on_success(self, datasets):
-        pass
+        await asyncio.sleep(0)
+        self.task.run(file_list)
 
     def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
         """Create a full path to a directory contained in the
@@ -170,7 +162,19 @@ class ButlerAttendant:
         else:
             return f"{str(e.__cause__)};  {cause}"
 
-    def transmit_status(self, metadata, code, description):
+    async def print_msg(self, msg):
+        """Print message dictionary - used if a CSC has not been created
+
+        Parameters
+        ----------
+        msg: `dict`
+            Dictionary to print
+        """
+
+        LOGGER.info(f"would have sent {msg=}")
+        await asyncio.sleep(0)
+
+    async def transmit_status(self, metadata, code, description):
         """Transmit a message with given metadata, status code and description
 
         Parameters
@@ -188,8 +192,9 @@ class ButlerAttendant:
         msg["DESCRIPTION"] = description
         LOGGER.info("msg: %s, code: %s, description: %s", msg, code, description)
         if self.csc is None:
+            await self.print_msg(msg)
             return
-        asyncio.run(self.csc.send_imageInOODS(msg))
+        await self.csc.send_imageInOODS(msg)
 
     async def clean_task(self):
         """run the clean() method at the configured interval"""
@@ -197,20 +202,16 @@ class ButlerAttendant:
         LOGGER.info("clean_task created!")
         while True:
             LOGGER.debug("cleaning")
-            try:
-                loop = asyncio.get_running_loop()
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    await loop.run_in_executor(pool, self.clean)
-            except Exception as e:
-                LOGGER.info("Exception: %s", e)
+            await self.clean()
             LOGGER.debug("sleeping for %d seconds", seconds)
             await asyncio.sleep(seconds)
 
-    def clean(self):
+    async def clean(self):
         """Remove all the datasets in the butler that
         were ingested before the configured Interval
         """
 
+        await asyncio.sleep(0)
         # calculate the time value which is Time.now - the
         # "olderThan" configuration
         t = Time.now()
@@ -220,10 +221,15 @@ class ButlerAttendant:
         )
         t = t - td
 
+        LOGGER.info("about to createButler()")
         butler = self.createButler()
+        await asyncio.sleep(0)
 
+        LOGGER.info("about to refresh()")
         butler.registry.refresh()
+        await asyncio.sleep(0)
 
+        LOGGER.info("about to call queryDatasets")
         # get all datasets in these collections
         allCollections = self.collections if self.cleanCollections is None else self.cleanCollections
         all_datasets = set(
@@ -234,19 +240,28 @@ class ButlerAttendant:
                 bind={"ref_date": t},
             )
         )
+        LOGGER.info("done calling queryDatasets")
+        await asyncio.sleep(0)
 
+        LOGGER.info("about to call queryCollections")
         # get all TAGGED collections
         tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
+        LOGGER.info("done calling queryCollections")
 
         # Note: The code below is to get around an issue where passing
         # an empty list as the collections argument to queryDatasets
         # returns all datasets.
         if tagged_cols:
             # get all TAGGED datasets
+            LOGGER.info("about to run queryDatasets for TAGGED collections")
             tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
+            LOGGER.info("done running queryDatasets for TAGGED collections; differencing datasets")
+            await asyncio.sleep(0)
 
             # get a set of datasets in all_datasets, but not in tagged_datasets
             ref = all_datasets.difference(tagged_datasets)
+            LOGGER.info("done differencing datasets")
+            await asyncio.sleep(0)
         else:
             # no TAGGED collections, so use all_datasets
             ref = all_datasets
@@ -259,9 +274,9 @@ class ButlerAttendant:
         # the Butler, and if the URI was available,
         # remove it.
         for x in ref:
+            await asyncio.sleep(0)
             uri = None
             try:
-                # uri = butler.getURI(x, collections=x.run)
                 uri = butler.getURI(x)
             except Exception as e:
                 LOGGER.warning("butler is missing uri for %s: %s", x, e)
@@ -273,7 +288,10 @@ class ButlerAttendant:
                 except Exception as e:
                     LOGGER.warning("couldn't remove %s: %s", uri, e)
 
+        await asyncio.sleep(0)
+        LOGGER.info("about to run pruneDatasets")
         butler.pruneDatasets(ref, purge=True, unstore=True)
+        LOGGER.info("done running pruneDatasets")
 
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary
