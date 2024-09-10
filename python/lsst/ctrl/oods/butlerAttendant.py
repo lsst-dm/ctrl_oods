@@ -31,7 +31,7 @@ from astropy.time import Time, TimeDelta
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler
-from lsst.daf.butler.registry import CollectionType
+from lsst.daf.butler import CollectionType
 from lsst.obs.base import DefineVisitsTask
 from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
 from lsst.pipe.base import Instrument
