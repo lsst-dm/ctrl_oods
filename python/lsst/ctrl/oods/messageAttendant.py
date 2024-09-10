@@ -18,7 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
+import asyncio
 import logging
 
 from lsst.ctrl.oods.butlerAttendant import ButlerAttendant
@@ -56,6 +56,9 @@ class MessageAttendant(ButlerAttendant):
         return info
 
     def on_success(self, datasets):
+        asyncio.create_task(self._on_success(datasets))
+
+    async def _on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
         successful data ingestion status
 
@@ -66,12 +69,16 @@ class MessageAttendant(ButlerAttendant):
         """
         self.definer_run(datasets)
         for dataset in datasets:
+            await asyncio.sleep(0)
             LOGGER.info("file %s successfully ingested", dataset.path)
             image_data = ImageData(dataset)
             LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
-            self.transmit_status(image_data.get_info(), code=0, description="file ingested")
+            await self.transmit_status(image_data.get_info(), code=0, description="file ingested")
 
     def on_ingest_failure(self, exposures, exc):
+        asyncio.create_task(self._on_ingest_failure(exposures, exc))
+
+    async def _on_ingest_failure(self, exposures, exc):
         """Callback used on ingest failure. Used to transmit
         unsuccessful data ingestion status
 
@@ -84,11 +91,15 @@ class MessageAttendant(ButlerAttendant):
 
         """
         for f in exposures.files:
+            await asyncio.sleep(0)
             cause = self.extract_cause(exc)
             info = self.rawexposure_info(f)
-            self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
+            await self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
 
     def on_metadata_failure(self, resource_path, exc):
+        asyncio.create_task(self._on_metadata_failure(resource_path, exc))
+
+    async def _on_metadata_failure(self, resource_path, exc):
         """Callback used on metadata extraction failure. Used to transmit
 
         Parameters
@@ -101,4 +112,4 @@ class MessageAttendant(ButlerAttendant):
         real_file = f"{resource_path}"
         cause = self.extract_cause(exc)
         info = self.undef_metadata(real_file)
-        self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
+        await self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
