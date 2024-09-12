@@ -28,9 +28,8 @@ import unittest
 import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.fileIngester import FileIngester
-
 from lsst.daf.butler import Butler, CollectionType
-from lsst.daf.butler.tests import MetricsExample, addDatasetType, registerMetricsExample, addDataIdValue
+from lsst.daf.butler.tests import MetricsExample, addDataIdValue, addDatasetType, registerMetricsExample
 
 
 class CleanCollectionsTestCase(unittest.IsolatedAsyncioTestCase):
