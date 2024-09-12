@@ -81,8 +81,8 @@ class CleanCollectionsTestCase(unittest.IsolatedAsyncioTestCase):
         opts = dict(writeable=True)
         self.butler = Butler(self.repoDir, **opts)
 
-        self.butler.registry.registerCollection("collection_a", CollectionType.RUN)
-        self.butler.registry.registerCollection("collection_b", CollectionType.RUN)
+        self.butler.registry.registerCollection(run_a, CollectionType.RUN)
+        self.butler.registry.registerCollection(run_b, CollectionType.RUN)
 
         registerMetricsExample(self.butler)
         image_data = MetricsExample(summary={"answer": 42, "question": "unknown"})
@@ -104,7 +104,7 @@ class CleanCollectionsTestCase(unittest.IsolatedAsyncioTestCase):
         """Remove butler repo directory"""
         shutil.rmtree(self.repoDir, ignore_errors=True)
 
-    def number_of_files(self):
+    def number_of_datasets(self):
         """count the number of files in the butler
 
         Returns
@@ -164,7 +164,7 @@ class CleanCollectionsTestCase(unittest.IsolatedAsyncioTestCase):
 
         # ensure two files are registered on setUp
 
-        self.assertEqual(self.number_of_files(), 2)
+        self.assertEqual(self.number_of_datasets(), 2)
 
         # set expiration time to 120 seconds
         self.modify_collection_time("collection_a", 120)
@@ -174,7 +174,7 @@ class CleanCollectionsTestCase(unittest.IsolatedAsyncioTestCase):
         await self.perform_clean()
 
         # both should still be there
-        self.assertEqual(self.number_of_files(), 2)
+        self.assertEqual(self.number_of_datasets(), 2)
 
         # set expiration time to 3 seconds in collection_a
         self.modify_collection_time("collection_a", 3)
@@ -182,14 +182,14 @@ class CleanCollectionsTestCase(unittest.IsolatedAsyncioTestCase):
 
         # should have removed one in collection_a, and
         # kept one in collection_b
-        self.assertEqual(self.number_of_files(), 1)
+        self.assertEqual(self.number_of_datasets(), 1)
 
         # set expiration time to 3 seconds in collection_b
         self.modify_collection_time("collection_b", 3)
         await self.perform_clean()
 
         # should be no more left
-        self.assertEqual(self.number_of_files(), 0)
+        self.assertEqual(self.number_of_datasets(), 0)
 
     async def interrupt_me(self):
         await asyncio.sleep(5)
