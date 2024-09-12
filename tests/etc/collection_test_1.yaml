@@ -18,14 +18,17 @@ ingester:
             collections:
                 - LATISS/runs/quickLook
             cleanCollections:
-                - LATISS/raw/all
-                - LATISS/runs/quickLook
+                - collection: LATISS/raw/all
+                  filesOlderThan:
+                      <<: *interval
+                      seconds: 5
+                - collection: LATISS/runs/quickLook
+                  filesOlderThan:
+                      <<: *interval
+                      seconds: 5
             scanInterval:
                 <<: *interval
                 seconds: 3
-            filesOlderThan:
-                <<: *interval
-                seconds: 5
     batchSize: 20
     scanInterval:
         <<: *interval

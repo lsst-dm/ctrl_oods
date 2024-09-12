@@ -23,12 +23,14 @@ ingester:
             stagingDirectory: /tmp/staging
             collections:
                 - LATISS/raw/all
+            cleanCollections:
+                - collection: LATISS/raw/all
+                  filesOlderThan:
+                      <<: *interval
+                      seconds: 3
             scanInterval:
                 <<: *interval
                 seconds: 2
-            filesOlderThan:
-                <<: *interval
-                seconds: 3
     batchSize: 20
     scanInterval:
         <<: *interval

@@ -17,8 +17,14 @@ ingester:
             collections:
                 - FARG/raw/all
             cleanCollections:
-                - FARG/raw/all
-                - FARG/runs/quickLook
+                - collection: FARG/raw/all
+                  filesOlderThan:
+                      <<: *interval
+                      days: 30
+                - collection: FARG/runs/quickLook
+                  filesOlderThan:
+                      <<: *interval
+                      days: 30
             instrument: lsst.obs.lsst.LsstComCam
             class:
                 import : lsst.ctrl.oods.fileAttendant
@@ -29,9 +35,6 @@ ingester:
             scanInterval:
                 <<: *interval
                 minutes: 1
-            filesOlderThan:
-                <<: *interval
-                days: 30
 
     batchSize: 20
     scanInterval:
