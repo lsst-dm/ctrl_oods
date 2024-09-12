@@ -21,10 +21,12 @@ ingester:
             repoDirectory : /tmp/repo/LATISS
             collections:
                 - LATISS/raw/all
+            cleanCollections:
+                - collection: LATISS/raw/all
+                  filesOlderThan:
+                      <<: *interval
+                      seconds: 30
             scanInterval:
                 <<: *interval
                 seconds: 10
-            filesOlderThan:
-                <<: *interval
-                seconds: 30
     batchSize: 20

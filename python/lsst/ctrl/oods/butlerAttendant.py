@@ -51,9 +51,8 @@ class ButlerAttendant:
         repo = self.config["repoDirectory"]
         self.instrument = self.config["instrument"]
         self.scanInterval = self.config["scanInterval"]
-        self.olderThan = self.config["filesOlderThan"]
         self.collections = self.config["collections"]
-        self.cleanCollections = self.config.get("cleanCollections", None)
+        self.cleanCollections = self.config.get("cleanCollections")
 
         LOGGER.info(f"Using Butler repo located at {repo}")
         self.butlerConfig = repo
@@ -207,14 +206,30 @@ class ButlerAttendant:
 
     async def clean(self):
         """Remove all the datasets in the butler that
+        were ingested before the configured time interval
+        """
+        for entry in self.cleanCollections:
+            collection = entry["collection"]
+            olderThan = entry["filesOlderThan"]
+            await self.cleanCollection(collection, olderThan)
+
+    async def cleanCollection(self, collection, olderThan):
+        """Remove all the datasets in the butler that
         were ingested before the configured Interval
+
+        Parameters
+        ----------
+        collection: `str`
+            collection to clean up
+        olderThan: `dict`
+            time interval
         """
 
         await asyncio.sleep(0)
         # calculate the time value which is Time.now - the
         # "olderThan" configuration
         t = Time.now()
-        interval = collections.namedtuple("Interval", self.olderThan.keys())(*self.olderThan.values())
+        interval = collections.namedtuple("Interval", olderThan.keys())(*olderThan.values())
         td = TimeDelta(
             interval.days * u.d + interval.hours * u.h + interval.minutes * u.min + interval.seconds * u.s
         )
@@ -230,11 +245,10 @@ class ButlerAttendant:
 
         LOGGER.info("about to call queryDatasets")
         # get all datasets in these collections
-        allCollections = self.collections if self.cleanCollections is None else self.cleanCollections
         all_datasets = set(
             butler.registry.queryDatasets(
                 datasetType=...,
-                collections=allCollections,
+                collections=[collection],
                 where="ingest_date < ref_date",
                 bind={"ref_date": t},
             )

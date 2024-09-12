@@ -5,12 +5,12 @@ defaultInterval: &interval
     seconds: 0
 
 archiver:
-    name: "CCArchiver"
+    name: "ATArchiver"
 
 ingester:
-    FILE_INGEST_REQUEST: CC_FILE_INGEST_REQUEST
-    CONSUME_QUEUE: cc_publish_to_oods
-    PUBLISH_QUEUE: oods_publish_to_cc
+    FILE_INGEST_REQUEST: AT_FILE_INGEST_REQUEST
+    CONSUME_QUEUE: at_publish_to_oods
+    PUBLISH_QUEUE: oods_publish_to_at
     imageStagingDirectory: data
     butlers:
         - butler:
@@ -18,19 +18,24 @@ ingester:
                 import : lsst.ctrl.oods.fileAttendant
                 name : FileAttendant
             repoDirectory : repo
-            instrument: lsst.obs.lsst.LsstComCam
+            instrument: lsst.obs.lsst.Latiss
             badFileDirectory: /tmp/bad
             stagingDirectory: /tmp/staging
             collections:
-                - LSSTComCam/raw/all
+                - collection_a
+                - collection_b
             cleanCollections:
-                - collection: LSSTComCam/raw/all
+                - collection: collection_a
                   filesOlderThan:
                       <<: *interval
-                      seconds: 2
+                      days: 3
+                - collection: collection_b
+                  filesOlderThan:
+                      <<: *interval
+                      days: 3
             scanInterval:
                 <<: *interval
-                seconds: 1
+                seconds: 2
     batchSize: 20
     scanInterval:
         <<: *interval

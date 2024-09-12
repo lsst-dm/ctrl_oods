@@ -20,12 +20,14 @@ ingester:
             stagingDirectory: /tmp/staging
             collections:
                 - LSSTComCam/raw/all
+            cleanCollections:
+                - collection: LSSTComCam/raw/all
+                  filesOlderThan:
+                      <<: *interval
+                      seconds: 5
             scanInterval:
                 <<: *interval
                 seconds: 20
-            filesOlderThan:
-                <<: *interval
-                seconds: 5
     batchSize: 20
     scanInterval:
         <<: *interval
