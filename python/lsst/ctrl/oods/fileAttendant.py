@@ -19,7 +19,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import asyncio
 import logging
 import os
 import shutil
@@ -81,7 +80,7 @@ class FileAttendant(ButlerAttendant):
         info["FILENAME"] = os.path.basename(filename)
         return info
 
-    async def print_msg(self, msg):
+    def print_msg(self, msg):
         """Print message dictionary - used if a CSC has not been created
 
         Parameters
@@ -91,7 +90,6 @@ class FileAttendant(ButlerAttendant):
         """
 
         LOGGER.info(f"would have sent {msg=}")
-        await asyncio.sleep(0)
 
     def on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit

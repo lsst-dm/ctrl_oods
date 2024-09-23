@@ -25,7 +25,6 @@ import collections
 import logging
 import os
 import os.path
-import traceback
 
 import astropy.units as u
 from astropy.time import Time, TimeDelta
@@ -94,14 +93,6 @@ class ButlerAttendant:
             return f"{prefix}{dataId[key]:02d}"
         return f"{prefix}??"
 
-
-    def _run(self, file_list):
-        try:
-            self.task.run(file_list)
-        except Exception as e:
-            print(f"Exception!! {e=}")
-            print(traceback.format_exc())
-
     async def ingest(self, file_list):
         """Ingest a list of files into a butler
 
@@ -113,10 +104,9 @@ class ButlerAttendant:
 
         # Ingest images.
         await asyncio.sleep(0)
-        loop = asyncio.get_event_loop_policy().get_event_loop()
+        loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
-                print(f"{loop = }")
                 await loop.run_in_executor(executor, self.task.run, file_list)
             except Exception as e:
                 print(f"Exception! {e=}")
@@ -228,6 +218,28 @@ class ButlerAttendant:
             olderThan = entry["filesOlderThan"]
             await self.cleanCollection(collection, olderThan)
 
+    def _query_collections(self, butler, collection_type):
+        tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
+        return tagged_cols
+
+    def _query_datasets(self, butler, collections):
+        tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=collections))
+        return tagged_datasets
+
+    def _query_all_datasets(self, butler, collection, t):
+        all_datasets = set(
+            butler.registry.queryDatasets(
+                datasetType=...,
+                collections=[collection],
+                where="ingest_date < ref_date",
+                bind={"ref_date": t},
+            )
+        )
+        return all_datasets
+
+    def _prune_datasets(self, butler, ref):
+        butler.pruneDatasets(ref, purge=True, unstore=True)
+
     async def cleanCollection(self, collection, olderThan):
         """Remove all the datasets in the butler that
         were ingested before the configured Interval
@@ -260,20 +272,21 @@ class ButlerAttendant:
 
         LOGGER.info("about to call queryDatasets")
         # get all datasets in these collections
-        all_datasets = set(
-            butler.registry.queryDatasets(
-                datasetType=...,
-                collections=[collection],
-                where="ingest_date < ref_date",
-                bind={"ref_date": t},
-            )
-        )
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            all_datasets = await loop.run_in_executor(executor, self._query_all_datasets,
+                                                      butler, collection, t)
         LOGGER.info("done calling queryDatasets")
         await asyncio.sleep(0)
 
         LOGGER.info("about to call queryCollections")
         # get all TAGGED collections
-        tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            tagged_cols = await loop.run_in_executor(executor,
+                                                     self._query_collections,
+                                                     butler,
+                                                     CollectionType.TAGGED)
         LOGGER.info("done calling queryCollections")
 
         # Note: The code below is to get around an issue where passing
@@ -282,7 +295,12 @@ class ButlerAttendant:
         if tagged_cols:
             # get all TAGGED datasets
             LOGGER.info("about to run queryDatasets for TAGGED collections")
-            tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
+            loop = asyncio.get_event_loop()
+            with ThreadPoolExecutor() as executor:
+                tagged_datasets = await loop.run_in_executor(executor,
+                                                             self._query_datasets,
+                                                             butler,
+                                                             tagged_cols)
             LOGGER.info("done running queryDatasets for TAGGED collections; differencing datasets")
             await asyncio.sleep(0)
 
@@ -318,7 +336,9 @@ class ButlerAttendant:
 
         await asyncio.sleep(0)
         LOGGER.info("about to run pruneDatasets")
-        butler.pruneDatasets(ref, purge=True, unstore=True)
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            await loop.run_in_executor(executor, self._prune_datasets, butler, ref)
         LOGGER.info("done running pruneDatasets")
 
     def rawexposure_info(self, data):
