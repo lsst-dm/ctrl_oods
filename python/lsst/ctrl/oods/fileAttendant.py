@@ -94,9 +94,6 @@ class FileAttendant(ButlerAttendant):
         await asyncio.sleep(0)
 
     def on_success(self, datasets):
-        asyncio.create_task(self._on_success(datasets))
-
-    async def _on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
         successful data ingestion status
 
@@ -107,16 +104,12 @@ class FileAttendant(ButlerAttendant):
         """
         self.definer_run(datasets)
         for dataset in datasets:
-            await asyncio.sleep(0)
             LOGGER.info("file %s successfully ingested", dataset.path.ospath)
             image_data = ImageData(dataset)
             LOGGER.debug("image_data.get_info() = %s", image_data.get_info())
-            await self.transmit_status(image_data.get_info(), code=0, description="file ingested")
+            self.transmit_status(image_data.get_info(), code=0, description="file ingested")
 
     def on_ingest_failure(self, exposures, exc):
-        asyncio.create_task(self._on_ingest_failure(exposures, exc))
-
-    async def _on_ingest_failure(self, exposures, exc):
         """Callback used on ingest failure. Used to transmit
         unsuccessful data ingestion status
 
@@ -129,17 +122,13 @@ class FileAttendant(ButlerAttendant):
 
         """
         for f in exposures.files:
-            await asyncio.sleep(0)
             real_file = f.filename.ospath
             self._move_file_to_bad_dir(real_file)
             cause = self.extract_cause(exc)
             info = self.rawexposure_info(f)
-            await self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
+            self.transmit_status(info, code=1, description=f"ingest failure: {cause}")
 
     def on_metadata_failure(self, filename, exc):
-        asyncio.create_task(self._on_metadata_failure(filename, exc))
-
-    async def _on_metadata_failure(self, filename, exc):
         """Callback used on metadata extraction failure. Used to transmit
         unsuccessful data ingestion status
 
@@ -155,7 +144,7 @@ class FileAttendant(ButlerAttendant):
 
         cause = self.extract_cause(exc)
         info = self.undef_metadata(real_file)
-        await self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
+        self.transmit_status(info, code=2, description=f"metadata failure: {cause}")
 
     def _move_file_to_bad_dir(self, filename):
         bad_dir = self.create_bad_dirname(self.bad_file_dir, self.staging_dir, filename)

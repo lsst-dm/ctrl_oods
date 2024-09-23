@@ -25,9 +25,11 @@ import collections
 import logging
 import os
 import os.path
+import traceback
 
 import astropy.units as u
 from astropy.time import Time, TimeDelta
+from concurrent.futures import ThreadPoolExecutor
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler, CollectionType
@@ -92,6 +94,14 @@ class ButlerAttendant:
             return f"{prefix}{dataId[key]:02d}"
         return f"{prefix}??"
 
+
+    def _run(self, file_list):
+        try:
+            self.task.run(file_list)
+        except Exception as e:
+            print(f"Exception!! {e=}")
+            print(traceback.format_exc())
+
     async def ingest(self, file_list):
         """Ingest a list of files into a butler
 
@@ -103,7 +113,13 @@ class ButlerAttendant:
 
         # Ingest images.
         await asyncio.sleep(0)
-        self.task.run(file_list)
+        loop = asyncio.get_event_loop_policy().get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            try:
+                print(f"{loop = }")
+                await loop.run_in_executor(executor, self.task.run, file_list)
+            except Exception as e:
+                print(f"Exception! {e=}")
 
     def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
         """Create a full path to a directory contained in the
@@ -160,7 +176,7 @@ class ButlerAttendant:
         else:
             return f"{str(e.__cause__)};  {cause}"
 
-    async def print_msg(self, msg):
+    def print_msg(self, msg):
         """Print message dictionary - used if a CSC has not been created
 
         Parameters
@@ -170,9 +186,8 @@ class ButlerAttendant:
         """
 
         LOGGER.info(f"would have sent {msg=}")
-        await asyncio.sleep(0)
 
-    async def transmit_status(self, metadata, code, description):
+    def transmit_status(self, metadata, code, description):
         """Transmit a message with given metadata, status code and description
 
         Parameters
@@ -190,9 +205,9 @@ class ButlerAttendant:
         msg["DESCRIPTION"] = description
         LOGGER.info("msg: %s, code: %s, description: %s", msg, code, description)
         if self.csc is None:
-            await self.print_msg(msg)
+            self.print_msg(msg)
             return
-        await self.csc.send_imageInOODS(msg)
+        asyncio.run(self.csc.send_imageInOODS(msg))
 
     async def clean_task(self):
         """run the clean() method at the configured interval"""
