@@ -24,7 +24,6 @@ import os
 import shutil
 import tempfile
 import time
-import unittest
 from unittest.mock import MagicMock
 
 import lsst.utils.tests
@@ -33,9 +32,10 @@ from lsst.ctrl.oods.bucketMessage import BucketMessage
 from lsst.ctrl.oods.msgIngester import MsgIngester
 from lsst.ctrl.oods.msgQueue import MsgQueue
 from lsst.daf.butler import Butler
+from heartbeat_base import HeartbeatBase
 
 
-class S3AuxtelIngesterTestCase(unittest.IsolatedAsyncioTestCase):
+class S3AuxtelIngesterTestCase(HeartbeatBase):
     """Test S3 Butler Ingest"""
 
     def createConfig(self, config_name):

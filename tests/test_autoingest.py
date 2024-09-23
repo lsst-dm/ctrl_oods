@@ -23,7 +23,6 @@ import asyncio
 import os
 import shutil
 import tempfile
-import unittest
 
 import lsst.utils.tests
 import yaml
@@ -31,9 +30,10 @@ from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler
+from heartbeat_base import HeartbeatBase
 
 
-class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
+class AutoIngestTestCase(HeartbeatBase):
     """Test Gen3 Butler Ingest"""
 
     def createConfig(self, config_name, fits_name):
@@ -103,6 +103,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def testAuxTelIngest(self):
         """test ingesting an auxtel file"""
+
         fits_name = "2020032700020-det000.fits.fz"
         config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
 
@@ -233,7 +234,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def interrupt_me(self):
         """Used to interrupt asyncio.gather() so that test can be halted"""
-        await asyncio.sleep(10)
+        await asyncio.sleep(20)
         raise RuntimeError("I'm interrupting")
 
 

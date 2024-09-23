@@ -23,16 +23,16 @@ import asyncio
 import os
 import shutil
 import tempfile
-import unittest
 
 import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.daf.butler import Butler, CollectionType
 from lsst.daf.butler.tests import MetricsExample, addDataIdValue, addDatasetType, registerMetricsExample
+from heartbeat_base import HeartbeatBase
 
 
-class CleanCollectionsTestCase(unittest.IsolatedAsyncioTestCase):
+class CleanCollectionsTestCase(HeartbeatBase):
 
     def setUp(self):
         """set up test info, including config dict, and populate

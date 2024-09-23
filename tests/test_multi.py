@@ -21,16 +21,16 @@
 import os
 import shutil
 import tempfile
-import unittest
 
 import lsst.utils.tests
 import yaml
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.daf.butler import Butler
+from heartbeat_base import HeartbeatBase
 
 
-class MultiComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
+class MultiComCamIngesterTestCase(HeartbeatBase):
     """Test multiple butler ingest"""
 
     def createConfig(self, config_name, fits_name):

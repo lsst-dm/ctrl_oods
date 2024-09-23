@@ -20,13 +20,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import tempfile
-import unittest
 
 import lsst.utils.tests
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
+from heartbeat_base import HeartbeatBase
 
 
-class ScanDirTestCase(unittest.IsolatedAsyncioTestCase):
+class ScanDirTestCase(HeartbeatBase):
     """Test Scanning directory"""
 
     async def testScanDir(self):

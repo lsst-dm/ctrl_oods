@@ -20,14 +20,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import asyncio
 import os
-import unittest
 from unittest.mock import MagicMock, patch
 
 import lsst.utils.tests
 from lsst.ctrl.oods.msgQueue import MsgQueue
+from heartbeat_base import HeartbeatBase
 
 
-class MsgQueueTestCase(unittest.IsolatedAsyncioTestCase):
+class MsgQueueTestCase(HeartbeatBase):
 
     @patch.object(MsgQueue, "createConsumer", return_value=None)
     async def testMsgQueue(self, MockClass1):

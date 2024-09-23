@@ -22,14 +22,14 @@ import datetime
 import os
 import tempfile
 import time
-import unittest
 
 import lsst.utils.tests
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
+from heartbeat_base import HeartbeatBase
 
 
-class CleanerTestCase(unittest.IsolatedAsyncioTestCase):
+class CleanerTestCase(HeartbeatBase):
     """Test cache cleaning"""
 
     async def testFileCleaner(self):

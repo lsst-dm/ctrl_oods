@@ -24,7 +24,6 @@ import logging
 import os
 import shutil
 import tempfile
-import unittest
 from pathlib import PurePath
 
 import lsst.utils.tests
@@ -34,9 +33,10 @@ from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.daf.butler import Butler
 from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
 from lsst.pipe.base import Instrument
+from heartbeat_base import HeartbeatBase
 
 
-class CollectionTestCase(unittest.IsolatedAsyncioTestCase):
+class CollectionTestCase(HeartbeatBase):
     """Test Collections
 
     These tests check whether or not files are deleted properly
