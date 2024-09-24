@@ -135,7 +135,7 @@ class CollectionTestCase(HeartbeatBase):
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
         ingester = FileIngester(config)
-        butler_tasks = ingester.getButlerCleanTasks()
+        butler_clean = ingester.getButlerCleanMethods()
 
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
@@ -160,79 +160,39 @@ class CollectionTestCase(HeartbeatBase):
         # this file should now not exist
         self.assertFalse(os.path.exists(self.destFile))
 
-        # add one more task, whose sole purpose is to interrupt the others by
-        # throwing an exception. This is used to exit all tasks.
-        # task_list.append(asyncio.create_task(self.interrupt_me()))
-
-        return staged_file, butler_tasks
+        return staged_file, butler_clean
 
     async def testCollectionsTestCase(self):
         fits_name = "AT_O_20221122_000951_R00_S00.fits.fz"
-        stage_file, butler_tasks = await self.load(fits_name, "collection_test_1.yaml")
+        stage_file, butler_clean = await self.load(fits_name, "collection_test_1.yaml")
 
         self.check_exposure_count("2020032700020", "LATISS/runs/quickLook", 1)
         self.check_exposure_count("2022112200951", "LATISS/raw/all", 1)
 
-        task_list = []
-        for butler_task in butler_tasks:
-            task = asyncio.create_task(butler_task())
-            task_list.append(task)
-        task_list.append(asyncio.create_task(self.interrupt_me()))
-        #
-        # kick off all the tasks, until one (the "interrupt_me" task)
-        # throws an exception
-        try:
-            await asyncio.gather(*task_list)
-        except Exception:
-            for task in task_list:
-                task.cancel()
+        await asyncio.sleep(5)
+        for clean in butler_clean:
+            await asyncio.create_task(clean())
 
-        await asyncio.create_task(self.check_file_does_not_exist(stage_file, wait=30))
+        self.assertFalse(os.path.exists(stage_file))
+
         self.check_exposure_count("2020032700020", "LATISS/runs/quickLook", 0)
         self.check_exposure_count("2022112200951", "LATISS/raw/all", 0)
 
     async def testDoNoDeleteCollectionsTestCase(self):
         fits_name = "AT_O_20221122_000951_R00_S00.fits.fz"
-        stage_file, butler_tasks = await self.load(fits_name, "collection_test_2.yaml")
+        stage_file, butler_clean = await self.load(fits_name, "collection_test_2.yaml")
 
         self.check_exposure_count("2020032700020", "LATISS/runs/quickLook", 1)
         self.check_exposure_count("2022112200951", "LATISS/raw/all", 1)
 
-        task_list = []
-        for butler_task in butler_tasks:
-            task = asyncio.create_task(butler_task())
-            task_list.append(task)
-        task_list.append(asyncio.create_task(self.interrupt_me()))
-        #
-        # kick off all the tasks, until one (the "interrupt_me" task)
-        # throws an exception
-        try:
-            await asyncio.gather(*task_list)
-        except Exception:
-            for task in task_list:
-                task.cancel()
+        await asyncio.sleep(5)
+        for clean in butler_clean:
+            await asyncio.create_task(clean())
 
-        await asyncio.create_task(self.check_file_does_not_exist(stage_file, wait=30))
+        self.assertFalse(os.path.exists(stage_file))
+
         self.check_exposure_count("2020032700020", "LATISS/runs/quickLook", 1)
         self.check_exposure_count("2022112200951", "LATISS/raw/all", 0)
-
-    async def check_file_does_not_exist(self, filename, wait=25):
-        """Check that the existance of a file
-
-        Parameters
-        ----------
-        filename : `str`
-            name of the file to check
-        wait : `int`, optional
-            seconds to wait until the file is checked
-        exists : `bool`, optional
-            If True, file is checked that it exists
-            If False, file is checked that it doesn't exist
-        """
-
-        await asyncio.sleep(wait)
-        self.assertFalse(os.path.exists(filename))
-        logging.info("file was not there, as expected")
 
     def copy_to_test_location(self, fits_name):
         # location of test file
@@ -294,13 +254,6 @@ class CollectionTestCase(HeartbeatBase):
         p = PurePath(name)
         ret = str(p.relative_to(prefix))
         return ret
-
-    async def interrupt_me(self):
-        """Throw an exception after waiting.  Used to break out of gather()"""
-        await asyncio.sleep(15)
-        logging.info("About to interrupt all tasks")
-        raise RuntimeError("I'm interrupting")
-
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
     pass

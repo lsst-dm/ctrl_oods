@@ -222,14 +222,6 @@ class ButlerAttendant:
             with ThreadPoolExecutor() as executor:
                 await loop.run_in_executor(executor, self.cleanCollection, collection, olderThan)
 
-    def _query_collections(self, butler, collection_type):
-        tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
-        return tagged_cols
-
-    def _query_datasets(self, butler, collections):
-        tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=collections))
-        return tagged_datasets
-
     def cleanCollection(self, collection, olderThan):
         """Remove all the datasets in the butler that
         were ingested before the configured Interval

@@ -67,5 +67,9 @@ class ButlerProxy(object):
         await self.butlerInstance.ingest(file_list)
 
     async def clean_task(self):
-        """Return the butler's clean_task method"""
+        """Call the butler's clean_task method"""
         await self.butlerInstance.clean_task()
+
+    async def clean(self):
+        """Call the butler's clean method"""
+        await self.butlerInstance.clean()

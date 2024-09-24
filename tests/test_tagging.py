@@ -102,13 +102,13 @@ class TaggingTestCase(HeartbeatBase):
         # load the YAML configuration
 
         with open(config_file, "r") as f:
-            config = yaml.safe_load(f)
+            self.config = yaml.safe_load(f)
 
         # extract parts of the ingester configuration
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = config["ingester"]
+        ingesterConfig = self.config["ingester"]
         self.imageStagingDir = tempfile.mkdtemp()
         ingesterConfig["imageStagingDirectory"] = self.imageStagingDir
 
@@ -132,26 +132,17 @@ class TaggingTestCase(HeartbeatBase):
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = config["ingester"]
+        ingesterConfig = self.config["ingester"]
         image_staging_dir = ingesterConfig["imageStagingDirectory"]
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
-        # create the file ingester, get all tasks associated with it, and
-        # create the tasks
-        ingester = FileIngester(config)
-        butler_tasks = ingester.getButlerCleanTasks()
-
-        task_list = []
-        for butler_task in butler_tasks:
-            task = asyncio.create_task(butler_task())
-            task_list.append(task)
-
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
 
-        # trigger the ingester
+        # stage the files
+        ingester = FileIngester(self.config)
         staged_files = ingester.stageFiles([self.destFile])
         await ingester.ingest(staged_files)
 
@@ -171,11 +162,7 @@ class TaggingTestCase(HeartbeatBase):
         # this file should now not exist
         self.assertFalse(os.path.exists(self.destFile))
 
-        # add one more task, whose sole purpose is to interrupt the others by
-        # throwing an exception. This is used to exit all tasks.
-        task_list.append(asyncio.create_task(self.interrupt_me()))
-
-        return staged_file, task_list
+        return staged_file
 
     async def testTaggedFileTestCase(self):
         """Test associating and disassociating of datasets
@@ -186,42 +173,15 @@ class TaggingTestCase(HeartbeatBase):
         later disassociated, they are cleaned up.
         """
         exposure = "3019053000001"
-        file_to_ingest, task_list = await self.stage()
+        file_to_ingest = await self.stage()
 
+        await self.perform_clean(self.config)
         await self.associate_file(exposure)
-        self.check_file(file_to_ingest)
+        self.assertTrue(os.path.exists(file_to_ingest))
+
         await self.disassociate_file(exposure)
-        await asyncio.sleep(40)
-        self.check_file(file_to_ingest, exists=False)
-
-        # wait until the "interrupt_me" task
-        # throws an exception
-        try:
-            await asyncio.gather(*task_list)
-        except Exception:
-            for task in task_list:
-                task.cancel()
-
-    def check_file(self, filename, exists=True):
-        """Check that the existance of a file
-
-        Parameters
-        ----------
-        filename : `str`
-            name of the file to check
-        wait : `int`
-            seconds to wait until the file is checked
-        exists : `bool`
-            If True, file is checked that it exists
-            If False, file is checked that it doesn't exist
-        """
-
-        if exists:
-            self.assertTrue(os.path.exists(filename))
-            logging.info("file was there, as expected")
-        else:
-            self.assertFalse(os.path.exists(filename))
-            logging.info("file was not there, as expected")
+        await self.perform_clean(self.config)
+        self.assertFalse(os.path.exists(file_to_ingest))
 
     async def associate_file(self, exposure):
         """add exposure from TAGGED collection
@@ -232,8 +192,6 @@ class TaggingTestCase(HeartbeatBase):
             the name of the exposure to add
         """
         # wait for the file to be ingested
-        logging.info("waiting to associate file")
-        await asyncio.sleep(10)
         logging.info("about to associate file")
 
         # now that the file has been ingested, create a butler
@@ -269,9 +227,9 @@ class TaggingTestCase(HeartbeatBase):
         """
 
         logging.info("waiting to disassociate file")
-        await asyncio.sleep(20)
-        # create a butler and remove the file from the TAGGED collecdtion
+        await asyncio.sleep(5)
         logging.info("about to disassociate file")
+        # create a butler and remove the file from the TAGGED collecdtion
         butler = Butler(self.repoDir, writeable=True)
 
         results = set(
@@ -307,12 +265,6 @@ class TaggingTestCase(HeartbeatBase):
         p = PurePath(name)
         ret = str(p.relative_to(prefix))
         return ret
-
-    async def interrupt_me(self):
-        """Throw an exception after waiting.  Used to break out of gather()"""
-        await asyncio.sleep(30)
-        logging.info("About to interrupt all tasks")
-        raise RuntimeError("I'm interrupting")
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):

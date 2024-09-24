@@ -145,12 +145,6 @@ class AutoIngestTestCase(HeartbeatBase):
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
         ingester = FileIngester(config)
-        clean_tasks = ingester.getButlerCleanTasks()
-
-        task_list = []
-        for clean_task in clean_tasks:
-            task = asyncio.create_task(clean_task())
-            task_list.append(task)
 
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
@@ -174,17 +168,10 @@ class AutoIngestTestCase(HeartbeatBase):
         # this file should now not exist
         self.assertFalse(os.path.exists(self.destFile))
 
-        # add one more task, whose sole purpose is to interrupt the others by
-        # throwing an acception
-        task_list.append(asyncio.create_task(self.interrupt_me()))
-
-        # kick off all the tasks, until one (the "interrupt_me" task)
-        # throws an exception
-        try:
-            await asyncio.gather(*task_list)
-        except Exception:
-            for task in task_list:
-                task.cancel()
+        await asyncio.sleep(1)
+        clean_methods = ingester.getButlerCleanMethods()
+        for clean in clean_methods:
+            await asyncio.create_task(clean())
 
         # that should have been enough time to run the "real" tasks,
         # which performed the ingestion, and the clean up task, which
@@ -231,12 +218,6 @@ class AutoIngestTestCase(HeartbeatBase):
         FileIngester(config)
         # tests the path that the previously created repo (above) exists
         FileIngester(config)
-
-    async def interrupt_me(self):
-        """Used to interrupt asyncio.gather() so that test can be halted"""
-        await asyncio.sleep(20)
-        raise RuntimeError("I'm interrupting")
-
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
     pass

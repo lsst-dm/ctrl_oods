@@ -19,14 +19,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import asyncio
 import os
 import shutil
 import tempfile
+import yaml
 
 import lsst.utils.tests
-import yaml
-from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.daf.butler import Butler, CollectionType
 from lsst.daf.butler.tests import MetricsExample, addDataIdValue, addDatasetType, registerMetricsExample
 from heartbeat_base import HeartbeatBase
@@ -71,6 +69,7 @@ class CleanCollectionsTestCase(HeartbeatBase):
         butlerConfig["repoDirectory"] = self.repoDir
 
         self.clean_collections = butlerConfig["cleanCollections"]
+        print(f"{self.clean_collections=}")
 
         # Define the run collection
         run_a = "collection_a"
@@ -115,30 +114,6 @@ class CleanCollectionsTestCase(HeartbeatBase):
         ref = list(self.butler.registry.queryDatasets(datasetType=..., collections=self.collections))
         return len(ref)
 
-    async def perform_clean(self):
-        """Perform butler clean operation to remove old files"""
-
-        ingester = FileIngester(self.config)
-
-        clean_tasks = ingester.getButlerCleanTasks()
-
-        task_list = []
-        for clean_task in clean_tasks:
-            task = asyncio.create_task(clean_task())
-            task_list.append(task)
-
-        # add one more task, whose sole purpose is to interrupt the others by
-        # throwing an acception
-        task_list.append(asyncio.create_task(self.interrupt_me()))
-
-        # gather all the tasks, until one (the "interrupt_me" task)
-        # throws an exception
-        try:
-            await asyncio.gather(*task_list)
-        except Exception:
-            for task in task_list:
-                task.cancel()
-
     def modify_collection_time(self, name, seconds):
         """Modify the time interval in the config dict
         to change the time at which files are reaped
@@ -171,30 +146,25 @@ class CleanCollectionsTestCase(HeartbeatBase):
         self.modify_collection_time("collection_b", 120)
 
         # attempt to clean the collections
-        await self.perform_clean()
+        await self.perform_clean(self.config)
 
         # both should still be there
         self.assertEqual(self.number_of_datasets(), 2)
 
         # set expiration time to 3 seconds in collection_a
-        self.modify_collection_time("collection_a", 3)
-        await self.perform_clean()
+        self.modify_collection_time("collection_a", 1)
+        await self.perform_clean(self.config)
 
         # should have removed one in collection_a, and
         # kept one in collection_b
         self.assertEqual(self.number_of_datasets(), 1)
 
         # set expiration time to 3 seconds in collection_b
-        self.modify_collection_time("collection_b", 3)
-        await self.perform_clean()
+        self.modify_collection_time("collection_b", 1)
+        await self.perform_clean(self.config)
 
         # should be no more left
         self.assertEqual(self.number_of_datasets(), 0)
-
-    async def interrupt_me(self):
-        await asyncio.sleep(5)
-        raise RuntimeError("I'm interrupting")
-
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
     pass
