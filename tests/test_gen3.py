@@ -174,9 +174,7 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
         self.assertFalse(os.path.exists(self.destFile))
 
         await asyncio.sleep(1)
-        clean_methods = ingester.getButlerCleanMethods()
-        for clean in clean_methods:
-            await asyncio.create_task(clean())
+        await self.perform_clean(config)
 
         # that should have been enough time to run the "real" tasks,
         # which performed the ingestion, and the clean up task, which
@@ -235,9 +233,7 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
         os.remove(staged_files[key][1])
 
         await asyncio.sleep(1)
-        clean_methods = ingester.getButlerCleanMethods()
-        for clean in clean_methods:
-            await asyncio.create_task(clean())
+        await self.perform_clean(config)
 
         # that should have been enough time to run the "real" tasks,
         # which performed the ingestion, and the clean up task, which
