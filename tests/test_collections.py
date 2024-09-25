@@ -163,6 +163,7 @@ class CollectionTestCase(HeartbeatBase):
         return staged_file, butler_clean
 
     async def testCollectionsTestCase(self):
+        """Test that all collections are removed"""
         fits_name = "AT_O_20221122_000951_R00_S00.fits.fz"
         stage_file, butler_clean = await self.load(fits_name, "collection_test_1.yaml")
 
@@ -179,6 +180,7 @@ class CollectionTestCase(HeartbeatBase):
         self.check_exposure_count("2022112200951", "LATISS/raw/all", 0)
 
     async def testDoNoDeleteCollectionsTestCase(self):
+        """Test that some collections are not removed"""
         fits_name = "AT_O_20221122_000951_R00_S00.fits.fz"
         stage_file, butler_clean = await self.load(fits_name, "collection_test_2.yaml")
 

@@ -151,7 +151,7 @@ class TaggingTestCase(HeartbeatBase):
         self.assertEqual(len(files), 0)
 
         # Check to see that the file was ingested.
-        # Recall that files start in teh image staging area, and are
+        # Recall that files start in the image staging area, and are
         # moved to the OODS staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.

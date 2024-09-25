@@ -30,7 +30,7 @@ class BucketMessageTestCase(lsst.utils.tests.TestCase):
     """Test Bucket Message"""
 
     def createBucketMessage(self, msg_file):
-
+        """Create a fake s3 message from a file"""
         # create a path to the test directory
 
         testdir = os.path.abspath(os.path.dirname(__file__))
@@ -48,6 +48,7 @@ class BucketMessageTestCase(lsst.utils.tests.TestCase):
         return bucket_message
 
     def testBucketMessage(self):
+        """test that the message we're extracting is expected"""
         bucket_message = self.createBucketMessage("kafka_msg.json")
         url_list = list()
         for url in bucket_message.extract_urls():
@@ -58,6 +59,7 @@ class BucketMessageTestCase(lsst.utils.tests.TestCase):
         self.assertEqual(url_list[0], f)
 
     def testBadBucketMessage(self):
+        """test that a bad message throws an exception"""
         bucket_message = self.createBucketMessage("bad_kafka_msg.json")
 
         with self.assertRaises(Exception):

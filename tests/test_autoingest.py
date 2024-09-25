@@ -173,11 +173,8 @@ class AutoIngestTestCase(HeartbeatBase):
         for clean in clean_methods:
             await asyncio.create_task(clean())
 
-        # that should have been enough time to run the "real" tasks,
-        # which performed the ingestion, and the clean up task, which
-        # was set to clean it up right away.  (That "clean up" time
-        # is set in the config file loaded for this FileIngester).
-        # And, when "cleaned up", the file that was originally there
+        # Ingestion and clean up tasks have been run.
+        # When "cleaned up", the file that was originally there
         # is now gone.  Check for that.
         self.assertFalse(os.path.exists(file_to_ingest))
 
