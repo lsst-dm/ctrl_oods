@@ -28,11 +28,11 @@ from unittest.mock import MagicMock
 
 import lsst.utils.tests
 import yaml
+from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.bucketMessage import BucketMessage
 from lsst.ctrl.oods.msgIngester import MsgIngester
 from lsst.ctrl.oods.msgQueue import MsgQueue
 from lsst.daf.butler import Butler
-from heartbeat_base import HeartbeatBase
 
 
 class S3AuxtelIngesterTestCase(HeartbeatBase):

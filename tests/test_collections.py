@@ -28,12 +28,12 @@ from pathlib import PurePath
 
 import lsst.utils.tests
 import yaml
+from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.daf.butler import Butler
 from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
 from lsst.pipe.base import Instrument
-from heartbeat_base import HeartbeatBase
 
 
 class CollectionTestCase(HeartbeatBase):
@@ -256,6 +256,7 @@ class CollectionTestCase(HeartbeatBase):
         p = PurePath(name)
         ret = str(p.relative_to(prefix))
         return ret
+
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
     pass

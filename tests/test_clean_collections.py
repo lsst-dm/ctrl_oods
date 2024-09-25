@@ -22,12 +22,12 @@
 import os
 import shutil
 import tempfile
-import yaml
 
 import lsst.utils.tests
+import yaml
+from heartbeat_base import HeartbeatBase
 from lsst.daf.butler import Butler, CollectionType
 from lsst.daf.butler.tests import MetricsExample, addDataIdValue, addDatasetType, registerMetricsExample
-from heartbeat_base import HeartbeatBase
 
 
 class CleanCollectionsTestCase(HeartbeatBase):
@@ -165,6 +165,7 @@ class CleanCollectionsTestCase(HeartbeatBase):
 
         # should be no more left
         self.assertEqual(self.number_of_datasets(), 0)
+
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
     pass

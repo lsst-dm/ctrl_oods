@@ -25,10 +25,10 @@ import collections
 import logging
 import os
 import os.path
+from concurrent.futures import ThreadPoolExecutor
 
 import astropy.units as u
 from astropy.time import Time, TimeDelta
-from concurrent.futures import ThreadPoolExecutor
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler, CollectionType

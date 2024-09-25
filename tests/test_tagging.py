@@ -28,11 +28,12 @@ from shutil import copyfile
 
 import lsst.utils.tests
 import yaml
+from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.daf.butler import Butler
 from lsst.daf.butler.registry import CollectionType
-from heartbeat_base import HeartbeatBase
+
 
 class TaggingTestCase(HeartbeatBase):
     """Test TAGGED deletion

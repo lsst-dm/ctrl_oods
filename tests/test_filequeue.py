@@ -23,8 +23,8 @@ import asyncio
 import os
 import tempfile
 
-from lsst.ctrl.oods.fileQueue import FileQueue
 from heartbeat_base import HeartbeatBase
+from lsst.ctrl.oods.fileQueue import FileQueue
 
 
 class FileQueueTestCase(HeartbeatBase):

@@ -23,8 +23,8 @@ import os
 from unittest.mock import MagicMock, patch
 
 import lsst.utils.tests
-from lsst.ctrl.oods.msgQueue import MsgQueue
 from heartbeat_base import HeartbeatBase
+from lsst.ctrl.oods.msgQueue import MsgQueue
 
 
 class MsgQueueTestCase(HeartbeatBase):

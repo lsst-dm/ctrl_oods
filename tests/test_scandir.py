@@ -22,8 +22,8 @@ import os
 import tempfile
 
 import lsst.utils.tests
-from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from heartbeat_base import HeartbeatBase
+from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 
 
 class ScanDirTestCase(HeartbeatBase):

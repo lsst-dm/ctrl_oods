@@ -24,9 +24,9 @@ import tempfile
 import time
 
 import lsst.utils.tests
+from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
-from heartbeat_base import HeartbeatBase
 
 
 class CleanerTestCase(HeartbeatBase):
