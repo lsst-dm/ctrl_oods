@@ -27,7 +27,7 @@ ingester:
                 - collection: LATISS/raw/all
                   filesOlderThan:
                       <<: *interval
-                      seconds: 3
+                      seconds: 1
             scanInterval:
                 <<: *interval
                 seconds: 2

@@ -21,11 +21,11 @@ ingester:
                 - collection: LATISS/raw/all
                   filesOlderThan:
                       <<: *interval
-                      seconds: 5
+                      seconds: 1
                 - collection: LATISS/runs/quickLook
                   filesOlderThan:
                       <<: *interval
-                      seconds: 5
+                      seconds: 1
             scanInterval:
                 <<: *interval
                 seconds: 3

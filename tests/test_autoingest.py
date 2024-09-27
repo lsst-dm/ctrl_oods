@@ -23,17 +23,17 @@ import asyncio
 import os
 import shutil
 import tempfile
-import unittest
 
 import lsst.utils.tests
 import yaml
+from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler
 
 
-class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
+class AutoIngestTestCase(HeartbeatBase):
     """Test Gen3 Butler Ingest"""
 
     def createConfig(self, config_name, fits_name):
@@ -103,6 +103,7 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def testAuxTelIngest(self):
         """test ingesting an auxtel file"""
+
         fits_name = "2020032700020-det000.fits.fz"
         config = self.createConfig("ingest_auxtel_gen3.yaml", fits_name)
 
@@ -144,12 +145,6 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
         ingester = FileIngester(config)
-        clean_tasks = ingester.getButlerCleanTasks()
-
-        task_list = []
-        for clean_task in clean_tasks:
-            task = asyncio.create_task(clean_task())
-            task_list.append(task)
 
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
@@ -173,23 +168,13 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         # this file should now not exist
         self.assertFalse(os.path.exists(self.destFile))
 
-        # add one more task, whose sole purpose is to interrupt the others by
-        # throwing an acception
-        task_list.append(asyncio.create_task(self.interrupt_me()))
+        await asyncio.sleep(1)
+        clean_methods = ingester.getButlerCleanMethods()
+        for clean in clean_methods:
+            await asyncio.create_task(clean())
 
-        # kick off all the tasks, until one (the "interrupt_me" task)
-        # throws an exception
-        try:
-            await asyncio.gather(*task_list)
-        except Exception:
-            for task in task_list:
-                task.cancel()
-
-        # that should have been enough time to run the "real" tasks,
-        # which performed the ingestion, and the clean up task, which
-        # was set to clean it up right away.  (That "clean up" time
-        # is set in the config file loaded for this FileIngester).
-        # And, when "cleaned up", the file that was originally there
+        # Ingestion and clean up tasks have been run.
+        # When "cleaned up", the file that was originally there
         # is now gone.  Check for that.
         self.assertFalse(os.path.exists(file_to_ingest))
 
@@ -230,11 +215,6 @@ class AutoIngestTestCase(unittest.IsolatedAsyncioTestCase):
         FileIngester(config)
         # tests the path that the previously created repo (above) exists
         FileIngester(config)
-
-    async def interrupt_me(self):
-        """Used to interrupt asyncio.gather() so that test can be halted"""
-        await asyncio.sleep(10)
-        raise RuntimeError("I'm interrupting")
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):

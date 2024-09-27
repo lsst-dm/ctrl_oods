@@ -24,7 +24,7 @@ ingester:
                 - collection: LSSTComCam/raw/all
                   filesOlderThan:
                       <<: *interval
-                      seconds: 5
+                      seconds: 1
             scanInterval:
                 <<: *interval
                 seconds: 20

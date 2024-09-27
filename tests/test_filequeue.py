@@ -22,12 +22,12 @@
 import asyncio
 import os
 import tempfile
-import unittest
 
+from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.fileQueue import FileQueue
 
 
-class FileQueueTestCase(unittest.IsolatedAsyncioTestCase):
+class FileQueueTestCase(HeartbeatBase):
     """Test FileQueue object"""
 
     def setUp(self):

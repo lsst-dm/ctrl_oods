@@ -23,17 +23,17 @@ import asyncio
 import os
 import shutil
 import tempfile
-import unittest
 
 import lsst.utils.tests
 import yaml
+from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler
 
 
-class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
+class Gen3ComCamIngesterTestCase(HeartbeatBase):
     """Test Gen3 Butler Ingest"""
 
     def createConfig(self, config_name):
@@ -151,13 +151,6 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         # create the file ingester, get all tasks associated with it, and
         # create the tasks
         ingester = FileIngester(config)
-        clean_tasks = ingester.getButlerCleanTasks()
-
-        task_list = []
-        for clean_task in clean_tasks:
-            task = asyncio.create_task(clean_task())
-            task_list.append(task)
-
         # check to see that the file is there before ingestion
         self.assertTrue(os.path.exists(self.destFile))
 
@@ -180,22 +173,12 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         # this file should now not exist
         self.assertFalse(os.path.exists(self.destFile))
 
-        # add one more task, whose sole purpose is to interrupt the others by
-        # throwing an acception
-        task_list.append(asyncio.create_task(self.interrupt_me()))
+        await asyncio.sleep(1)
+        await self.perform_clean(config)
 
-        # gather all the tasks, until one (the "interrupt_me" task)
-        # throws an exception
-        try:
-            await asyncio.gather(*task_list)
-        except Exception:
-            for task in task_list:
-                task.cancel()
-
-        # that should have been enough time to run the "real" tasks,
-        # which performed the ingestion, and the clean up task, which
-        # was set to clean it up right away.  (That "clean up" time
-        # is set in the config file loaded for this FileIngester).
+        # Ingestion and clean up tasks were performed.
+        # That "clean up" time is set in the config file
+        # loaded for this FileIngester.
         # And, when "cleaned up", the file that was originally there
         # is now gone.  Check for that.
         self.assertFalse(os.path.exists(file_to_ingest))
@@ -248,32 +231,14 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         os.remove(staged_files[key][0])
         os.remove(staged_files[key][1])
 
-        clean_tasks = ingester.getButlerCleanTasks()
+        await asyncio.sleep(1)
+        await self.perform_clean(config)
 
-        task_list = []
-        for clean_task in clean_tasks:
-            task = asyncio.create_task(clean_task())
-            task_list.append(task)
-
-        # add one more task, whose sole purpose is to interrupt the others by
-        # throwing an acception
-        task_list.append(asyncio.create_task(self.interrupt_me()))
-
-        # gather all the tasks, until one (the "interrupt_me" task)
-        # throws an exception
-        try:
-            await asyncio.gather(*task_list)
-        except Exception:
-            for task in task_list:
-                task.cancel()
-
-        # that should have been enough time to run the "real" tasks,
-        # which performed the ingestion, and the clean up task, which
-        # was set to clean it up right away.  (That "clean up" time
-        # is set in the config file loaded for this FileIngester).
+        # Ingestion and clean up tasks were performed.
+        # That "clean up" time is set in the config file
+        # loaded for this FileIngester.
         # And, when "cleaned up", the file that was originally there
         # is now gone.  Check for that.
-
         keyList = list(staged_files.keys())
         self.assertEqual(len(keyList), 1)
 
@@ -315,12 +280,6 @@ class Gen3ComCamIngesterTestCase(unittest.IsolatedAsyncioTestCase):
         self.destFile = self.placeFitsFile(self.subDir, fits_name)
 
         FileIngester(config)
-        # tests the path that the previously created repo (above) exists
-        FileIngester(config)
-
-    async def interrupt_me(self):
-        await asyncio.sleep(10)
-        raise RuntimeError("I'm interrupting")
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):

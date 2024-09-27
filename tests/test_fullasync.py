@@ -23,17 +23,17 @@ import asyncio
 import os
 import shutil
 import tempfile
-import unittest
 
 import lsst.utils.tests
 import yaml
+from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler
 
 
-class AsyncIngestTestCase(unittest.IsolatedAsyncioTestCase):
+class AsyncIngestTestCase(HeartbeatBase):
     """Test full async ingest"""
 
     def createConfig(self, config_name, fits_name):
