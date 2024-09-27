@@ -75,6 +75,14 @@ class FileIngester(object):
         return self.image_staging_dir
 
     def getButlerCleanMethods(self):
+        """Return the list of all butler clean methods
+
+        Returns
+        -------
+        methods: `list`
+            A list containing each butler clean method
+
+        """
         methods = []
         for butler in self.butlers:
             methods.append(butler.clean)
