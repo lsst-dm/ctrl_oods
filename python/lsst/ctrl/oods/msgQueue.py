@@ -22,11 +22,19 @@
 import asyncio
 import concurrent
 import logging
+import os
 
 from confluent_kafka import Consumer
 
 LOGGER = logging.getLogger(__name__)
 
+SECURITY_PROTOCOL = "SASL_PLAINTEXT"
+SASL_MECHANISM = "SCRAM-SHA-512"
+
+USERNAME_KEY = "LSST_KAFKA_SECURITY_USERNAME"
+PASSWORD_KEY = "LSST_KAFKA_SECURITY_PASSWORD"
+PROTOCOL_KEY = "LSST_KAFKA_SECURITY_PROTOCOL"
+MECHANISM_KEY = "LSST_KAFKA_SECURITY_MECHANISM"
 
 class MsgQueue(object):
     """Report on new messages
@@ -48,10 +56,19 @@ class MsgQueue(object):
         self.msgList = list()
         self.condition = asyncio.Condition()
 
+        username = os.environ.get(USERNAME_KEY, "USERNAME_NOT_CONFIGURED")
+        password = os.environ.get(PASSWORD_KEY, "PASSWORD_NOT_CONFIGURED")
+        mechanism = os.environ.get(MECHANISM_KEY, SASL_MECHANISM)
+        protocol = os.environ.get(PROTOCOL_KEY, SECURITY_PROTOCOL)
+
         config = {
             "bootstrap.servers": ",".join(self.brokers),
             "group.id": self.group_id,
             "auto.offset.reset": "earliest",
+            "security.protocol": protocol,
+            "sasl.mechanism": mechanism,
+            "sasl.username": username,
+            "sasl.password": password,
         }
         # note: this is done because mocking a cimpl is...tricky
         self.createConsumer(config, topics)
