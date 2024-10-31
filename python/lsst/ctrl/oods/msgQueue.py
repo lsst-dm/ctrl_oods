@@ -72,11 +72,13 @@ class MsgQueue(object):
 
             if message_list:
                 async with self.condition:
+                    LOGGER.info('queue messages')
                     self.msgList.extend(message_list)
                     self.condition.notify_all()
 
     def _get_messages(self):
         """Return up to max_messages at a time from Kafka"""
+        LOGGER.info('attempting to read messages')
         while self.running:
             try:
                 m_list = self.consumer.consume(num_messages=self.max_messages, timeout=1.0)
@@ -85,6 +87,7 @@ class MsgQueue(object):
                 raise e
             if len(m_list) == 0:
                 continue
+            LOGGER.info('read messages')
             return m_list
 
     async def dequeue_messages(self):
@@ -94,6 +97,7 @@ class MsgQueue(object):
             await self.condition.wait()
             message_list = list(self.msgList)
             self.msgList.clear()
+        LOGGER.info('dequeue messages')
         return message_list
 
     def commit(self, message):
