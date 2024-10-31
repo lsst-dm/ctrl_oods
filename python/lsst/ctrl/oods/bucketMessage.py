@@ -48,12 +48,14 @@ class BucketMessage(object):
         oid : `str`
             The filename referred to by each message.
         """
+        LOGGER.info(f'extracting from {self.message}')
         msg = json.loads(self.message)
         for record in msg["Records"]:
             try:
                 bucket_name = record["s3"]["bucket"]["name"]
                 key = record["s3"]["object"]["key"]
                 url = f"s3://{bucket_name}/{key}"
+                LOGGER.info(f'yielding {url}')
                 yield url
             except KeyError as e:
                 LOGGER.error(f"Invalid msg: Couldn't find key in {record=}")
