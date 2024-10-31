@@ -77,6 +77,7 @@ class MsgQueue(object):
         """Create a Kafka Consumer"""
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
+        LOGGER.info("subscribed")
 
     async def queue_files(self):
         """Queue all files in messages on the subscribed topics"""
@@ -94,6 +95,7 @@ class MsgQueue(object):
 
     def _get_messages(self):
         """Return up to max_messages at a time from Kafka"""
+        LOGGER.info("getting more messages")
         while self.running:
             try:
                 m_list = self.consumer.consume(num_messages=self.max_messages, timeout=1.0)
@@ -102,6 +104,7 @@ class MsgQueue(object):
                 raise e
             if len(m_list) == 0:
                 continue
+            LOGGER.info(f"messages received {m_list}")
             return m_list
 
     async def dequeue_messages(self):
