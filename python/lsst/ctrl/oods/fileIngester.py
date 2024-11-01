@@ -23,6 +23,7 @@ import asyncio
 import logging
 import os
 import os.path
+from itertools import islice
 
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
@@ -201,5 +202,22 @@ class FileIngester(object):
             # to the area where they're staged for the OODS.
             # Files staged here so the scanning asyncio routine doesn't
             # queue them twice.
-            butler_file_list = self.stageFiles(file_list)
-            await self.ingest(butler_file_list)
+            for files in self._grouped(file_list, 1000):
+                butler_file_list = self.stageFiles(files)
+                await self.ingest(butler_file_list)
+
+    def _grouped(self, file_list, n):
+        # this should be replaced by itertools.batched
+        # when we up-rev to python 3.13
+        """return 'n' element groups from file_list
+
+        Parameters
+        ----------
+        file_list: `list`
+            an iterable data structure
+        n: `int`
+            largest group to return at once
+        """
+        it = iter(file_list)
+        while batch := tuple(islice(it, n)):
+            yield batch

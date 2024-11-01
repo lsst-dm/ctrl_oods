@@ -73,26 +73,13 @@ class MsgQueue(object):
         }
         # note: this is done because mocking a cimpl is...tricky
         self.createConsumer(config, topics)
+        self.running = True
 
     def createConsumer(self, config, topics):
         """Create a Kafka Consumer"""
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
         LOGGER.info("subscribed")
-
-    async def queue_files(self):
-        """Queue all files in messages on the subscribed topics"""
-        loop = asyncio.get_running_loop()
-        # now, add all the currently known files to the queue
-        self.running = True
-        while self.running:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                message_list = await loop.run_in_executor(pool, self._get_messages)
-
-            if message_list:
-                async with self.condition:
-                    self.msgList.extend(message_list)
-                    self.condition.notify_all()
 
     def _get_messages(self):
         """Return up to max_messages at a time from Kafka"""
@@ -109,12 +96,10 @@ class MsgQueue(object):
             return m_list
 
     async def dequeue_messages(self):
-        """Return all of the messages retrieved so far"""
-        # get a list of messages, clear the msgList
-        async with self.condition:
-            await self.condition.wait()
-            message_list = list(self.msgList)
-            self.msgList.clear()
+        """Retrieve messages"""
+        loop = asyncio.get_running_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            message_list = await loop.run_in_executor(pool, self._get_messages)
         return message_list
 
     def commit(self, message):
