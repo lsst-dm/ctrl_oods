@@ -36,6 +36,7 @@ PASSWORD_KEY = "LSST_KAFKA_SECURITY_PASSWORD"
 PROTOCOL_KEY = "LSST_KAFKA_SECURITY_PROTOCOL"
 MECHANISM_KEY = "LSST_KAFKA_SECURITY_MECHANISM"
 
+
 class MsgQueue(object):
     """Report on new messages
 
@@ -95,7 +96,7 @@ class MsgQueue(object):
 
     def _get_messages(self):
         """Return up to max_messages at a time from Kafka"""
-        LOGGER.info("getting more messages")
+        LOGGER.debug("getting more messages")
         while self.running:
             try:
                 m_list = self.consumer.consume(num_messages=self.max_messages, timeout=1.0)
@@ -104,7 +105,7 @@ class MsgQueue(object):
                 raise e
             if len(m_list) == 0:
                 continue
-            LOGGER.info(f"messages received {m_list}")
+            LOGGER.debug("message(s) received")
             return m_list
 
     async def dequeue_messages(self):
