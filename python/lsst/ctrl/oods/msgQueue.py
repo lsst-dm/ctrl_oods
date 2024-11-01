@@ -22,10 +22,19 @@
 import asyncio
 import concurrent
 import logging
+import os
 
 from confluent_kafka import Consumer
 
 LOGGER = logging.getLogger(__name__)
+
+SECURITY_PROTOCOL = "SASL_PLAINTEXT"
+SASL_MECHANISM = "SCRAM-SHA-512"
+
+USERNAME_KEY = "LSST_KAFKA_SECURITY_USERNAME"
+PASSWORD_KEY = "LSST_KAFKA_SECURITY_PASSWORD"
+PROTOCOL_KEY = "LSST_KAFKA_SECURITY_PROTOCOL"
+MECHANISM_KEY = "LSST_KAFKA_SECURITY_MECHANISM"
 
 
 class MsgQueue(object):
@@ -48,10 +57,19 @@ class MsgQueue(object):
         self.msgList = list()
         self.condition = asyncio.Condition()
 
+        username = os.environ.get(USERNAME_KEY, "USERNAME_NOT_CONFIGURED")
+        password = os.environ.get(PASSWORD_KEY, "PASSWORD_NOT_CONFIGURED")
+        mechanism = os.environ.get(MECHANISM_KEY, SASL_MECHANISM)
+        protocol = os.environ.get(PROTOCOL_KEY, SECURITY_PROTOCOL)
+
         config = {
             "bootstrap.servers": ",".join(self.brokers),
             "group.id": self.group_id,
             "auto.offset.reset": "earliest",
+            "security.protocol": protocol,
+            "sasl.mechanism": mechanism,
+            "sasl.username": username,
+            "sasl.password": password,
         }
         # note: this is done because mocking a cimpl is...tricky
         self.createConsumer(config, topics)
@@ -60,6 +78,7 @@ class MsgQueue(object):
         """Create a Kafka Consumer"""
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
+        LOGGER.info("subscribed")
 
     async def queue_files(self):
         """Queue all files in messages on the subscribed topics"""
@@ -77,6 +96,7 @@ class MsgQueue(object):
 
     def _get_messages(self):
         """Return up to max_messages at a time from Kafka"""
+        LOGGER.debug("getting more messages")
         while self.running:
             try:
                 m_list = self.consumer.consume(num_messages=self.max_messages, timeout=1.0)
@@ -85,6 +105,7 @@ class MsgQueue(object):
                 raise e
             if len(m_list) == 0:
                 continue
+            LOGGER.debug("message(s) received")
             return m_list
 
     async def dequeue_messages(self):

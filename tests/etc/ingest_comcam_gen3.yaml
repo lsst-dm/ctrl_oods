@@ -8,9 +8,6 @@ archiver:
     name: "CCArchiver"
 
 ingester:
-    FILE_INGEST_REQUEST: CC_FILE_INGEST_REQUEST
-    CONSUME_QUEUE: cc_publish_to_oods
-    PUBLISH_QUEUE: oods_publish_to_cc
     imageStagingDirectory: data
     butlers:
         - butler:
