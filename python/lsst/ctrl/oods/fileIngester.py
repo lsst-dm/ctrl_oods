@@ -57,7 +57,7 @@ class FileIngester(object):
         if self.batch_size is None:
             LOGGER.info(f"configuration 'batchSize' not set, defaulting to {DEFAULT_BATCH_SIZE}")
             self.batch_size = DEFAULT_BATCH_SIZE
-        LOGGER.info(f'will ingest in groups of batchSize={self.batch_size}')
+        LOGGER.info(f"will ingest in groups of batchSize={self.batch_size}")
         scanInterval = self.config["scanInterval"]
         seconds = TimeInterval.calculateTotalSeconds(scanInterval)
 
