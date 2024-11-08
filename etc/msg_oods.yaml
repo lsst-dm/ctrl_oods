@@ -29,4 +29,3 @@ ingester:
             scanInterval:
                 <<: *interval
                 seconds: 10
-    batchSize: 20
