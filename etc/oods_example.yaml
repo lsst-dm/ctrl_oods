@@ -5,6 +5,7 @@ defaultInterval: &interval
     seconds: 0
 
 ingester:
+    imageStagingDirectory: /tmp
     butlers:
         - butler:
             collections:

@@ -33,6 +33,8 @@ from lsst.ctrl.oods.utils import Utils
 
 LOGGER = logging.getLogger(__name__)
 
+DEFAULT_BATCH_SIZE = 1000
+
 
 class FileIngester(object):
     """Ingest files into the butler specified in the configuration.
@@ -51,6 +53,11 @@ class FileIngester(object):
         self.config = mainConfig["ingester"]
 
         self.image_staging_dir = self.config["imageStagingDirectory"]
+        self.batch_size = self.config.get("batchSize", None)
+        if self.batch_size is None:
+            LOGGER.info(f"configuration 'batchSize' not set, defaulting to {DEFAULT_BATCH_SIZE}")
+            self.batch_size = DEFAULT_BATCH_SIZE
+        LOGGER.info(f'will ingest in groups of batchSize={self.batch_size}')
         scanInterval = self.config["scanInterval"]
         seconds = TimeInterval.calculateTotalSeconds(scanInterval)
 
@@ -202,7 +209,7 @@ class FileIngester(object):
             # to the area where they're staged for the OODS.
             # Files staged here so the scanning asyncio routine doesn't
             # queue them twice.
-            for files in self._grouped(file_list, 1000):
+            for files in self._grouped(file_list, self.batch_size):
                 butler_file_list = self.stageFiles(files)
                 await self.ingest(butler_file_list)
 
