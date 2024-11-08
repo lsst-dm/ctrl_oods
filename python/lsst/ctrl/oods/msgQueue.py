@@ -103,8 +103,16 @@ class MsgQueue(object):
         return message_list
 
     def commit(self, message):
+        """Perform Kafka commit a message
+
+        Parameters
+        ----------
+        message: Kafka message
+            message to commit
+        """
         self.consumer.commit(message=message)
 
     def stop(self):
+        """shut down"""
         self.running = False
         self.consumer.close()
