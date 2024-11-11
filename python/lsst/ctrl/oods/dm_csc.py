@@ -45,10 +45,10 @@ class DmCsc(BaseCsc):
 
     valid_simulation_modes = [0]
     version = __version__
-    LOGGER.info(f"{version=}")
 
     def __init__(self, name, initial_state):
         super().__init__(name, initial_state=initial_state)
+        LOGGER.info(f"OODS version: {self.version}")
 
         self.estimated_timeout = 5.0
 

@@ -51,7 +51,6 @@ class MsgQueueTestCase(HeartbeatBase):
         mq.consumer.close = MagicMock()
 
         task_list = []
-        task_list.append(asyncio.create_task(mq.queue_files()))
         task_list.append(asyncio.create_task(self.interrupt_me()))
         msg = await mq.dequeue_messages()
         self.assertEqual(len(msg), 1)

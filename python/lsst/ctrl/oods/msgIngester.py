@@ -121,8 +121,6 @@ class MsgIngester(object):
         # this is split into two tasks so they can run at slightly different
         # cadences.  We want to gather as many files as we can before we
         # do the ingest
-        task = asyncio.create_task(self.msgQueue.queue_files())
-        self.tasks.append(task)
 
         task = asyncio.create_task(self.dequeue_and_ingest_files())
         self.tasks.append(task)

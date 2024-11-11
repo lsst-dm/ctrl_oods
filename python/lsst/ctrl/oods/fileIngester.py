@@ -23,6 +23,7 @@ import asyncio
 import logging
 import os
 import os.path
+from itertools import islice
 
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
@@ -31,6 +32,8 @@ from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.utils import Utils
 
 LOGGER = logging.getLogger(__name__)
+
+DEFAULT_BATCH_SIZE = 1000
 
 
 class FileIngester(object):
@@ -50,6 +53,11 @@ class FileIngester(object):
         self.config = mainConfig["ingester"]
 
         self.image_staging_dir = self.config["imageStagingDirectory"]
+        self.batch_size = self.config.get("batchSize", None)
+        if self.batch_size is None:
+            LOGGER.info(f"configuration 'batchSize' not set, defaulting to {DEFAULT_BATCH_SIZE}")
+            self.batch_size = DEFAULT_BATCH_SIZE
+        LOGGER.info(f"will ingest in groups of batchSize={self.batch_size}")
         scanInterval = self.config["scanInterval"]
         seconds = TimeInterval.calculateTotalSeconds(scanInterval)
 
@@ -201,5 +209,22 @@ class FileIngester(object):
             # to the area where they're staged for the OODS.
             # Files staged here so the scanning asyncio routine doesn't
             # queue them twice.
-            butler_file_list = self.stageFiles(file_list)
-            await self.ingest(butler_file_list)
+            for files in self._grouped(file_list, self.batch_size):
+                butler_file_list = self.stageFiles(files)
+                await self.ingest(butler_file_list)
+
+    def _grouped(self, file_list, n):
+        # this should be replaced by itertools.batched
+        # when we up-rev to python 3.13
+        """return 'n' element groups from file_list
+
+        Parameters
+        ----------
+        file_list: `list`
+            an iterable data structure
+        n: `int`
+            largest group to return at once
+        """
+        it = iter(file_list)
+        while batch := tuple(islice(it, n)):
+            yield batch
