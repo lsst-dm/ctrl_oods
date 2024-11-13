@@ -57,20 +57,39 @@ class MsgQueue(object):
         self.msgList = list()
         self.condition = asyncio.Condition()
 
-        username = os.environ.get(USERNAME_KEY, "USERNAME_NOT_CONFIGURED")
-        password = os.environ.get(PASSWORD_KEY, "PASSWORD_NOT_CONFIGURED")
+        username = os.environ.get(USERNAME_KEY, None)
+        password = os.environ.get(PASSWORD_KEY, None)
         mechanism = os.environ.get(MECHANISM_KEY, SASL_MECHANISM)
         protocol = os.environ.get(PROTOCOL_KEY, SECURITY_PROTOCOL)
 
-        config = {
-            "bootstrap.servers": ",".join(self.brokers),
-            "group.id": self.group_id,
-            "auto.offset.reset": "earliest",
-            "security.protocol": protocol,
-            "sasl.mechanism": mechanism,
-            "sasl.username": username,
-            "sasl.password": password,
-        }
+        use_auth = True
+        if username is None:
+            LOGGER.info(f"{USERNAME_KEY} has not been set.")
+            use_auth = False
+        if password is None:
+            LOGGER.info(f"{PASSWORD_KEY} has not been set.")
+            use_auth = False
+
+        if use_auth:
+            LOGGER.info("{MECHANISM_KEY} set to {mechanism}")
+            LOGGER.info("{PROTOCOL_KEY} set to {protocol}")
+            config = {
+                "bootstrap.servers": ",".join(self.brokers),
+                "group.id": self.group_id,
+                "auto.offset.reset": "earliest",
+                "security.protocol": protocol,
+                "sasl.mechanism": mechanism,
+                "sasl.username": username,
+                "sasl.password": password,
+            }
+        else:
+            LOGGER.info("Defaulting to no authentication to Kafka")
+            config = {
+                "bootstrap.servers": ",".join(self.brokers),
+                "group.id": self.group_id,
+                "auto.offset.reset": "earliest",
+            }
+
         # note: this is done because mocking a cimpl is...tricky
         self.createConsumer(config, topics)
         self.running = True
