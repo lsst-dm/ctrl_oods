@@ -111,7 +111,7 @@ class ButlerAttendant:
                 await loop.run_in_executor(executor, self.task.run, file_list)
                 LOGGER.info("done with ingest")
             except Exception as e:
-                print(f"Exception! {e=}")
+                LOGGER.exception(f"Exception! {e=}")
 
     def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
         """Create a full path to a directory contained in the

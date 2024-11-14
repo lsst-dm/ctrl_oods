@@ -22,6 +22,7 @@
 import asyncio
 import logging
 
+from confluent_kafka import KafkaError
 from lsst.ctrl.oods.bucketMessage import BucketMessage
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.msgQueue import MsgQueue
@@ -145,6 +146,11 @@ class MsgIngester(object):
             message_list = await self.msgQueue.dequeue_messages()
             resources = []
             for m in message_list:
+                if m.error():
+                    if m.error().code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
+                        raise Exception("The topic or partition does not exist")
+                    else:
+                        raise Exception(f"KafkaError = {m.error().code()}")
                 rps = self._gather_all_resource_paths(m)
                 resources.extend(rps)
             await self.ingest(resources)

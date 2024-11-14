@@ -23,6 +23,7 @@
 import asyncio
 import logging
 import os
+import sys
 
 import lsst.log as lsstlog
 import yaml
@@ -82,10 +83,10 @@ class Standalone(object):
         self.ingester = MsgIngester(self.config, self)
 
         self.task_list = self.ingester.run_tasks()
+        return self.task_list
 
     async def stop_services(self):
         """Stop all cleanup and archiving services"""
-        print("calling stop_tasks")
         self.ingester.stop_tasks()
 
     async def done(self):
@@ -94,14 +95,20 @@ class Standalone(object):
             await asyncio.sleep(3600)
         print("done!")
 
-    async def main(self):
-        await self.start_services()
-        group = asyncio.gather(self.done())
-        print("gathering")
-        await group
-        print("finished")
+    async def call_fault(self, code, report):
+        LOGGER.info(f"{code}: {report}")
         await self.stop_services()
-        print("complete")
+
+    async def main(self):
+        tasks = await self.start_services()
+        try:
+            group = await asyncio.gather(*tasks)
+        except asyncio.exceptions.CancelledError:
+            LOGGER.info("cancelled")
+        except Exception as e:
+            LOGGER.info(e)
+            LOGGER.info("exiting")
+        await self.stop_services()
 
 
 if __name__ == "__main__":
