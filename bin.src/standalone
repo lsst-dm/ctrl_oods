@@ -110,6 +110,7 @@ class Standalone(object):
             LOGGER.info("exiting")
         await self.stop_services()
 
+
 if __name__ == "__main__":
     alone = Standalone()
     asyncio.run(alone.main())
