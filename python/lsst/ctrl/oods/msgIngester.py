@@ -22,11 +22,11 @@
 import asyncio
 import logging
 
+from confluent_kafka import KafkaError
 from lsst.ctrl.oods.bucketMessage import BucketMessage
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.msgQueue import MsgQueue
 from lsst.resources import ResourcePath
-from confluent_kafka import KafkaError
 
 LOGGER = logging.getLogger(__name__)
 
