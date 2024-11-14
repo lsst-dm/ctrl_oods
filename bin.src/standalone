@@ -113,8 +113,3 @@ class Standalone(object):
 if __name__ == "__main__":
     alone = Standalone()
     asyncio.run(alone.main())
-    #try:
-    #    alone = Standalone()
-    #    asyncio.run(alone.main())
-    #except Exception as e:
-    #    LOGGER.info(e)
