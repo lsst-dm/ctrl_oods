@@ -1,0 +1,44 @@
+{
+   "Records": [
+      {
+         "eventVersion": "2.2",
+         "eventSource": "ceph:s3",
+         "awsRegion": "s3-butler",
+         "eventTime": "2024-11-13T17:52:22.138912Z",
+         "eventName": "ObjectCreated:Put",
+         "userIdentity": {
+            "principalId": "lsstcam"
+         },
+         "requestParameters": {
+            "sourceIPAddress": ""
+         },
+         "responseElements": {
+            "x-amz-request-id": "1cad9458-45e6-48cf-ae5a-2bb195396da7.41369686.13031161180866775831",
+            "x-amz-id-2": "2774056-s3-butler-s3-butler"
+         },
+         "s3": {
+            "s3SchemaVersion": "1.0",
+            "configurationId": "lsst.s3.raw.lsstcam",
+            "bucket": {
+               "name": "rubinobs-raw-lsstcam",
+               "ownerIdentity": {
+                  "principalId": "lsstcam"
+               },
+               "arn": "arn:aws:s3:s3-butler::rubinobs-raw-lsstcam",
+               "id": "1cad9458-45e6-48cf-ae5a-2bb195396da7.28735610.1"
+            },
+            "object": {
+               "key": "test.txt",
+               "size": 0,
+               "eTag": "d41d8cd98f00b204e9800998ecf8427e",
+               "versionId": "",
+               "sequencer": "56E7346729097308",
+               "metadata": [],
+               "tags": []
+            }
+         },
+         "eventId": "1731520342.141756.d41d8cd98f00b204e9800998ecf8427e",
+         "opaqueData": "&mechanism=SCRAM-SHA-512"
+      }
+   ]
+}

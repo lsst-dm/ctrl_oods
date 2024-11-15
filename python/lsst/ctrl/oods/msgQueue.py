@@ -71,8 +71,8 @@ class MsgQueue(object):
             use_auth = False
 
         if use_auth:
-            LOGGER.info("{MECHANISM_KEY} set to {mechanism}")
-            LOGGER.info("{PROTOCOL_KEY} set to {protocol}")
+            LOGGER.info(f"{MECHANISM_KEY} set to {mechanism}")
+            LOGGER.info(f"{PROTOCOL_KEY} set to {protocol}")
             config = {
                 "bootstrap.servers": ",".join(self.brokers),
                 "group.id": self.group_id,

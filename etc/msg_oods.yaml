@@ -14,7 +14,7 @@ ingester:
         max_messages: 10
     butlers: 
         - butler:
-            instrument: lsst.obs.lsst.Latiss
+            instrument: lsst.obs.lsst.LsstCam
             class:
                 import : lsst.ctrl.oods.messageAttendant
                 name : MessageAttendant

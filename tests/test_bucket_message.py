@@ -47,7 +47,7 @@ class BucketMessageTestCase(lsst.utils.tests.TestCase):
         bucket_message = BucketMessage(message)
         return bucket_message
 
-    def testBucketMessage(self):
+    def testBucketMessage1(self):
         """test that the message we're extracting is expected"""
         bucket_message = self.createBucketMessage("kafka_msg.json")
         url_list = list()
@@ -57,6 +57,18 @@ class BucketMessageTestCase(lsst.utils.tests.TestCase):
         self.assertEqual(len(url_list), 1)
         f = "s3://rubin-pp/HSC/73/2023061400090/0/6140090/HSC-Z/HSC-2023061400090-0-6140090-HSC-Z-73.fz"
         self.assertEqual(url_list[0], f)
+
+    def testBucketMessage2(self):
+        """test that the message we're extracting is expected"""
+        bucket_message = self.createBucketMessage("kafka_msg2.json")
+        url_list = list()
+        for url in bucket_message.extract_urls():
+            url_list.append(url)
+
+        self.assertEqual(len(url_list), 1)
+        f = "s3://rubinobs-raw-lsstcam/test.txt"
+        self.assertEqual(url_list[0], f)
+
 
     def testBadBucketMessage(self):
         """test that a bad message throws an exception"""

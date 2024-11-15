@@ -110,6 +110,8 @@ class ButlerAttendant:
                 LOGGER.info("about to ingest")
                 await loop.run_in_executor(executor, self.task.run, file_list)
                 LOGGER.info("done with ingest")
+            except RuntimeError as re:
+                LOGGER.info(f"{re}")
             except Exception as e:
                 LOGGER.exception(f"Exception! {e=}")
 
@@ -195,7 +197,7 @@ class ButlerAttendant:
         msg["MSG_TYPE"] = "IMAGE_IN_OODS"
         msg["STATUS_CODE"] = code
         msg["DESCRIPTION"] = description
-        LOGGER.info("msg: %s, code: %s, description: %s", msg, code, description)
+        LOGGER.debug("msg: %s, code: %s, description: %s", msg, code, description)
         if self.csc is None:
             self.print_msg(msg)
             return
