@@ -69,7 +69,6 @@ class BucketMessageTestCase(lsst.utils.tests.TestCase):
         f = "s3://rubinobs-raw-lsstcam/test.txt"
         self.assertEqual(url_list[0], f)
 
-
     def testBadBucketMessage(self):
         """test that a bad message throws an exception"""
         bucket_message = self.createBucketMessage("bad_kafka_msg.json")
