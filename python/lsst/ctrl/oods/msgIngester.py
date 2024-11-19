@@ -172,12 +172,12 @@ class MsgIngester(object):
         # extract all urls within this message
         msg = BucketMessage(m.value())
 
-        names = [url for url in msg.extract_urls()]
+        urls = [url for url in msg.extract_urls()]
 
-        name_list = self.filter_by_regex(names)
-        if len(name_list) == 0:
+        filtered_urls = self.filter_by_regex(urls)
+
+        if filtered_urls:
+            rps = [ResourcePath(url) for url in filtered_urls]
+            return rps
+
             return None
-
-        rp_list = [ResourcePath(url) for url in name_list]
-
-        return rp_list
