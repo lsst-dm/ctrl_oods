@@ -20,9 +20,9 @@ ingester:
                 name : MessageAttendant
             repoDirectory : /tmp/repo/LATISS
             collections:
-                - LATISS/raw/all
+                - LSSTCam/raw/all
             cleanCollections:
-                - collection: LATISS/raw/all
+                - collection: LSSTCam/raw/all
                   filesOlderThan:
                       <<: *interval
                       seconds: 30

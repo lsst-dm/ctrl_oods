@@ -245,14 +245,15 @@ class ButlerAttendant:
         )
         t = t - td
 
-        LOGGER.info("about to createButler()")
+        LOGGER.info("cleaning collections")
+        LOGGER.debug("about to createButler()")
         butler = self.createButler()
 
-        LOGGER.info("about to refresh()")
+        LOGGER.debug("about to refresh()")
         butler.registry.refresh()
 
         # get all datasets in these collections
-        LOGGER.info("about to call queryDatasets")
+        LOGGER.debug("about to call queryDatasets")
         all_datasets = set(
             butler.registry.queryDatasets(
                 datasetType=...,
@@ -261,25 +262,25 @@ class ButlerAttendant:
                 bind={"ref_date": t},
             )
         )
-        LOGGER.info("done calling queryDatasets")
+        LOGGER.debug("done calling queryDatasets")
 
         # get all TAGGED collections
-        LOGGER.info("about to call queryCollections")
+        LOGGER.debug("about to call queryCollections")
         tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
-        LOGGER.info("done calling queryCollections")
+        LOGGER.debug("done calling queryCollections")
 
         # Note: The code below is to get around an issue where passing
         # an empty list as the collections argument to queryDatasets
         # returns all datasets.
         if tagged_cols:
             # get all TAGGED datasets
-            LOGGER.info("about to run queryDatasets for TAGGED collections")
+            LOGGER.debug("about to run queryDatasets for TAGGED collections")
             tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
-            LOGGER.info("done running queryDatasets for TAGGED collections; differencing datasets")
+            LOGGER.debug("done running queryDatasets for TAGGED collections; differencing datasets")
 
             # get a set of datasets in all_datasets, but not in tagged_datasets
             ref = all_datasets.difference(tagged_datasets)
-            LOGGER.info("done differencing datasets")
+            LOGGER.debug("done differencing datasets")
         else:
             # no TAGGED collections, so use all_datasets
             ref = all_datasets
@@ -305,9 +306,10 @@ class ButlerAttendant:
                 except Exception as e:
                     LOGGER.warning("couldn't remove %s: %s", uri, e)
 
-        LOGGER.info("about to run pruneDatasets")
+        LOGGER.debug("about to run pruneDatasets")
         butler.pruneDatasets(ref, purge=True, unstore=True)
-        LOGGER.info("done running pruneDatasets")
+        LOGGER.debug("done running pruneDatasets")
+        LOGGER.info("done cleaning collections")
 
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary
@@ -359,6 +361,6 @@ class ButlerAttendant:
                 refs = fds.refs
                 ids = [ref.dataId for ref in refs]
                 self.visit_definer.run(ids)
-                LOGGER.info("Defined visits for %s", ids)
+                LOGGER.debug("Defined visits for %s", ids)
             except Exception as e:
                 LOGGER.exception(e)
