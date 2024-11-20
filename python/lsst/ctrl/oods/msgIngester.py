@@ -21,6 +21,8 @@
 
 import asyncio
 import logging
+import os
+import re
 
 from confluent_kafka import KafkaError
 from lsst.ctrl.oods.bucketMessage import BucketMessage
@@ -85,6 +87,9 @@ class MsgIngester(object):
         self.tasks = []
         self.dequeue_task = None
 
+        self.regex = re.compile(os.environ.get("DATASET_REGEXP", r".*\.(fits|fits.fz)$"))
+        LOGGER.info(f"Ingesting files matching regular expression {self.regex.pattern}")
+
     def get_butler_clean_tasks(self):
         """Get a list of all butler run_task methods
 
@@ -140,6 +145,9 @@ class MsgIngester(object):
             task.cancel()
         self.tasks = []
 
+    def filter_by_regex(self, files):
+        return [s for s in files if self.regex.search(s)]
+
     async def dequeue_and_ingest_files(self):
         self.running = True
         while self.running:
@@ -152,6 +160,8 @@ class MsgIngester(object):
                     else:
                         raise Exception(f"KafkaError = {m.error().code()}")
                 rps = self._gather_all_resource_paths(m)
+                if rps is None:
+                    continue
                 resources.extend(rps)
             await self.ingest(resources)
 
@@ -162,6 +172,12 @@ class MsgIngester(object):
         # extract all urls within this message
         msg = BucketMessage(m.value())
 
-        rp_list = [ResourcePath(url) for url in msg.extract_urls()]
+        urls = [url for url in msg.extract_urls()]
 
-        return rp_list
+        filtered_urls = self.filter_by_regex(urls)
+
+        if filtered_urls:
+            rps = [ResourcePath(url) for url in filtered_urls]
+            return rps
+
+            return None

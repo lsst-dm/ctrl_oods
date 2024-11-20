@@ -18,11 +18,11 @@ ingester:
             class:
                 import : lsst.ctrl.oods.messageAttendant
                 name : MessageAttendant
-            repoDirectory : /tmp/repo/LATISS
+            repoDirectory : /tmp/repo/LSSTCAM
             collections:
-                - LATISS/raw/all
+                - LSSTCam/raw/all
             cleanCollections:
-                - collection: LATISS/raw/all
+                - collection: LSSTCam/raw/all
                   filesOlderThan:
                       <<: *interval
                       seconds: 30
