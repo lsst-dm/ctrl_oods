@@ -103,15 +103,15 @@ class OodsCsc(DmCsc):
         self.task_list = self.ingester.run_tasks()
 
     def createIngester(self):
-        if "ingesterClass" not in self.config:
+        if "class" not in self.config:
             ingester = MsgIngester(self.config, self)
             return ingester
 
         # this is a fall back, in case we want to use another
         # ingestion type (like FileIngester)
-        classConfig = self.config["ingesterClass"]
-        importFile = classConfig["ingesterType"]
-        name = classConfig["ingesterName"]
+        classConfig = self.config["class"]
+        importFile = classConfig["import"]
+        name = classConfig["name"]
 
         mod = import_module(importFile)
         ingesterClass = getattr(mod, name)
