@@ -22,7 +22,7 @@ message_ingester:
                 - collection: LSSTCam/raw/all
                   filesOlderThan:
                       <<: *interval
-                      seconds: 30
+                      days: 30
             scanInterval:
                 <<: *interval
-                seconds: 10
+                seconds: 2
