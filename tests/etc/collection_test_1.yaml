@@ -4,13 +4,10 @@ defaultInterval: &interval
     minutes: 0
     seconds: 0
 
-ingester:
+file_ingester:
     imageStagingDirectory: data
     butlers:
         - butler:
-            class:
-                import : lsst.ctrl.oods.fileAttendant
-                name : FileAttendant
             repoDirectory : repo
             instrument: lsst.obs.lsst.Latiss
             badFileDirectory: /tmp/bad

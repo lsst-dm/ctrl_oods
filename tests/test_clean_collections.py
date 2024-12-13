@@ -53,7 +53,7 @@ class CleanCollectionsTestCase(HeartbeatBase):
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = self.config["ingester"]
+        ingesterConfig = self.config["file_ingester"]
         self.imageDir = tempfile.mkdtemp()
         ingesterConfig["imageStagingDirectory"] = self.imageDir
 

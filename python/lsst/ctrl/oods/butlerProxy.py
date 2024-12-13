@@ -19,8 +19,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from importlib import import_module
-
 
 class ButlerProxy(object):
     """proxy interface to the gen2 or gen3 butler
@@ -33,19 +31,11 @@ class ButlerProxy(object):
         OODS CSC
     """
 
-    def __init__(self, butlerConfig, csc=None):
+    def __init__(self, butlerClass, butlerConfig, csc=None):
         # create the butler
-        classConfig = butlerConfig["class"]
-
-        importFile = classConfig["import"]
-        name = classConfig["name"]
-
-        mod = import_module(importFile)
-        butlerClass = getattr(mod, name)
-
         self.butlerInstance = butlerClass(butlerConfig, csc)
 
-        self.staging_dir = butlerConfig.get("stagingDirectory")
+        self.staging_dir = butlerConfig.get("stagingDirectory", None)
 
     def getStagingDirectory(self):
         """Return the path of the staging directory

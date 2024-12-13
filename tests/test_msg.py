@@ -64,7 +64,7 @@ class S3AuxtelIngesterTestCase(HeartbeatBase):
         with open(configFile, "r") as f:
             config = yaml.safe_load(f)
 
-        ingesterConfig = config["ingester"]
+        ingesterConfig = config["message_ingester"]
         butlerConfig = ingesterConfig["butlers"][0]["butler"]
 
         self.repoDir = tempfile.mkdtemp()

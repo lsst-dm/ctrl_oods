@@ -4,10 +4,7 @@ defaultInterval: &interval
     minutes: 0
     seconds: 0
 
-archiver:
-    name: "CCArchiver"
-
-ingester:
+file_ingester:
     imageStagingDirectory: image_staging
     butlers:
         - butler:
@@ -23,9 +20,6 @@ ingester:
                       <<: *interval
                       days: 30
             instrument: lsst.obs.lsst.LsstComCam
-            class:
-                import : lsst.ctrl.oods.fileAttendant
-                name : FileAttendant
             stagingDirectory : staging2
             repoDirectory : repo2
             badFileDirectory: bad2

@@ -27,6 +27,7 @@ import re
 from confluent_kafka import KafkaError
 from lsst.ctrl.oods.bucketMessage import BucketMessage
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
+from lsst.ctrl.oods.messageAttendant import MessageAttendant
 from lsst.ctrl.oods.msgQueue import MsgQueue
 from lsst.resources import ResourcePath
 
@@ -34,6 +35,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class MsgIngester(object):
+    CONFIG_NAME = "message_ingester"
     """Ingest files into the butler specified in the configuration.
 
     Parameters
@@ -45,7 +47,7 @@ class MsgIngester(object):
     def __init__(self, mainConfig, csc=None):
         self.SUCCESS = 0
         self.FAILURE = 1
-        self.config = mainConfig["ingester"]
+        self.config = mainConfig[MsgIngester.CONFIG_NAME]
         self.max_messages = 1
 
         kafka_settings = self.config.get("kafka")
@@ -81,7 +83,7 @@ class MsgIngester(object):
 
         self.butlers = []
         for butler_config in butler_configs:
-            butler = ButlerProxy(butler_config["butler"], csc)
+            butler = ButlerProxy(MessageAttendant, butler_config["butler"], csc)
             self.butlers.append(butler)
 
         self.tasks = []

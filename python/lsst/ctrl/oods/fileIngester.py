@@ -27,6 +27,7 @@ from itertools import islice
 
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
+from lsst.ctrl.oods.fileAttendant import FileAttendant
 from lsst.ctrl.oods.fileQueue import FileQueue
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.utils import Utils
@@ -37,6 +38,7 @@ DEFAULT_BATCH_SIZE = 1000
 
 
 class FileIngester(object):
+    CONFIG_NAME = "file_ingester"
     """Ingest files into the butler specified in the configuration.
     Files must be removed from the directory as part of the ingest
     or there will be an attempt to ingest them again later.
@@ -50,7 +52,7 @@ class FileIngester(object):
     def __init__(self, mainConfig, csc=None):
         self.SUCCESS = 0
         self.FAILURE = 1
-        self.config = mainConfig["ingester"]
+        self.config = mainConfig[FileIngester.CONFIG_NAME]
 
         self.image_staging_dir = self.config["imageStagingDirectory"]
         self.batch_size = self.config.get("batchSize", None)
@@ -69,7 +71,7 @@ class FileIngester(object):
 
         self.butlers = []
         for butlerConfig in butlerConfigs:
-            butler = ButlerProxy(butlerConfig["butler"], csc)
+            butler = ButlerProxy(FileAttendant, butlerConfig["butler"], csc)
             self.butlers.append(butler)
 
         cache_config = mainConfig["cacheCleaner"]

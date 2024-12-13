@@ -70,7 +70,7 @@ class AsyncIngestTestCase(HeartbeatBase):
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = config["ingester"]
+        ingesterConfig = config["file_ingester"]
         self.imageStagingDir = tempfile.mkdtemp()
         ingesterConfig["imageStagingDirectory"] = self.imageStagingDir
 
@@ -108,7 +108,7 @@ class AsyncIngestTestCase(HeartbeatBase):
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = config["ingester"]
+        ingesterConfig = config["file_ingester"]
         image_staging_dir = ingesterConfig["imageStagingDirectory"]
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()

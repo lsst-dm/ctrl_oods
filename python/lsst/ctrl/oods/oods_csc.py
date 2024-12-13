@@ -21,10 +21,9 @@
 
 import logging
 import os
-from importlib import import_module
-
 import yaml
 from lsst.ctrl.oods.dm_csc import DmCsc
+from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.msgIngester import MsgIngester
 from lsst.ts import salobj
 
@@ -103,19 +102,14 @@ class OodsCsc(DmCsc):
         self.task_list = self.ingester.run_tasks()
 
     def createIngester(self):
-        if "class" not in self.config:
+        if MsgIngester.CONFIG_NAME in self.config:
+            LOGGER.info("Creating MessageIngester")
             ingester = MsgIngester(self.config, self)
-            return ingester
-
-        # this is a fall back, in case we want to use another
-        # ingestion type (like FileIngester)
-        classConfig = self.config["class"]
-        importFile = classConfig["import"]
-        name = classConfig["name"]
-
-        mod = import_module(importFile)
-        ingesterClass = getattr(mod, name)
-        ingester = ingesterClass(self.config, self)
+        elif FileIngester.CONFIG_NAME in self.config:
+            LOGGER.info("Creating FileIngester")
+            ingester = FileIngester(self.config, self)
+        else:
+            raise RuntimeError("valid configuation not found")
         return ingester
 
     async def stop_services(self):

@@ -43,7 +43,7 @@ class MultiComCamIngesterTestCase(HeartbeatBase):
         with open(configFile, "r") as f:
             config = yaml.safe_load(f)
 
-        ingesterConfig = config["ingester"]
+        ingesterConfig = config["file_ingester"]
         self.dataDir = tempfile.mkdtemp()
         ingesterConfig["imageStagingDirectory"] = self.dataDir
 
@@ -83,7 +83,7 @@ class MultiComCamIngesterTestCase(HeartbeatBase):
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
         config, destFile = self.createConfig("cc_oods_multi.yaml", fits_name)
 
-        ingesterConfig = config["ingester"]
+        ingesterConfig = config["file_ingester"]
         image_staging_dir = ingesterConfig["imageStagingDirectory"]
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()

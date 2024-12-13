@@ -109,7 +109,7 @@ class TaggingTestCase(HeartbeatBase):
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = self.config["ingester"]
+        ingesterConfig = self.config["file_ingester"]
         self.imageStagingDir = tempfile.mkdtemp()
         ingesterConfig["imageStagingDirectory"] = self.imageStagingDir
 
@@ -133,7 +133,7 @@ class TaggingTestCase(HeartbeatBase):
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = self.config["ingester"]
+        ingesterConfig = self.config["file_ingester"]
         image_staging_dir = ingesterConfig["imageStagingDirectory"]
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
