@@ -26,7 +26,6 @@ message_ingester:
             scanInterval:
                 <<: *interval
                 minutes: 1
-    batchSize: 20
     scanInterval:
         <<: *interval
         seconds: 10
