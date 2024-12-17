@@ -10,6 +10,15 @@ file_ingester:
         - butler:
             collections:
                 - LATISS/raw/all
+            cleanCollections:
+                - collection: FARG/raw/all
+                  filesOlderThan:
+                      <<: *interval
+                      days: 30
+                - collection: FARG/runs/quickLook
+                  filesOlderThan:
+                      <<: *interval
+                      days: 30
             instrument: lsst.obs.lsst.LsstComCam
             stagingDirectory : staging
             repoDirectory : repo
@@ -17,9 +26,6 @@ file_ingester:
             scanInterval:
                 <<: *interval
                 minutes: 10
-            filesOlderThan:
-                <<: *interval
-                days: 90
     batchSize: 20
     scanInterval:
         <<: *interval
@@ -30,10 +36,10 @@ cacheCleaner:
         - repo/raw
     scanInterval:
         <<: *interval
-        seconds: 30
+        days: 1
     filesOlderThan:
         <<: *interval
-        days: 30 
+        days: 95 
     directoriesEmptyForMoreThan:
         <<: *interval
         days: 2
