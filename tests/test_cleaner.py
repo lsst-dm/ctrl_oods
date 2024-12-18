@@ -45,15 +45,15 @@ class CleanerTestCase(HeartbeatBase):
         interval["hours"] = 0
         interval["seconds"] = 0
 
-        scanInterval = {}
-        scanInterval["days"] = 0
-        scanInterval["minutes"] = 0
-        scanInterval["hours"] = 0
-        scanInterval["seconds"] = 3
+        cleanInterval = {}
+        cleanInterval["days"] = 0
+        cleanInterval["minutes"] = 0
+        cleanInterval["hours"] = 0
+        cleanInterval["seconds"] = 3
 
         config["filesOlderThan"] = interval
         config["directoriesEmptyForMoreThan"] = interval
-        config["scanInterval"] = scanInterval
+        config["cleanInterval"] = cleanInterval
 
         # put some files into it
         (fh1, filename1) = tempfile.mkstemp(dir=dirPath)
@@ -116,15 +116,15 @@ class CleanerTestCase(HeartbeatBase):
         interval["minutes"] = 0
         interval["seconds"] = 0
 
-        scanInterval = {}
-        scanInterval["days"] = 0
-        scanInterval["minutes"] = 0
-        scanInterval["hours"] = 0
-        scanInterval["seconds"] = 3
+        cleanInterval = {}
+        cleanInterval["days"] = 0
+        cleanInterval["minutes"] = 0
+        cleanInterval["hours"] = 0
+        cleanInterval["seconds"] = 3
 
         config["filesOlderThan"] = interval
         config["directoriesEmptyForMoreThan"] = interval
-        config["scanInterval"] = scanInterval
+        config["cleanInterval"] = cleanInterval
 
         # put some directories into it
         dirname1 = tempfile.mkdtemp(dir=dirPath)

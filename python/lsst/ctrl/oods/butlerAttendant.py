@@ -51,7 +51,7 @@ class ButlerAttendant:
 
         repo = self.config["repoDirectory"]
         self.instrument = self.config["instrument"]
-        self.scanInterval = self.config["scanInterval"]
+        self.cleanInterval = self.config["cleanInterval"]
         self.collections = self.config["collections"]
         self.cleanCollections = self.config.get("cleanCollections")
 
@@ -205,7 +205,7 @@ class ButlerAttendant:
 
     async def clean_task(self):
         """run the clean() method at the configured interval"""
-        seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
+        seconds = TimeInterval.calculateTotalSeconds(self.cleanInterval)
         LOGGER.info("clean_task created!")
         while True:
             LOGGER.debug("cleaning")

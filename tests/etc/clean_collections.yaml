@@ -24,7 +24,7 @@ file_ingester:
                   filesOlderThan:
                       <<: *interval
                       days: 3
-            scanInterval:
+            cleanInterval:
                 <<: *interval
                 seconds: 2
     batchSize: 20
@@ -35,7 +35,7 @@ file_ingester:
 cacheCleaner:
     clearEmptyDirectoriesAndOldFiles:
         - repo/raw
-    scanInterval:
+    cleanInterval:
         <<: *interval
         seconds: 30
     filesOlderThan:

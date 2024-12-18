@@ -33,7 +33,7 @@ file_ingester
          instrument: lsst.obs.lsst.LsstComCam
          stagingDirectory: staging
          repoDirectory : repo
-         scanInterval:
+         cleanInterval:
              <<: \*interval
              minutes: 10
      batchSize: 20
@@ -44,7 +44,7 @@ file_ingester
  cacheCleaner:
      directories:
          - repo/raw
-     scanInterval:
+     cleanInterval:
          <<: \*interval
          days: 1
      filesOlderThan:
@@ -76,7 +76,7 @@ butlers
 The "butlers" section allows multiple "butler"s, which is an artifact of when
 we ran multiple butler instances with one OODS. In practice, we have a one-to-one OODS to butler correspondence, and eventually the "butlers" section will be removed.
 
-Each "butler" section specifies: collections, instrument, stagingDirectory, repoDirectory, cleanCollections, and scanInterval
+Each "butler" section specifies: collections, instrument, stagingDirectory, repoDirectory, cleanCollections, and cleanInterval
 
 The "collections" section indicates which collections are used to instantiate the Butler object used by the OODS.
 
@@ -88,7 +88,7 @@ The "repoDirectory" is where the Butler repo exists.
 
 The "cleanCollections" section specifies collections to clean up after a specified time.  The two subsections are "collection" and "filesOlderThan". This directs the OODS to remove data from the specified "collection" at a time interval specified by "filesOlderThan".
 
-The "scanInterval" in this "butler" section specifies the frequency at which to process the "cleanCollections" directives.
+The "cleanInterval" in this "butler" section specifies the frequency at which to process the "cleanCollections" directives.
 
 scanInterval
 ^^^^^^^^^^^^
@@ -107,16 +107,16 @@ This has four subsections: directories, scanInterval, filesOlderThan and directo
 The "directories" section specifies the location of the ingested Butler files to clean up.
 By default this is "repo/raw" and is expected to be within the current directory where the OODS is invoked.
 
-The "scanInterval" section specifies the frequency at which to scan the "directories" specified above.
-In the example, it scans every 30 seconds.
+The "cleanInterval" section specifies the frequency at which to scan the "directories" specified above.
+In the example, it scans every 1 day.
 
 The "filesOlderthan" section specifies how old files must be in order for them to be considered for removal.
 This is checked against the last modification date of the file.
-In this example, the file must be at least 30 days old to be considered for removal.
+In this example, the file must be at least 95 days old to be considered for removal.
 
 The "directoriesEmptyForMoreThan" section specifies how long directories must be empty for before they are to be considered for removal.
 This is checked against the last modification date of the directory.
-In this example, the directory must be at least  1 day old and empty to be considered for removal.
+In this example, the directory must be at least 2 days old and empty to be considered for removal.
 
 
 message_ingester
@@ -149,12 +149,9 @@ message_ingester
                    filesOlderThan:
                        <<: *interval
                        days: 30
-             scanInterval:
+             cleanInterval:
                  <<: *interval
                  minutes: 1
-     scanInterval:
-         <<: *interval
-         seconds: 10
 
 defaultInterval
 ---------------
@@ -179,7 +176,7 @@ butlers
 The "butlers" subsection allows multiple "butler"s, which is an artifact of when
 we ran multiple butler instances with one OODS. In practice, we have a one-to-one OODS to butler correspondence, and eventually the "butlers" section will be removed.
 
-Each "butler" section specifies: repoDirectory, instrument, collections, cleanCollections, scanInterval
+Each "butler" section specifies: repoDirectory, instrument, collections, cleanCollections, cleanInterval
 
 The "repoDirectory" is where the Butler repo exists.
 
@@ -189,9 +186,5 @@ The "collections" section indicates which collections are used to instantiate th
 
 The "cleanCollections" section specifies collections to clean up after a specified time.  The two subsections are "collection" and "filesOlderThan". This directs the OODS to remove data from the specified "collection" at a time interval specified by "filesOlderThan".
 
-The "scanInterval" in this "butler" section specifies the frequency at which to process the "cleanCollections" directives.
-
-scanInterval
-^^^^^^^^^^^^
-The "scanInterval" section specifies how often wait for incoming messages.
+The "cleanInterval" in this "butler" section specifies the frequency at which to process the "cleanCollections" directives.
 

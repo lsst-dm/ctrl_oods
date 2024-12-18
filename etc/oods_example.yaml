@@ -23,7 +23,7 @@ file_ingester:
             stagingDirectory : staging
             repoDirectory : repo
             badFileDirectory: bad
-            scanInterval:
+            cleanInterval:
                 <<: *interval
                 minutes: 10
     batchSize: 20
@@ -34,7 +34,7 @@ file_ingester:
 cacheCleaner:
     directories:
         - repo/raw
-    scanInterval:
+    cleanInterval:
         <<: *interval
         days: 1
     filesOlderThan:

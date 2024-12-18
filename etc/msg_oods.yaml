@@ -23,6 +23,6 @@ message_ingester:
                   filesOlderThan:
                       <<: *interval
                       days: 30
-            scanInterval:
+            cleanInterval:
                 <<: *interval
                 seconds: 2

@@ -47,8 +47,8 @@ class CacheCleaner(object):
             self.only_empty_directories = self.config["clearEmptyDirectories"]
         self.fileInterval = self.config["filesOlderThan"]
         self.emptyDirsInterval = self.config["directoriesEmptyForMoreThan"]
-        scanInterval = self.config["scanInterval"]
-        self.seconds = TimeInterval.calculateTotalSeconds(scanInterval)
+        cleanInterval = self.config["cleanInterval"]
+        self.seconds = TimeInterval.calculateTotalSeconds(cleanInterval)
         self.terminate = False
 
     async def run_tasks(self):
