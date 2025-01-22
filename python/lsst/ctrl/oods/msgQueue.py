@@ -121,7 +121,7 @@ class MsgQueue(object):
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 message_list = await loop.run_in_executor(pool, self._get_messages)
             return message_list
-        except asyncio.exceptions.CancelledError as err:
+        except asyncio.exceptions.CancelledError:
             LOGGER.info("get messages task cancelled")
 
     def commit(self, message):

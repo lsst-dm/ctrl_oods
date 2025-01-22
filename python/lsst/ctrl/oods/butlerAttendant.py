@@ -240,7 +240,7 @@ class ButlerAttendant:
                 msg = await self.status_queue.get()
                 await self.csc.send_imageInOODS(msg)
                 self.status_queue.task_done()
-            except asyncio.exceptions.CancelledError as err:
+            except asyncio.exceptions.CancelledError:
                 LOGGER.info("status get task cancelled")
                 return
             except Exception as e:

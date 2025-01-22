@@ -182,7 +182,7 @@ class FileIngester(object):
         if task.exception():
             try:
                 task.result()
-            except Exeception as e:
+            except Exception as e:
                 LOGGER.info(f"Task {task}: {e}")
 
     def run_tasks(self):

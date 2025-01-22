@@ -73,7 +73,7 @@ class ButlerProxy(object):
         """Call the butler's clean_task method"""
         try:
             await self.butlerInstance.clean_task()
-        except asyncio.exceptions.CancelledError as err:
+        except asyncio.exceptions.CancelledError:
             LOGGER.info("cleaning task cancelled")
 
     async def send_status_task(self):
