@@ -19,8 +19,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
+import logging
 from importlib import import_module
 
+LOGGER = logging.getLogger(__name__)
 
 class ButlerProxy(object):
     """proxy interface to the gen2 or gen3 butler
@@ -68,7 +71,13 @@ class ButlerProxy(object):
 
     async def clean_task(self):
         """Call the butler's clean_task method"""
-        await self.butlerInstance.clean_task()
+        try:
+            await self.butlerInstance.clean_task()
+        except asyncio.exceptions.CancelledError as err:
+            LOGGER.info("cleaning task cancelled")
+
+    async def send_status_task(self):
+        await self.butlerInstance.send_status_task()
 
     async def clean(self):
         """Call the butler's clean method"""

@@ -77,6 +77,7 @@ class ButlerAttendant:
         define_visits_config = DefineVisitsTask.ConfigClass()
         define_visits_config.groupExposures = "one-to-one-and-by-counter"
         self.visit_definer = DefineVisitsTask(config=define_visits_config, butler=self.butler)
+        self.status_queue = asyncio.Queue()
 
     def createButler(self):
         instr = Instrument.from_string(self.instrument)
@@ -201,7 +202,15 @@ class ButlerAttendant:
         if self.csc is None:
             self.print_msg(msg)
             return
-        asyncio.run(self.csc.send_imageInOODS(msg))
+
+        loop = asyncio.new_event_loop()
+
+        try:
+            loop.run_until_complete(self.status_queue.put(msg))
+        except Exception as e:
+            LOGGER.info(e)
+        finally:
+            loop.close()
 
     async def clean_task(self):
         """run the clean() method at the configured interval"""
@@ -223,6 +232,19 @@ class ButlerAttendant:
             loop = asyncio.get_event_loop()
             with ThreadPoolExecutor() as executor:
                 await loop.run_in_executor(executor, self.cleanCollection, collection, olderThan)
+
+    async def send_status_task(self):
+        LOGGER.debug("send_status_task started")
+        while True:
+            try:
+                msg = await self.status_queue.get()
+                await self.csc.send_imageInOODS(msg)
+                self.status_queue.task_done()
+            except asyncio.exceptions.CancelledError as err:
+                LOGGER.info("status get task cancelled")
+                return
+            except Exception as e:
+                LOGGER.info(f"{e=}")
 
     def cleanCollection(self, collection, olderThan):
         """Remove all the datasets in the butler that

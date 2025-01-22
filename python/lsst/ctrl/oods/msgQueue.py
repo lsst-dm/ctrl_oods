@@ -116,10 +116,13 @@ class MsgQueue(object):
 
     async def dequeue_messages(self):
         """Retrieve messages"""
-        loop = asyncio.get_running_loop()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            message_list = await loop.run_in_executor(pool, self._get_messages)
-        return message_list
+        try:
+            loop = asyncio.get_running_loop()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                message_list = await loop.run_in_executor(pool, self._get_messages)
+            return message_list
+        except asyncio.exceptions.CancelledError as err:
+            LOGGER.info("get messages task cancelled")
 
     def commit(self, message):
         """Perform Kafka commit a message

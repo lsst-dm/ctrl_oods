@@ -96,8 +96,8 @@ class FileIngester(object):
             methods.append(butler.clean)
         return methods
 
-    def getButlerCleanTasks(self):
-        """Get a list of all butler run_task methods
+    def get_butler_tasks(self):
+        """Get all butler tasks
 
         Returns
         -------
@@ -107,6 +107,10 @@ class FileIngester(object):
         tasks = []
         for butler in self.butlers:
             tasks.append(butler.clean_task)
+
+        for butler in self.butlers:
+            tasks.append(butler.send_status_task)
+
         return tasks
 
     def move_staged_file(self, filename, dirname):
@@ -174,6 +178,13 @@ class FileIngester(object):
         except Exception as e:
             LOGGER.warning("Exception: %s", e)
 
+    def helper_done_callback(self, task):
+        if task.exception():
+            try:
+                task.result()
+            except Exeception as e:
+                LOGGER.info(f"Task {task}: {e}")
+
     def run_tasks(self):
         """run tasks to queue files and ingest them"""
 
@@ -186,9 +197,9 @@ class FileIngester(object):
         task = asyncio.create_task(self.dequeue_and_ingest_files())
         self.tasks.append(task)
 
-        cleanTasks = self.getButlerCleanTasks()
-        for cleanTask in cleanTasks:
-            task = asyncio.create_task(cleanTask())
+        butler_tasks = self.get_butler_tasks()
+        for butler_task in butler_tasks:
+            task = asyncio.create_task(butler_task())
             self.tasks.append(task)
 
         self.tasks.append(asyncio.create_task(self.cache_cleaner.run_tasks()))
