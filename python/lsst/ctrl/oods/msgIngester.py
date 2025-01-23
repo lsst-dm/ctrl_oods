@@ -90,17 +90,20 @@ class MsgIngester(object):
         self.regex = re.compile(os.environ.get("DATASET_REGEXP", r".*\.(fits|fits.fz)$"))
         LOGGER.info(f"Ingesting files matching regular expression {self.regex.pattern}")
 
-    def get_butler_clean_tasks(self):
-        """Get a list of all butler run_task methods
+    def get_butler_tasks(self):
+        """Get all butler tasks
 
         Returns
         -------
         tasks: `list`
-            A list containing each butler run_task method
+            A list containing each butler task to run
         """
         tasks = []
         for butler in self.butlers:
             tasks.append(butler.clean_task)
+
+        for butler in self.butlers:
+            tasks.append(butler.send_status_task)
         return tasks
 
     async def ingest(self, butler_file_list):
@@ -115,11 +118,21 @@ class MsgIngester(object):
         # for each butler, attempt to ingest the requested file,
         # Success or failure is noted in a message description which
         # will send out via a CSC logevent.
+        LOGGER.info("ingest called")
         try:
             for butler in self.butlers:
                 await butler.ingest(butler_file_list)
         except Exception as e:
             LOGGER.warning("Exception: %s", e)
+
+    def _helper_done_callback(self, task):
+        LOGGER.info("called")
+        if task.exception():
+            try:
+                task.result()
+            except Exception as e:
+                LOGGER.info(f"Task {task}: {e}")
+        LOGGER.info("completed")
 
     def run_tasks(self):
         """run tasks to queue files and ingest them"""
@@ -129,11 +142,13 @@ class MsgIngester(object):
         # do the ingest
 
         task = asyncio.create_task(self.dequeue_and_ingest_files())
+        task.add_done_callback(self._helper_done_callback)
         self.tasks.append(task)
 
-        clean_tasks = self.get_butler_clean_tasks()
-        for clean_task in clean_tasks:
-            task = asyncio.create_task(clean_task())
+        butler_tasks = self.get_butler_tasks()
+        for butler_task in butler_tasks:
+            task = asyncio.create_task(butler_task())
+            task.add_done_callback(self._helper_done_callback)
             self.tasks.append(task)
 
         return self.tasks
@@ -152,6 +167,8 @@ class MsgIngester(object):
         self.running = True
         while self.running:
             message_list = await self.msgQueue.dequeue_messages()
+            if message_list is None:
+                return
             resources = []
             for m in message_list:
                 if m.error():
