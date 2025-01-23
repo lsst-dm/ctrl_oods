@@ -125,7 +125,7 @@ class MsgIngester(object):
         except Exception as e:
             LOGGER.warning("Exception: %s", e)
 
-    def helper_done_callback(self, task):
+    def _helper_done_callback(self, task):
         LOGGER.info("called")
         if task.exception():
             try:
@@ -142,16 +142,14 @@ class MsgIngester(object):
         # do the ingest
 
         task = asyncio.create_task(self.dequeue_and_ingest_files())
-        task.add_done_callback(self.helper_done_callback)
+        task.add_done_callback(self._helper_done_callback)
         self.tasks.append(task)
 
         butler_tasks = self.get_butler_tasks()
         for butler_task in butler_tasks:
             task = asyncio.create_task(butler_task())
-            task.add_done_callback(self.helper_done_callback)
+            task.add_done_callback(self._helper_done_callback)
             self.tasks.append(task)
-
-        self.tasks.append(task)
 
         return self.tasks
 

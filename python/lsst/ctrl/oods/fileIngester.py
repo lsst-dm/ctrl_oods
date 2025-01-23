@@ -178,7 +178,7 @@ class FileIngester(object):
         except Exception as e:
             LOGGER.warning("Exception: %s", e)
 
-    def helper_done_callback(self, task):
+    def _helper_done_callback(self, task):
         if task.exception():
             try:
                 task.result()
