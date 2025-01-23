@@ -25,6 +25,7 @@ from importlib import import_module
 
 LOGGER = logging.getLogger(__name__)
 
+
 class ButlerProxy(object):
     """proxy interface to the gen2 or gen3 butler
 
