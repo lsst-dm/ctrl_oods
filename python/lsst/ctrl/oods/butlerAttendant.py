@@ -49,6 +49,7 @@ class ButlerAttendant:
         self.csc = csc
         self.config = config
 
+        self.status_queue = asyncio.Queue()
         repo = self.config["repoDirectory"]
         self.instrument = self.config["instrument"]
         self.scanInterval = self.config["scanInterval"]
@@ -77,7 +78,6 @@ class ButlerAttendant:
         define_visits_config = DefineVisitsTask.ConfigClass()
         define_visits_config.groupExposures = "one-to-one-and-by-counter"
         self.visit_definer = DefineVisitsTask(config=define_visits_config, butler=self.butler)
-        self.status_queue = asyncio.Queue()
 
     def createButler(self):
         instr = Instrument.from_string(self.instrument)
