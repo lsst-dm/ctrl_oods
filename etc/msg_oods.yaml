@@ -19,6 +19,7 @@ ingester:
                 import : lsst.ctrl.oods.messageAttendant
                 name : MessageAttendant
             repoDirectory : /tmp/repo/LSSTCAM
+            s3profile: testprofile
             collections:
                 - LSSTCam/raw/all
             cleanCollections:

@@ -26,6 +26,7 @@ import logging
 import os
 import os.path
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urlparse, urlunparse
 
 import astropy.units as u
 from astropy.time import Time, TimeDelta
@@ -35,6 +36,7 @@ from lsst.daf.butler import Butler, CollectionType
 from lsst.obs.base import DefineVisitsTask
 from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
 from lsst.pipe.base import Instrument
+from lsst.resources.s3 import S3ResourcePath
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,6 +57,7 @@ class ButlerAttendant:
         self.scanInterval = self.config["scanInterval"]
         self.collections = self.config["collections"]
         self.cleanCollections = self.config.get("cleanCollections")
+        self.s3profile = self.config.get("s3profile", None)
 
         LOGGER.info(f"Using Butler repo located at {repo}")
         self.butlerConfig = repo
@@ -105,17 +108,30 @@ class ButlerAttendant:
 
         # Ingest images.
         await asyncio.sleep(0)
+        if self.s3profile:
+            new_list = self._rewrite_file_list(file_list)
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
                 LOGGER.info("about to ingest")
-                await loop.run_in_executor(executor, self.task.run, file_list)
+                await loop.run_in_executor(executor, self.task.run, new_list)
                 LOGGER.info("done with ingest")
             except RuntimeError as re:
                 LOGGER.info(f"{re}")
             except Exception as e:
                 LOGGER.exception(f"Exception! {e=}")
 
+    def _rewrite_file_list(self, file_list):
+        new_list = []
+        for item in file_list:
+            url = item.geturl()
+            p = urlparse(url)
+            newp = p._replace(netloc=f"{self.s3profile}@{p.netloc}")
+            newitem = urlunparse(newp)
+            s3path = S3ResourcePath(newitem)
+            new_list.append(s3path)
+        return new_list
+        
     def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
         """Create a full path to a directory contained in the
         'bad directory' hierarchy; this retains the subdirectory structure
