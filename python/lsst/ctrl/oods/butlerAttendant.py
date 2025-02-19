@@ -108,6 +108,7 @@ class ButlerAttendant:
 
         # Ingest images.
         await asyncio.sleep(0)
+        new_list = file_list
         if self.s3profile:
             new_list = self._rewrite_file_list(file_list)
         loop = asyncio.get_event_loop()
@@ -131,7 +132,7 @@ class ButlerAttendant:
             s3path = S3ResourcePath(newitem)
             new_list.append(s3path)
         return new_list
-        
+
     def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
         """Create a full path to a directory contained in the
         'bad directory' hierarchy; this retains the subdirectory structure
