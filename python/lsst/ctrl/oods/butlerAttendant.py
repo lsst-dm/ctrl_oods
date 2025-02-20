@@ -55,6 +55,7 @@ class ButlerAttendant:
         self.scanInterval = self.config["scanInterval"]
         self.collections = self.config["collections"]
         self.cleanCollections = self.config.get("cleanCollections")
+        self.s3profile = self.config.get("s3profile", None)
 
         LOGGER.info(f"Using Butler repo located at {repo}")
         self.butlerConfig = repo
@@ -105,11 +106,15 @@ class ButlerAttendant:
 
         # Ingest images.
         await asyncio.sleep(0)
+        new_list = file_list
+        if self.s3profile:
+            # rewrite URI to add s3profile
+            new_list = [s.replace(netloc=f"{self.s3profile}@{s.netloc}") for s in file_list]
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
                 LOGGER.info("about to ingest")
-                await loop.run_in_executor(executor, self.task.run, file_list)
+                await loop.run_in_executor(executor, self.task.run, new_list)
                 LOGGER.info("done with ingest")
             except RuntimeError as re:
                 LOGGER.info(f"{re}")
@@ -230,8 +235,11 @@ class ButlerAttendant:
             collection = entry["collection"]
             olderThan = entry["filesOlderThan"]
             loop = asyncio.get_event_loop()
-            with ThreadPoolExecutor() as executor:
-                await loop.run_in_executor(executor, self.cleanCollection, collection, olderThan)
+            try:
+                with ThreadPoolExecutor() as executor:
+                    await loop.run_in_executor(executor, self.cleanCollection, collection, olderThan)
+            except Exception as e:
+                LOGGER.error(e)
 
     async def send_status_task(self):
         LOGGER.debug("send_status_task started")
