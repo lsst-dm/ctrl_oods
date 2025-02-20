@@ -27,10 +27,6 @@ ingester:
                   filesOlderThan:
                       <<: *interval
                       seconds: 10
-                - collection: MOOSE/raw/all
-                  filesOlderThan:
-                      <<: *interval
-                      seconds: 10
             scanInterval:
                 <<: *interval
                 seconds: 10

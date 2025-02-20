@@ -26,7 +26,6 @@ import logging
 import os
 import os.path
 from concurrent.futures import ThreadPoolExecutor
-from urllib.parse import urlparse, urlunparse
 
 import astropy.units as u
 from astropy.time import Time, TimeDelta
@@ -110,7 +109,8 @@ class ButlerAttendant:
         await asyncio.sleep(0)
         new_list = file_list
         if self.s3profile:
-            new_list = self._rewrite_file_list(file_list)
+            # rewrite URI to add s3profile
+            new_list = [s.replace(netloc=f"{self.s3profile}@{s.netloc}") for s in file_list]
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
@@ -121,17 +121,6 @@ class ButlerAttendant:
                 LOGGER.info(f"{re}")
             except Exception as e:
                 LOGGER.exception(f"Exception! {e=}")
-
-    def _rewrite_file_list(self, file_list):
-        new_list = []
-        for item in file_list:
-            url = item.geturl()
-            p = urlparse(url)
-            newp = p._replace(netloc=f"{self.s3profile}@{p.netloc}")
-            newitem = urlunparse(newp)
-            s3path = S3ResourcePath(newitem)
-            new_list.append(s3path)
-        return new_list
 
     def create_bad_dirname(self, bad_dir_root, staging_dir_root, original):
         """Create a full path to a directory contained in the
