@@ -35,7 +35,6 @@ from lsst.daf.butler import Butler, CollectionType
 from lsst.obs.base import DefineVisitsTask
 from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
 from lsst.pipe.base import Instrument
-from lsst.resources.s3 import S3ResourcePath
 
 LOGGER = logging.getLogger(__name__)
 
