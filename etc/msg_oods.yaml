@@ -18,12 +18,16 @@ ingester:
             class:
                 import : lsst.ctrl.oods.messageAttendant
                 name : MessageAttendant
-            repoDirectory : /tmp/repo/LSSTCAM
+            repoDirectory : s3://testprofile@oods
             s3profile: testprofile
             collections:
                 - LSSTCam/raw/all
             cleanCollections:
                 - collection: LSSTCam/raw/all
+                  filesOlderThan:
+                      <<: *interval
+                      seconds: 10
+                - collection: MOOSE/raw/all
                   filesOlderThan:
                       <<: *interval
                       seconds: 10

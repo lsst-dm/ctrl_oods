@@ -247,8 +247,11 @@ class ButlerAttendant:
             collection = entry["collection"]
             olderThan = entry["filesOlderThan"]
             loop = asyncio.get_event_loop()
-            with ThreadPoolExecutor() as executor:
-                await loop.run_in_executor(executor, self.cleanCollection, collection, olderThan)
+            try:
+                with ThreadPoolExecutor() as executor:
+                    await loop.run_in_executor(executor, self.cleanCollection, collection, olderThan)
+            except Exception as e:
+                LOGGER.error(e)
 
     async def send_status_task(self):
         LOGGER.debug("send_status_task started")
