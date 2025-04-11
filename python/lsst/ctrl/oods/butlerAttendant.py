@@ -359,7 +359,7 @@ class ButlerAttendant:
         info["FILENAME"] = "??"
         dataId = dataset.dataId
         info["CAMERA"] = dataId.get("instrument", "??")
-        info["OBSID"] = dataId.get("exposure", "??")
+        info["OBSID"] = str(dataId.get("exposure", "??"))
         info["RAFT"] = self.extract_info_val(dataId, "raft", "R")
         info["SENSOR"] = self.extract_info_val(dataId, "detector", "S")
         return info
