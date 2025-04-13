@@ -118,7 +118,7 @@ class MsgIngester(object):
         # for each butler, attempt to ingest the requested file,
         # Success or failure is noted in a message description which
         # will send out via a CSC logevent.
-        LOGGER.info("ingest called")
+        LOGGER.debug("ingest called")
         try:
             for butler in self.butlers:
                 await butler.ingest(butler_file_list)
@@ -126,13 +126,13 @@ class MsgIngester(object):
             LOGGER.warning("Exception: %s", e)
 
     def _helper_done_callback(self, task):
-        LOGGER.info("called")
+        LOGGER.debug("called")
         if task.exception():
             try:
                 task.result()
             except Exception as e:
                 LOGGER.info(f"Task {task}: {e}")
-        LOGGER.info("completed")
+        LOGGER.debug("completed")
 
     def run_tasks(self):
         """run tasks to queue files and ingest them"""
