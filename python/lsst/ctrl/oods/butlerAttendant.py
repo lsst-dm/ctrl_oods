@@ -113,9 +113,9 @@ class ButlerAttendant:
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
-                LOGGER.info("about to ingest")
+                LOGGER.debug("about to ingest")
                 await loop.run_in_executor(executor, self.task.run, new_list)
-                LOGGER.info("done with ingest")
+                LOGGER.debug("done with ingest")
             except RuntimeError as re:
                 LOGGER.info(f"{re}")
             except Exception as e:
