@@ -386,11 +386,12 @@ class ButlerAttendant:
         return info
 
     def definer_run(self, file_datasets):
+        ids = []
         for fds in file_datasets:
-            try:
-                refs = fds.refs
-                ids = [ref.dataId for ref in refs]
-                self.visit_definer.run(ids)
-                LOGGER.debug("Defined visits for %s", ids)
-            except Exception as e:
-                LOGGER.exception(e)
+            refs = fds.refs
+            ids.extend([ref.dataId for ref in refs])
+        try:
+            self.visit_definer.run(ids)
+            LOGGER.debug("Defined visits for %s", ids)
+        except Exception as e:
+            LOGGER.exception(e)
