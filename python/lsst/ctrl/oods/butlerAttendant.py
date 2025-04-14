@@ -388,8 +388,8 @@ class ButlerAttendant:
     def definer_run(self, file_datasets):
         ids = []
         for fds in file_datasets:
-                refs = fds.refs
-                ids.extend([ref.dataId for ref in refs])
+            refs = fds.refs
+            ids.extend([ref.dataId for ref in refs])
         try:
             self.visit_definer.run(ids)
             LOGGER.debug("Defined visits for %s", ids)
