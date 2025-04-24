@@ -118,9 +118,9 @@ class ButlerAttendant:
         raws = []
         for entry in new_list:
             if type(entry) is str:
-                path = entry # for strings (like in unit tests)
+                path = entry  # for strings (like in unit tests)
             else:
-                path = entry.path # for ResourcePath
+                path = entry.path  # for ResourcePath
             if path.endswith("_guider.fits"):
                 LOGGER.info("adding %s to guiders", path)
                 self.guiders.append(entry)
@@ -191,10 +191,14 @@ class ButlerAttendant:
         datasets: `list`
             list of Datasets
         """
-        ingest_guider(self.butler, file_list, transfer="direct",
-                      register_dataset_type=True,
-                      on_success=self.on_guider_success,
-                      on_undefined_exposure=self.on_undefined_exposure)
+        ingest_guider(
+            self.butler,
+            file_list,
+            transfer="direct",
+            register_dataset_type=True,
+            on_success=self.on_guider_success,
+            on_undefined_exposure=self.on_undefined_exposure,
+        )
 
     async def _ingest(self, file_list):
         loop = asyncio.get_event_loop()
