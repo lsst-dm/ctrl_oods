@@ -29,12 +29,15 @@ from concurrent.futures import ThreadPoolExecutor
 
 import astropy.units as u
 from astropy.time import Time, TimeDelta
+from lsst.ctrl.oods.imageData import ImageData
 from lsst.ctrl.oods.timeInterval import TimeInterval
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler, CollectionType
 from lsst.obs.base import DefineVisitsTask
 from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
+from lsst.obs.lsst import ingest_guider
 from lsst.pipe.base import Instrument
+from lsst.resources import ResourcePath
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,6 +83,8 @@ class ButlerAttendant:
         define_visits_config.groupExposures = "one-to-one-and-by-counter"
         self.visit_definer = DefineVisitsTask(config=define_visits_config, butler=self.butler)
 
+        self.guiders = []
+
     def createButler(self):
         instr = Instrument.from_string(self.instrument)
         run = instr.makeDefaultRawIngestRunName()
@@ -110,11 +115,93 @@ class ButlerAttendant:
         if self.s3profile:
             # rewrite URI to add s3profile
             new_list = [s.replace(netloc=f"{self.s3profile}@{s.netloc}") for s in file_list]
+
+        raws = []
+        for entry in new_list:
+            rp = ResourcePath(entry)
+            if rp.path.endswith("_guider.fits"):
+                self.guiders.append(entry)
+            else:
+                raws.append(entry)
+
+        await self._ingest(raws)
+        await self.ingest_guiders()
+
+    def on_guider_success(self, datasets):
+        """Callback used on successful guider ingest. Used to transmit
+        successful guider ingestion status
+
+        Parameters
+        ----------
+        datasets: `list`
+            list of Datasets
+        """
+        for dataset in datasets:
+            image_data = ImageData(dataset)
+            self.transmit_status(image_data.get_info(), code=0, description="guider file ingested")
+            LOGGER.debug("removing %s from guider list after successful ingestion", dataset.path)
+            self.guiders.remove(dataset.path)
+
+    def on_undefined_exposure(self, dataset, obsid):
+        """Callback used on unsuccessful guider ingest.
+
+        Parameters
+        ----------
+        dataset: `ResourcePath`
+            guider dataset that failed to ingest
+        obsid: `str`
+            observation id
+        """
+        LOGGER.info(f"undefined exposure for {obsid=} {dataset.path}; will try again")
+
+    async def ingest_guiders(self):
+        """Ingest any available guider files
+
+        The idea here is to take any guider files this object may have in
+        its list, and ingest them.  There is a good chance that they have
+        arrived before any of the raws for this exposure, so this is a saved
+        list. Furthermore, the guider ingestion is called here without passing
+        the guider file list because this maybe called from outside of this
+        object, which we may implement in the future when the message grabbing
+        code hasn't gotten any messages, but an attempt to ingest any left
+        over guiders in the list.
+        """
+        if not self.guiders:
+            return
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            try:
+                LOGGER.info("about to ingest guiders")
+                await loop.run_in_executor(executor, self._ingest_saved_guiders, self.guiders)
+                LOGGER.info("done with guider ingest")
+            except RuntimeError as re:
+                LOGGER.warning(f"{re}; will try again soon")
+            except Exception as e:
+                LOGGER.exception(f"Exception! {e=}")
+
+    def _ingest_saved_guiders(self, file_list):
+        """Actual guider ingest call
+
+        Parameters
+        ----------
+        datasets: `list`
+            list of Datasets
+        """
+        ingest_guider(
+            self.butler,
+            file_list,
+            transfer="direct",
+            register_dataset_type=True,
+            on_success=self.on_guider_success,
+            on_undefined_exposure=self.on_undefined_exposure,
+        )
+
+    async def _ingest(self, file_list):
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
                 LOGGER.info("about to ingest")
-                await loop.run_in_executor(executor, self.task.run, new_list)
+                await loop.run_in_executor(executor, self.task.run, file_list)
                 LOGGER.info("done with ingest")
             except RuntimeError as re:
                 LOGGER.info(f"{re}")
