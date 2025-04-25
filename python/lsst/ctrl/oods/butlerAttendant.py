@@ -37,6 +37,7 @@ from lsst.obs.base import DefineVisitsTask
 from lsst.obs.base.ingest import RawIngestConfig, RawIngestTask
 from lsst.obs.lsst import ingest_guider
 from lsst.pipe.base import Instrument
+from lsst.resources import ResourcePath
 
 LOGGER = logging.getLogger(__name__)
 
@@ -117,15 +118,10 @@ class ButlerAttendant:
 
         raws = []
         for entry in new_list:
-            if type(entry) is str:
-                path = entry  # for strings (like in unit tests)
-            else:
-                path = entry.path  # for ResourcePath
-            if path.endswith("_guider.fits"):
-                LOGGER.info("adding %s to guiders", path)
+            rp = ResourcePath(entry)
+            if rp.path.endswith("_guider.fits"):
                 self.guiders.append(entry)
             else:
-                LOGGER.info("adding %s to raws", path)
                 raws.append(entry)
 
         await self._ingest(raws)
