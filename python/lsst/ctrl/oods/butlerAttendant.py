@@ -478,7 +478,7 @@ class ButlerAttendant:
             refs = fds.refs
             ids.extend([ref.dataId for ref in refs])
         try:
-            self.visit_definer.run(ids)
+            self.visit_definer.run(ids, incremental=True)
             LOGGER.debug("Defined visits for %s", ids)
         except Exception as e:
             LOGGER.exception(e)
