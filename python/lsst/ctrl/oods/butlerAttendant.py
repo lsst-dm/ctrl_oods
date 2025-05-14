@@ -67,7 +67,11 @@ class ButlerAttendant:
             self.butler = self.createButler()
         except Exception as exc:
             cause = self.extract_cause(exc)
-            asyncio.create_task(self.csc.call_fault(code=2, report=f"failed to create Butler: {cause}"))
+            msg = f"failed to create Butler: {cause}"
+            if csc:
+                asyncio.create_task(self.csc.call_fault(code=2, report=msg))
+            else:
+                LOGGER.info(msg)
             return
 
         cfg = RawIngestConfig()
@@ -100,6 +104,36 @@ class ButlerAttendant:
             return f"{prefix}{dataId[key]:02d}"
         return f"{prefix}??"
 
+
+    def _filter_files(self, resource_paths, patterns):
+        """Filters filenames based on a list of patterns using the 'any' approach.
+
+        Parameters
+        ----------
+        filenames: `list`
+            A list of ResourcePath
+
+        Returns:
+        -------
+            tuple: A tuple containing two lists:
+                   - matching_files (list): Filenames that contain at least one pattern.
+                   - non_matching_files (list): Filenames that do not contain any pattern.
+        """
+        matching_files = []
+        non_matching_files = []
+
+        for rp in resource_paths:
+            filename = rp.path
+            # The generator expression (p in filename for p in patterns_to_check)
+            # is efficient as it evaluates lazily.
+            # 'any()' stops as soon as the first match is found for the current filename.
+            if any(p in filename for p in patterns):
+                matching_files.append(rp)
+            else:
+                non_matching_files.append(rp)
+
+        return matching_files, non_matching_files
+
     async def ingest(self, file_list):
         """Ingest a list of files into a butler
 
@@ -116,14 +150,24 @@ class ButlerAttendant:
             # rewrite URI to add s3profile
             new_list = [s.replace(netloc=f"{self.s3profile}@{s.netloc}") for s in file_list]
 
-        raws = []
-        for entry in new_list:
-            rp = ResourcePath(entry)
-            if rp.path.endswith("_guider.fits"):
-                self.guiders.append(entry)
-            else:
-                raws.append(entry)
+        entries = [ResourcePath(s) for s in new_list]
 
+        wavefront_patterns = ["R00_SW0", "R00_SW1", "R04_SW0", "R04_SW1",
+                              "R40_SW0", "R40_SW1", "R44_SW0", "R44_SW1"]
+
+        wavefront_sensors, other_entries = self._filter_files(entries, wavefront_patterns)
+
+        LOGGER.info(f"{wavefront_sensors=}")
+        if wavefront_sensors:
+            await self._ingest(wavefront_sensors)
+
+        guider_pattern = ["_guider.fits"]
+        guiders, raws = self._filter_files(other_entries, guider_pattern)
+
+        self.guiders.extend(guiders)
+
+        LOGGER.info(f"{raws=}")
+        LOGGER.info(f"{guiders=}")
         await self._ingest(raws)
         await self.ingest_guiders()
 
