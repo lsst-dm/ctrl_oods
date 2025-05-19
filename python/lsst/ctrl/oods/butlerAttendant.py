@@ -105,27 +105,25 @@ class ButlerAttendant:
         return f"{prefix}??"
 
 
-    def _filter_files(self, resource_paths, patterns):
+    def _filter_files(self, resource_paths : list, patterns : list):
         """Filters filenames based on a list of patterns using the 'any' approach.
 
         Parameters
         ----------
-        filenames: `list`
+        resource_paths: `list`
             A list of ResourcePath
 
         Returns:
         -------
-            tuple: A tuple containing two lists:
-                   - matching_files (list): Filenames that contain at least one pattern.
-                   - non_matching_files (list): Filenames that do not contain any pattern.
+        tuple: `list`, `list`
+               - matching_files (list): Filenames that contain at least one pattern.
+               - non_matching_files (list): Filenames that do not contain any pattern.
         """
         matching_files = []
         non_matching_files = []
 
         for rp in resource_paths:
             filename = rp.path
-            # The generator expression (p in filename for p in patterns_to_check)
-            # is efficient as it evaluates lazily.
             # 'any()' stops as soon as the first match is found for the current filename.
             if any(p in filename for p in patterns):
                 matching_files.append(rp)
@@ -143,7 +141,9 @@ class ButlerAttendant:
             files to ingest
         """
 
-        # Ingest images.
+        # Ingest images, giving precedence to wavefront sensors, then raws, then guiders.
+        # Wavefront sensors are separated out because they want those ingested asap;
+        # guiders are last because a raw has to be ingested before a guider can.
         await asyncio.sleep(0)
         new_list = file_list
         if self.s3profile:
@@ -157,7 +157,6 @@ class ButlerAttendant:
 
         wavefront_sensors, other_entries = self._filter_files(entries, wavefront_patterns)
 
-        LOGGER.info(f"{wavefront_sensors=}")
         if wavefront_sensors:
             await self._ingest(wavefront_sensors)
 
@@ -166,9 +165,8 @@ class ButlerAttendant:
 
         self.guiders.extend(guiders)
 
-        LOGGER.info(f"{raws=}")
-        LOGGER.info(f"{guiders=}")
-        await self._ingest(raws)
+        if raws:
+            await self._ingest(raws)
         await self.ingest_guiders()
 
     def on_guider_success(self, datasets):
