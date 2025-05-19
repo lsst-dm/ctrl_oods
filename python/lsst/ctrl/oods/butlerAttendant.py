@@ -152,8 +152,16 @@ class ButlerAttendant:
 
         entries = [ResourcePath(s) for s in new_list]
 
-        wavefront_patterns = ["R00_SW0", "R00_SW1", "R04_SW0", "R04_SW1",
-                              "R40_SW0", "R40_SW1", "R44_SW0", "R44_SW1"]
+        wavefront_patterns = [
+            "R00_SW0",
+            "R00_SW1",
+            "R04_SW0",
+            "R04_SW1",
+            "R40_SW0",
+            "R40_SW1",
+            "R44_SW0",
+            "R44_SW1",
+        ]
 
         wavefront_sensors, other_entries = self._filter_files(entries, wavefront_patterns)
 
