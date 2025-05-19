@@ -104,9 +104,8 @@ class ButlerAttendant:
             return f"{prefix}{dataId[key]:02d}"
         return f"{prefix}??"
 
-
-    def _filter_files(self, resource_paths : list, patterns : list):
-        """Filters filenames based on a list of patterns using the 'any' approach.
+    def _filter_files(self, resource_paths: list, patterns: list):
+        """Filters filenames based on a list of patterns
 
         Parameters
         ----------
@@ -116,15 +115,15 @@ class ButlerAttendant:
         Returns:
         -------
         tuple: `list`, `list`
-               - matching_files (list): Filenames that contain at least one pattern.
-               - non_matching_files (list): Filenames that do not contain any pattern.
+               - matching_files (list): names containing at least one pattern
+               - non_matching_files (list): names containing no patterns
         """
         matching_files = []
         non_matching_files = []
 
         for rp in resource_paths:
             filename = rp.path
-            # 'any()' stops as soon as the first match is found for the current filename.
+
             if any(p in filename for p in patterns):
                 matching_files.append(rp)
             else:
@@ -141,9 +140,10 @@ class ButlerAttendant:
             files to ingest
         """
 
-        # Ingest images, giving precedence to wavefront sensors, then raws, then guiders.
-        # Wavefront sensors are separated out because they want those ingested asap;
-        # guiders are last because a raw has to be ingested before a guider can.
+        # Ingest images, giving precedence to wavefront sensors, then raws,
+        # then guiders. Wavefront sensors are separated out because they
+        # want those ingested asap; guiders are last because a raw has to
+        # be ingested before a guider can.
         await asyncio.sleep(0)
         new_list = file_list
         if self.s3profile:
