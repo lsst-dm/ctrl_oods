@@ -105,18 +105,21 @@ class ButlerAttendant:
         return f"{prefix}??"
 
     def _filter_files(self, resource_paths: list, patterns: list):
-        """Filters filenames based on a list of patterns
+        """Filters filenames using a list of patterns
 
         Parameters
         ----------
-        resource_paths: `list`
+        resource_paths : `list` [`lsst.resources.ResourcePath`]
             A list of ResourcePath
+        patterns : `list` [`str`]
+            A list of patterns
 
-        Returns:
+        Returns
         -------
-        tuple: `list`, `list`
-               - matching_files (list): names containing at least one pattern
-               - non_matching_files (list): names containing no patterns
+        matching_files : `list` [`lsst.resources.ResourcePath`]
+            Paths matching at least one pattern.
+        non_matching_files : `list` [`lsst.resources.ResourcePath`]
+            Paths matching no pattern.
         """
         matching_files = []
         non_matching_files = []
