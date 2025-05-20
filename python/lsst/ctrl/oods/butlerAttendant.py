@@ -67,7 +67,11 @@ class ButlerAttendant:
             self.butler = self.createButler()
         except Exception as exc:
             cause = self.extract_cause(exc)
-            asyncio.create_task(self.csc.call_fault(code=2, report=f"failed to create Butler: {cause}"))
+            msg = f"failed to create Butler: {cause}"
+            if csc:
+                asyncio.create_task(self.csc.call_fault(code=2, report=msg))
+            else:
+                LOGGER.info(msg)
             return
 
         cfg = RawIngestConfig()
@@ -100,6 +104,36 @@ class ButlerAttendant:
             return f"{prefix}{dataId[key]:02d}"
         return f"{prefix}??"
 
+    def _filter_files(self, resource_paths: list, patterns: list):
+        """Filters filenames using a list of patterns
+
+        Parameters
+        ----------
+        resource_paths : `list` [`lsst.resources.ResourcePath`]
+            A list of ResourcePath
+        patterns : `list` [`str`]
+            A list of patterns
+
+        Returns
+        -------
+        matching_files : `list` [`lsst.resources.ResourcePath`]
+            Paths matching at least one pattern.
+        non_matching_files : `list` [`lsst.resources.ResourcePath`]
+            Paths matching no pattern.
+        """
+        matching_files = []
+        non_matching_files = []
+
+        for rp in resource_paths:
+            filename = rp.path
+
+            if any(p in filename for p in patterns):
+                matching_files.append(rp)
+            else:
+                non_matching_files.append(rp)
+
+        return matching_files, non_matching_files
+
     async def ingest(self, file_list):
         """Ingest a list of files into a butler
 
@@ -109,22 +143,41 @@ class ButlerAttendant:
             files to ingest
         """
 
-        # Ingest images.
+        # Ingest images, giving precedence to wavefront sensors, then raws,
+        # then guiders. Wavefront sensors are separated out because they
+        # want those ingested asap; guiders are last because a raw has to
+        # be ingested before a guider can.
         await asyncio.sleep(0)
         new_list = file_list
         if self.s3profile:
             # rewrite URI to add s3profile
             new_list = [s.replace(netloc=f"{self.s3profile}@{s.netloc}") for s in file_list]
 
-        raws = []
-        for entry in new_list:
-            rp = ResourcePath(entry)
-            if rp.path.endswith("_guider.fits"):
-                self.guiders.append(entry)
-            else:
-                raws.append(entry)
+        entries = [ResourcePath(s) for s in new_list]
 
-        await self._ingest(raws)
+        wavefront_patterns = [
+            "R00_SW0",
+            "R00_SW1",
+            "R04_SW0",
+            "R04_SW1",
+            "R40_SW0",
+            "R40_SW1",
+            "R44_SW0",
+            "R44_SW1",
+        ]
+
+        wavefront_sensors, other_entries = self._filter_files(entries, wavefront_patterns)
+
+        if wavefront_sensors:
+            await self._ingest(wavefront_sensors)
+
+        guider_pattern = ["_guider.fits"]
+        guiders, raws = self._filter_files(other_entries, guider_pattern)
+
+        self.guiders.extend(guiders)
+
+        if raws:
+            await self._ingest(raws)
         await self.ingest_guiders()
 
     def on_guider_success(self, datasets):
