@@ -30,6 +30,7 @@ import lsst.utils.tests
 import yaml
 from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.bucketMessage import BucketMessage
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.ctrl.oods.msgIngester import MsgIngester
 from lsst.ctrl.oods.msgQueue import MsgQueue
 from lsst.daf.butler import Butler
@@ -61,15 +62,14 @@ class S3AuxtelIngesterTestCase(HeartbeatBase):
 
         # load the YAML configuration
 
-        with open(configFile, "r") as f:
-            config = yaml.safe_load(f)
+        config = OODSConfig.load(configFile)
 
-        ingesterConfig = config["ingester"]
-        butlerConfig = ingesterConfig["butlers"][0]["butler"]
+        ingesterConfig = config.message_ingester
+        butlerConfig = ingesterConfig.butler
 
         self.repoDir = tempfile.mkdtemp()
         Butler.makeRepo(self.repoDir)
-        butlerConfig["repoDirectory"] = self.repoDir
+        butlerConfig.repo_directory = self.repoDir
 
         return config
 
@@ -106,7 +106,7 @@ class S3AuxtelIngesterTestCase(HeartbeatBase):
 
         BucketMessage.extract_urls = MagicMock(return_value=[file_url, bad_file_url])
 
-        config = self.createConfig("ingest_auxtel_s3.yaml")
+        config = self.createConfig("new_ingest_auxtel_s3.yaml")
 
         # create a MsgIngester
         ingester = MsgIngester(config, None)

@@ -26,7 +26,7 @@ import re
 
 from confluent_kafka import KafkaError
 from lsst.ctrl.oods.bucketMessage import BucketMessage
-from lsst.ctrl.oods.butlerProxy import ButlerProxy
+from lsst.ctrl.oods.messageAttendant import MessageAttendant
 from lsst.ctrl.oods.msgQueue import MsgQueue
 from lsst.resources import ResourcePath
 
@@ -45,44 +45,28 @@ class MsgIngester(object):
     def __init__(self, mainConfig, csc=None):
         self.SUCCESS = 0
         self.FAILURE = 1
-        self.config = mainConfig["ingester"]
-        self.max_messages = 1
+        self.config = mainConfig
 
-        kafka_settings = self.config.get("kafka")
-        if kafka_settings is None:
-            raise ValueError("section 'kafka' not configured; check configuration file")
+        kafka_config = self.config.message_ingester.kafka
 
-        brokers = kafka_settings.get("brokers")
-        if brokers is None:
-            raise ValueError("No brokers configured; check configuration file")
+        brokers = kafka_config.brokers
 
-        group_id = kafka_settings.get("group_id")
-        if group_id is None:
-            raise ValueError("No group_id configured; check configuration file")
+        group_id = kafka_config.group_id
 
-        topics = kafka_settings.get("topics")
-        if topics is None:
-            raise ValueError("No topics configured; check configuration file")
+        topics = kafka_config.topics
 
-        max_messages = kafka_settings.get("max_messages")
-        if max_messages is None:
-            LOGGER.warn(f"max_messages not set; using default of {self.max_messages}")
-        else:
-            self.max_messages = max_messages
-            LOGGER.info(f"max_messages set to {self.max_messages}")
+        max_messages = kafka_config.max_messages
 
         LOGGER.info("listening to brokers %s", brokers)
         LOGGER.info("listening on topics %s", topics)
-        self.msgQueue = MsgQueue(brokers, group_id, topics, self.max_messages)
-
-        butler_configs = self.config["butlers"]
-        if len(butler_configs) == 0:
-            raise Exception("No Butlers configured; check configuration file")
+        LOGGER.info("max_messages set to %d", max_messages)
+        self.msgQueue = MsgQueue(brokers, group_id, topics, max_messages)
 
         self.butlers = []
-        for butler_config in butler_configs:
-            butler = ButlerProxy(butler_config["butler"], csc)
-            self.butlers.append(butler)
+        butler_config = self.config.message_ingester.butler
+        collection_cleaner_config = self.config.collection_cleaner
+        butler = MessageAttendant(butler_config, collection_cleaner_config, csc)
+        self.butlers.append(butler)
 
         self.tasks = []
         self.dequeue_task = None

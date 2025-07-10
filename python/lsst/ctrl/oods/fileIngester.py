@@ -33,8 +33,6 @@ from lsst.ctrl.oods.utils import Utils
 
 LOGGER = logging.getLogger(__name__)
 
-DEFAULT_BATCH_SIZE = 1000
-
 
 class FileIngester(object):
     """Ingest files into the butler specified in the configuration.
@@ -50,29 +48,24 @@ class FileIngester(object):
     def __init__(self, mainConfig, csc=None):
         self.SUCCESS = 0
         self.FAILURE = 1
-        self.config = mainConfig["ingester"]
+        self.config = mainConfig.file_ingester
 
-        self.image_staging_dir = self.config["imageStagingDirectory"]
-        self.batch_size = self.config.get("batchSize", None)
-        if self.batch_size is None:
-            LOGGER.info(f"configuration 'batchSize' not set, defaulting to {DEFAULT_BATCH_SIZE}")
-            self.batch_size = DEFAULT_BATCH_SIZE
+        self.image_staging_directory = self.config.image_staging_directory
+        self.batch_size = self.config.batch_size
+
         LOGGER.info(f"will ingest in groups of batchSize={self.batch_size}")
-        scanInterval = self.config["scanInterval"]
+        scanInterval = self.config.new_file_scan_interval
         seconds = TimeInterval.calculateTotalSeconds(scanInterval)
 
         self.fileQueue = FileQueue(self.image_staging_dir, seconds, csc)
 
-        butlerConfigs = self.config["butlers"]
-        if len(butlerConfigs) == 0:
-            raise Exception("No Butlers configured; check configuration file")
+        butler_config = self.config.butler
 
         self.butlers = []
-        for butlerConfig in butlerConfigs:
-            butler = ButlerProxy(butlerConfig["butler"], csc)
-            self.butlers.append(butler)
+        butler = ButlerProxy(butler_config, csc)
+        self.butlers.append(butler)
 
-        cache_config = mainConfig["cacheCleaner"]
+        cache_config = mainConfig.cache_cleaner
         self.cache_cleaner = CacheCleaner(cache_config, csc)
 
         self.tasks = []
@@ -80,7 +73,7 @@ class FileIngester(object):
 
     def getStagingDirectory(self):
         """Return the directory where the external service stages files"""
-        return self.image_staging_dir
+        return self.image_staging_directory
 
     def getButlerCleanMethods(self):
         """Return the list of all butler clean methods
@@ -128,7 +121,7 @@ class FileIngester(object):
         # in a subdirectory of the staging directory.  We want to retain
         #  that subdirectory name
 
-        basefile = Utils.strip_prefix(filename, self.image_staging_dir)
+        basefile = Utils.strip_prefix(filename, self.image_staging_directory)
 
         # create a new full path to where the file will be moved for the OODS
         new_file = os.path.join(dirname, basefile)

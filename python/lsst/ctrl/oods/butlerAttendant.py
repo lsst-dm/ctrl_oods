@@ -48,20 +48,18 @@ class ButlerAttendant:
     SUCCESS = 0
     FAILURE = 1
 
-    def __init__(self, config, csc=None):
+    def __init__(self, butler_config, collection_cleaner_config, csc=None):
         self.csc = csc
-        self.config = config
 
         self.status_queue = asyncio.Queue()
-        repo = self.config["repoDirectory"]
-        self.instrument = self.config["instrument"]
-        self.scanInterval = self.config["scanInterval"]
-        self.collections = self.config["collections"]
-        self.cleanCollections = self.config.get("cleanCollections")
-        self.s3profile = self.config.get("s3profile", None)
+        self.butler_repo = butler_config.repo_directory
+        self.instrument = butler_config.instrument
+        self.scanInterval = collection_cleaner_config.cleaning_interval
+        self.collections = butler_config.collections
+        self.cleanCollections = collection_cleaner_config.collections_to_clean
+        self.s3profile = butler_config.s3profile
 
-        LOGGER.info(f"Using Butler repo located at {repo}")
-        self.butlerConfig = repo
+        LOGGER.info(f"Using Butler repo located at {self.butler_repo}")
 
         try:
             self.butler = self.createButler()
@@ -93,7 +91,7 @@ class ButlerAttendant:
         instr = Instrument.from_string(self.instrument)
         run = instr.makeDefaultRawIngestRunName()
         opts = dict(run=run, writeable=True, collections=self.collections)
-        butler = Butler(self.butlerConfig, **opts)
+        butler = Butler(self.butler_repo, **opts)
         # Register an instrument.
         instr.register(butler.registry)
 
