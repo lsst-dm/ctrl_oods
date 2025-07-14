@@ -1,52 +1,49 @@
-defaultInterval: &interval
+default_interval: &interval
     days: 0
     hours: 0
     minutes: 0
     seconds: 0
 
-archiver:
-    name: "ATArchiver"
-
-ingester:
-    imageStagingDirectory: data
-    butlers:
-        - butler:
-            class:
-                import : lsst.ctrl.oods.fileAttendant
-                name : FileAttendant
-            repoDirectory : repo
-            instrument: lsst.obs.lsst.Latiss
-            badFileDirectory: /tmp/bad
-            stagingDirectory: /tmp/staging
-            collections:
-                - collection_a
-                - collection_b
-            cleanCollections:
-                - collection: collection_a
-                  filesOlderThan:
-                      <<: *interval
-                      days: 3
-                - collection: collection_b
-                  filesOlderThan:
-                      <<: *interval
-                      days: 3
-            scanInterval:
-                <<: *interval
-                seconds: 2
-    batchSize: 20
-    scanInterval:
+file_ingester:
+    image_staging_directory: data
+    bad_file_directory: /tmp/bad
+    staging_directory: /tmp/staging
+    batch_size: 20
+    new_file_scan_interval:
         <<: *interval
         seconds: 10
 
-cacheCleaner:
-    clearEmptyDirectoriesAndOldFiles:
-        - repo/raw
-    scanInterval:
+    butler:
+        repo_directory : repo
+        instrument: lsst.obs.lsst.Latiss
+        collections:
+            - collection_a
+            - collection_b
+
+    cache_cleaner:
+        clear_empty_directories_and_old_files:
+            - repo/raw
+        cleaning_interval:
+            <<: *interval
+            seconds: 30
+        files_older_than:
+            <<: *interval
+            days: 30 
+        directories_empty_for_more_than:
+            <<: *interval
+            days: 1
+
+collection_cleaner:
+    collections_to_clean:
+        - collection: collection_a
+          files_older_than:
+              <<: *interval
+              days: 3
+        - collection: collection_b
+          files_older_than:
+              <<: *interval
+              days: 3
+    cleaning_interval:
         <<: *interval
-        seconds: 30
-    filesOlderThan:
-        <<: *interval
-        days: 30 
-    directoriesEmptyForMoreThan:
-        <<: *interval
-        days: 1
+        seconds: 2
+

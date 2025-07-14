@@ -27,7 +27,6 @@ import time
 from unittest.mock import MagicMock
 
 import lsst.utils.tests
-import yaml
 from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.bucketMessage import BucketMessage
 from lsst.ctrl.oods.oods_config import OODSConfig
@@ -106,7 +105,7 @@ class S3AuxtelIngesterTestCase(HeartbeatBase):
 
         BucketMessage.extract_urls = MagicMock(return_value=[file_url, bad_file_url])
 
-        config = self.createConfig("new_ingest_auxtel_s3.yaml")
+        config = self.createConfig("ingest_auxtel_s3.yaml")
 
         # create a MsgIngester
         ingester = MsgIngester(config, None)

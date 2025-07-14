@@ -28,7 +28,7 @@ from itertools import islice
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.fileQueue import FileQueue
-from lsst.ctrl.oods.timeInterval import TimeInterval
+from lsst.ctrl.oods.oods_config import TimeInterval
 from lsst.ctrl.oods.utils import Utils
 
 LOGGER = logging.getLogger(__name__)
@@ -45,10 +45,10 @@ class FileIngester(object):
         A butler configuration dictionary
     """
 
-    def __init__(self, mainConfig, csc=None):
+    def __init__(self, main_config, csc=None):
         self.SUCCESS = 0
         self.FAILURE = 1
-        self.config = mainConfig.file_ingester
+        self.config = main_config.file_ingester
 
         self.image_staging_directory = self.config.image_staging_directory
         self.batch_size = self.config.batch_size
@@ -57,15 +57,13 @@ class FileIngester(object):
         scanInterval = self.config.new_file_scan_interval
         seconds = TimeInterval.calculateTotalSeconds(scanInterval)
 
-        self.fileQueue = FileQueue(self.image_staging_dir, seconds, csc)
-
-        butler_config = self.config.butler
+        self.fileQueue = FileQueue(self.image_staging_directory, seconds, csc)
 
         self.butlers = []
-        butler = ButlerProxy(butler_config, csc)
+        butler = ButlerProxy(main_config, csc)
         self.butlers.append(butler)
 
-        cache_config = mainConfig.cache_cleaner
+        cache_config = main_config.file_ingester.cache_cleaner
         self.cache_cleaner = CacheCleaner(cache_config, csc)
 
         self.tasks = []

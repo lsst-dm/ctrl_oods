@@ -21,7 +21,8 @@
 
 import asyncio
 import logging
-from importlib import import_module
+from lsst.ctrl.oods.fileAttendant import FileAttendant
+from lsst.ctrl.oods.messageAttendant import MessageAttendant
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,19 +38,16 @@ class ButlerProxy(object):
         OODS CSC
     """
 
-    def __init__(self, butlerConfig, csc=None):
+    def __init__(self, main_config, csc=None):
+        self.staging_dir = None
+
         # create the butler
-        classConfig = butlerConfig["class"]
+        if main_config.file_ingester is not None:
+            self.butlerInstance = FileAttendant(main_config, csc)
+            self.staging_dir = main_config.file_ingester.staging_directory
+        else:
+            self.butlerInstance = MessageAttendant(main_config, csc)
 
-        importFile = classConfig["import"]
-        name = classConfig["name"]
-
-        mod = import_module(importFile)
-        butlerClass = getattr(mod, name)
-
-        self.butlerInstance = butlerClass(butlerConfig, csc)
-
-        self.staging_dir = butlerConfig.get("stagingDirectory")
 
     def getStagingDirectory(self):
         """Return the path of the staging directory

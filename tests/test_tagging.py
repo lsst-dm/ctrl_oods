@@ -27,10 +27,10 @@ from pathlib import PurePath
 from shutil import copyfile
 
 import lsst.utils.tests
-import yaml
 from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.daf.butler import Butler
 from lsst.daf.butler.registry import CollectionType
 
@@ -102,28 +102,27 @@ class TaggingTestCase(HeartbeatBase):
 
         # load the YAML configuration
 
-        with open(config_file, "r") as f:
-            self.config = yaml.safe_load(f)
+        self.config = OODSConfig.load(config_file)
 
         # extract parts of the ingester configuration
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = self.config["ingester"]
+        ingesterConfig = self.config.file_ingester
         self.imageStagingDir = tempfile.mkdtemp()
-        ingesterConfig["imageStagingDirectory"] = self.imageStagingDir
+        ingesterConfig.image_staging_directory = self.imageStagingDir
 
         self.badDir = tempfile.mkdtemp()
-        butlerConfig = ingesterConfig["butlers"][0]["butler"]
-        butlerConfig["badFileDirectory"] = self.badDir
+        butlerConfig = ingesterConfig.butler
+        ingesterConfig.bad_file_directory = self.badDir
         self.stagingDirectory = tempfile.mkdtemp()
-        butlerConfig["stagingDirectory"] = self.stagingDirectory
+        ingesterConfig.staging_directory = self.stagingDirectory
 
         self.repoDir = tempfile.mkdtemp()
         Butler.makeRepo(self.repoDir)
-        butlerConfig["repoDirectory"] = self.repoDir
+        butlerConfig.repo_directory = self.repoDir
 
-        self.collections = butlerConfig["collections"]
+        self.collections = butlerConfig.collections
 
         # copy the FITS file to it's test location
 
@@ -133,8 +132,7 @@ class TaggingTestCase(HeartbeatBase):
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = self.config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        image_staging_dir = ingesterConfig.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)

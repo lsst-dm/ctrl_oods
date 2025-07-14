@@ -21,7 +21,6 @@
 
 
 import asyncio
-import collections
 import logging
 import os
 import os.path
@@ -30,7 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 import astropy.units as u
 from astropy.time import Time, TimeDelta
 from lsst.ctrl.oods.imageData import ImageData
-from lsst.ctrl.oods.timeInterval import TimeInterval
+from lsst.ctrl.oods.oods_config import TimeInterval
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler, CollectionType
 from lsst.obs.base import DefineVisitsTask
@@ -370,8 +369,8 @@ class ButlerAttendant:
         were ingested before the configured time interval
         """
         for entry in self.cleanCollections:
-            collection = entry["collection"]
-            olderThan = entry["filesOlderThan"]
+            collection = entry.collection
+            olderThan = entry.files_older_than
             loop = asyncio.get_event_loop()
             try:
                 with ThreadPoolExecutor() as executor:
@@ -392,7 +391,7 @@ class ButlerAttendant:
             except Exception as e:
                 LOGGER.info(f"{e=}")
 
-    def cleanCollection(self, collection, olderThan):
+    def cleanCollection(self, collection, older_than):
         """Remove all the datasets in the butler that
         were ingested before the configured Interval
 
@@ -407,7 +406,7 @@ class ButlerAttendant:
         # calculate the time value which is Time.now - the
         # "olderThan" configuration
         t = Time.now()
-        interval = collections.namedtuple("Interval", olderThan.keys())(*olderThan.values())
+        interval = older_than
         td = TimeDelta(
             interval.days * u.d + interval.hours * u.h + interval.minutes * u.min + interval.seconds * u.s
         )

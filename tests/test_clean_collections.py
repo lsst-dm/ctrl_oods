@@ -24,8 +24,8 @@ import shutil
 import tempfile
 
 import lsst.utils.tests
-import yaml
 from heartbeat_base import HeartbeatBase
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.daf.butler import Butler, CollectionType
 from lsst.daf.butler.tests import MetricsExample, addDataIdValue, addDatasetType, registerMetricsExample
 
@@ -42,33 +42,32 @@ class CleanCollectionsTestCase(HeartbeatBase):
         # create a path to the configuration file
 
         testdir = os.path.abspath(os.path.dirname(__file__))
-        configFile = os.path.join(testdir, "etc", config_name)
+        config_file = os.path.join(testdir, "etc", config_name)
 
         # load the YAML configuration
 
-        with open(configFile, "r") as f:
-            self.config = yaml.safe_load(f)
+        self.config = OODSConfig.load(config_file)
 
         # extract parts of the ingester configuration
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = self.config["ingester"]
+        ingesterConfig = self.config.file_ingester
         self.imageDir = tempfile.mkdtemp()
-        ingesterConfig["imageStagingDirectory"] = self.imageDir
+        ingesterConfig.image_staging_directory = self.imageDir
 
         self.badDir = tempfile.mkdtemp()
-        butlerConfig = ingesterConfig["butlers"][0]["butler"]
-        butlerConfig["badFileDirectory"] = self.badDir
+        butlerConfig = ingesterConfig.butler
+        ingesterConfig.bad_file_directory = self.badDir
         self.stagingDir = tempfile.mkdtemp()
-        butlerConfig["stagingDirectory"] = self.stagingDir
+        ingesterConfig.staging_directory = self.stagingDir
 
         self.repoDir = tempfile.mkdtemp()
         Butler.makeRepo(self.repoDir)
 
-        butlerConfig["repoDirectory"] = self.repoDir
+        butlerConfig.repo_directory = self.repoDir
 
-        self.clean_collections = butlerConfig["cleanCollections"]
+        self.clean_collections = self.config.collection_cleaner.collections_to_clean
         print(f"{self.clean_collections=}")
 
         # Define the run collection
@@ -126,12 +125,12 @@ class CleanCollectionsTestCase(HeartbeatBase):
             number of seconds after which files will reaped
         """
         for entry in self.clean_collections:
-            collection = entry["collection"]
+            collection = entry.collection
             if collection == name:
-                entry["filesOlderThan"]["days"] = 0
-                entry["filesOlderThan"]["hours"] = 0
-                entry["filesOlderThan"]["minutes"] = 0
-                entry["filesOlderThan"]["seconds"] = seconds
+                entry.files_older_than.days = 0
+                entry.files_older_than.hours = 0
+                entry.files_older_than.minutes = 0
+                entry.files_older_than.seconds = seconds
                 return
 
     async def testCleanTask(self):

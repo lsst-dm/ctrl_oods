@@ -19,18 +19,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import lsst.utils.tests
-from lsst.ctrl.oods.timeInterval import TimeInterval
+from lsst.ctrl.oods.oods_config import TimeInterval
 
 
 class IntervalTestCase(lsst.utils.tests.TestCase):
     """Test cache cleaning"""
 
     def testFileCleaner(self):
-        config = {}
-        config["days"] = 1
-        config["hours"] = 1
-        config["minutes"] = 1
-        config["seconds"] = 1
+        config = TimeInterval()
+        config.days = 1
+        config.hours = 1
+        config.minutes = 1
+        config.seconds = 1
 
         seconds = TimeInterval.calculateTotalSeconds(config)
         self.assertTrue(seconds, 86400 + 3600 + 60 + 1)
