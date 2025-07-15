@@ -25,10 +25,10 @@ import shutil
 import tempfile
 
 import lsst.utils.tests
-import yaml
 from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler
 
@@ -55,7 +55,7 @@ class AutoIngestTestCase(HeartbeatBase):
         # create a path to the configuration file
 
         testdir = os.path.abspath(os.path.dirname(__file__))
-        configFile = os.path.join(testdir, "etc", config_name)
+        config_file = os.path.join(testdir, "etc", config_name)
 
         # path to the FITS file to ingest
 
@@ -63,27 +63,26 @@ class AutoIngestTestCase(HeartbeatBase):
 
         # load the YAML configuration
 
-        with open(configFile, "r") as f:
-            config = yaml.safe_load(f)
+        config = OODSConfig.load(config_file)
 
         # extract parts of the ingester configuration
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = config["ingester"]
+        ingester_config = config.file_ingester
         self.imageDir = tempfile.mkdtemp()
-        ingesterConfig["imageStagingDirectory"] = self.imageDir
+        ingester_config.image_staging_directory = self.imageDir
 
         self.badDir = tempfile.mkdtemp()
-        butlerConfig = ingesterConfig["butlers"][0]["butler"]
-        butlerConfig["badFileDirectory"] = self.badDir
+        butlerConfig = ingester_config.butler
+        ingester_config.bad_file_directory = self.badDir
         self.stagingDir = tempfile.mkdtemp()
-        butlerConfig["stagingDirectory"] = self.stagingDir
+        ingester_config.staging_directory = self.stagingDir
 
         self.repoDir = tempfile.mkdtemp()
         Butler.makeRepo(self.repoDir)
 
-        butlerConfig["repoDirectory"] = self.repoDir
+        butlerConfig.repo_directory = self.repoDir
 
         # copy the FITS file to it's test location
 
@@ -109,8 +108,8 @@ class AutoIngestTestCase(HeartbeatBase):
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        ingester_config = config.file_ingester
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
@@ -136,8 +135,8 @@ class AutoIngestTestCase(HeartbeatBase):
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        ingester_config = config.file_ingester
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
@@ -189,8 +188,8 @@ class AutoIngestTestCase(HeartbeatBase):
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
         # setup directory to scan for files in the image staging directory
-        ingesterConfig = config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        ingester_config = config.file_ingester
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)

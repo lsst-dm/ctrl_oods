@@ -41,9 +41,11 @@ class FileAttendant(ButlerAttendant):
     """
 
     def __init__(self, config, csc=None):
-        super().__init__(butler_config=config.file_ingester.butler,
-                         collection_cleaner_config=config.collection_cleaner,
-                         csc=csc)
+        super().__init__(
+            butler_config=config.file_ingester.butler,
+            collection_cleaner_config=config.collection_cleaner,
+            csc=csc,
+        )
 
         self.staging_dir = config.file_ingester.staging_directory
         self.bad_file_dir = config.file_ingester.bad_file_directory

@@ -44,7 +44,7 @@ class CacheCleaner(object):
         self.files_and_directories = self.config.clear_empty_directories_and_old_files
         self.only_empty_directories = []
         # XXX
-        #if "clearEmptyDirectories" in self.config:
+        # if "clearEmptyDirectories" in self.config:
         #    self.only_empty_directories = self.config["clearEmptyDirectories"]
         self.fileInterval = self.config.files_older_than
         self.emptyDirsInterval = self.config.directories_empty_for_more_than

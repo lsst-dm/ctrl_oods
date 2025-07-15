@@ -48,7 +48,6 @@ class ButlerProxy(object):
         else:
             self.butlerInstance = MessageAttendant(main_config, csc)
 
-
     def getStagingDirectory(self):
         """Return the path of the staging directory
         Returns

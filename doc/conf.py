@@ -8,6 +8,4 @@ import lsst.ctrl.oods
 
 
 _g = globals()
-_g.update(build_package_configs(
-    project_name='ctrl_oods',
-    version=lsst.ctrl.oods.version.__version__))
+_g.update(build_package_configs(project_name="ctrl_oods", version=lsst.ctrl.oods.version.__version__))

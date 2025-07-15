@@ -27,6 +27,7 @@ import lsst.utils.tests
 from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
+from lsst.ctrl.oods.oods_config import OODSConfig, TimeInterval
 
 
 class CleanerTestCase(HeartbeatBase):
@@ -35,25 +36,27 @@ class CleanerTestCase(HeartbeatBase):
     async def testFileCleaner(self):
         # create a temporary directory that looks like the cache
         dirPath = tempfile.mkdtemp()
+        testdir = os.path.abspath(os.path.dirname(__file__))
+        config = OODSConfig.load(os.path.join(testdir, "etc", "cleaner.yaml"))
 
-        config = {}
-        config["clearEmptyDirectoriesAndOldFiles"] = [dirPath]
+        cc_config = config.file_ingester.cache_cleaner
+        cc_config.clear_empty_directories_and_old_files = [dirPath]
 
-        interval = {}
-        interval["days"] = 1
-        interval["minutes"] = 0
-        interval["hours"] = 0
-        interval["seconds"] = 0
+        interval = TimeInterval()
+        interval.days = 1
+        interval.minutes = 0
+        interval.hours = 0
+        interval.seconds = 0
 
-        scanInterval = {}
-        scanInterval["days"] = 0
-        scanInterval["minutes"] = 0
-        scanInterval["hours"] = 0
-        scanInterval["seconds"] = 3
+        scanInterval = TimeInterval()
+        scanInterval.days = 0
+        scanInterval.minutes = 0
+        scanInterval.hours = 0
+        scanInterval.seconds = 3
 
-        config["filesOlderThan"] = interval
-        config["directoriesEmptyForMoreThan"] = interval
-        config["scanInterval"] = scanInterval
+        cc_config.files_older_than = interval
+        cc_config.directories_empty_for_more_than = interval
+        cc_config.cleaning_interval = scanInterval
 
         # put some files into it
         (fh1, filename1) = tempfile.mkstemp(dir=dirPath)
@@ -70,7 +73,7 @@ class CleanerTestCase(HeartbeatBase):
         self.assertEqual(len(files), 3)
 
         # run the cleaner once
-        cleaner = CacheCleaner(config)
+        cleaner = CacheCleaner(cc_config)
         await cleaner.clean()
 
         # get the list of files
@@ -107,24 +110,27 @@ class CleanerTestCase(HeartbeatBase):
         # create a temporary directory that looks like the cache
         dirPath = tempfile.mkdtemp()
 
-        config = {}
-        config["clearEmptyDirectoriesAndOldFiles"] = [dirPath]
+        testdir = os.path.abspath(os.path.dirname(__file__))
+        config = OODSConfig.load(os.path.join(testdir, "etc", "cleaner.yaml"))
 
-        interval = {}
-        interval["days"] = 1
-        interval["hours"] = 0
-        interval["minutes"] = 0
-        interval["seconds"] = 0
+        cc_config = config.file_ingester.cache_cleaner
+        cc_config.clear_empty_directories_and_old_files = [dirPath]
 
-        scanInterval = {}
-        scanInterval["days"] = 0
-        scanInterval["minutes"] = 0
-        scanInterval["hours"] = 0
-        scanInterval["seconds"] = 3
+        interval = TimeInterval()
+        interval.days = 1
+        interval.hours = 0
+        interval.minutes = 0
+        interval.seconds = 0
 
-        config["filesOlderThan"] = interval
-        config["directoriesEmptyForMoreThan"] = interval
-        config["scanInterval"] = scanInterval
+        scanInterval = TimeInterval()
+        scanInterval.days = 0
+        scanInterval.minutes = 0
+        scanInterval.hours = 0
+        scanInterval.seconds = 3
+
+        cc_config.files_older_than = interval
+        cc_config.directories_empty_for_more_than = interval
+        cc_config.cleaning_interval = scanInterval
 
         # put some directories into it
         dirname1 = tempfile.mkdtemp(dir=dirPath)
@@ -136,7 +142,7 @@ class CleanerTestCase(HeartbeatBase):
         (fh2, filename2) = tempfile.mkstemp(dir=dirPath)
 
         # run the cleaner once
-        cleaner = CacheCleaner(config)
+        cleaner = CacheCleaner(cc_config)
         await cleaner.clean()
 
         # check to see if all the directories are still there

@@ -8,6 +8,7 @@ from datetime import timedelta
 
 class TimeInterval(BaseModel):
     """Represents a time interval with days, hours, minutes, and seconds."""
+
     days: int = 0
     hours: int = 0
     minutes: int = 0
@@ -16,7 +17,6 @@ class TimeInterval(BaseModel):
     SECONDS_PER_DAY: ClassVar = 86400
     SECONDS_PER_HOUR: ClassVar = 3600
     SECONDS_PER_MINUTE: ClassVar = 60
-
 
     @staticmethod
     def calculateTotalSeconds(config):
@@ -45,23 +45,21 @@ class TimeInterval(BaseModel):
 
     def to_timedelta(self) -> timedelta:
         """Convert to Python timedelta object."""
-        return timedelta(
-            days=self.days,
-            hours=self.hours,
-            minutes=self.minutes,
-            seconds=self.seconds
-        )
+        return timedelta(days=self.days, hours=self.hours, minutes=self.minutes, seconds=self.seconds)
 
 
 class ButlerConfig(BaseModel):
     """Configuration for Butler data management."""
+
     instrument: str
     repo_directory: str
     collections: list[str]
     s3profile: str | None = None
 
+
 class CacheCleanerConfig(BaseModel):
     """Configuration for cache cleanup."""
+
     clear_empty_directories_and_old_files: list[str]
     cleaning_interval: TimeInterval
     files_older_than: TimeInterval
@@ -70,6 +68,7 @@ class CacheCleanerConfig(BaseModel):
 
 class FileIngesterConfig(BaseModel):
     """Configuration for file ingestion."""
+
     image_staging_directory: str
     bad_file_directory: str
     staging_directory: str
@@ -81,6 +80,7 @@ class FileIngesterConfig(BaseModel):
 
 class KafkaConfig(BaseModel):
     """Configuration for Kafka message consumption."""
+
     brokers: list[str]
     topics: list[str]
     group_id: str
@@ -89,18 +89,21 @@ class KafkaConfig(BaseModel):
 
 class MessageIngesterConfig(BaseModel):
     """Configuration for message ingestion."""
+
     kafka: KafkaConfig
     butler: ButlerConfig
 
 
 class CollectionCleanupRule(BaseModel):
     """Rule for cleaning up a specific collection."""
+
     collection: str
     files_older_than: TimeInterval
 
 
 class CollectionCleanerConfig(BaseModel):
     """Configuration for collection cleanup."""
+
     collections_to_clean: list[CollectionCleanupRule]
     cleaning_interval: TimeInterval
 
@@ -113,8 +116,8 @@ class OODSConfig(BaseModel):
     Must contain exactly one of file_ingester or message_ingester, but not both.
     """
 
-    FILE_INGESTER: ClassVar  = 'file_ingester'
-    MESSAGE_INGESTER: ClassVar  = 'message_ingester'
+    FILE_INGESTER: ClassVar = "file_ingester"
+    MESSAGE_INGESTER: ClassVar = "message_ingester"
 
     default_interval: TimeInterval
 
@@ -133,7 +136,7 @@ class OODSConfig(BaseModel):
             return OODSConfig.FILE_INGESTER
         return OODSConfig.MESSAGE_INGESTER
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validate_ingester_config(self):
         """Ensure exactly one of file_ingester or message_ingester is present."""
         file_ingester = self.file_ingester
@@ -157,6 +160,7 @@ class OODSConfig(BaseModel):
             raise ValueError(f"Error parsing {config_file}: {e}") from e
         except Exception as e:
             raise RuntimeError(f"Unexpected error loading {config_file}: {e}") from e
+
 
 if __name__ == "__main__":
 
