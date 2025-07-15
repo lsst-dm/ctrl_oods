@@ -37,6 +37,14 @@ class MessageAttendant(ButlerAttendant):
         Observatory Operations Data Service Commandable SAL component
     """
 
+    def __init__(self, config, csc=None):
+        super().__init__(
+            butler_config=config.message_ingester.butler,
+            collection_cleaner_config=config.collection_cleaner,
+            csc=csc,
+        )
+
+
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary
 

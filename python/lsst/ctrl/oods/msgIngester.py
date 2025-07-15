@@ -26,7 +26,7 @@ import re
 
 from confluent_kafka import KafkaError
 from lsst.ctrl.oods.bucketMessage import BucketMessage
-from lsst.ctrl.oods.messageAttendant import MessageAttendant
+from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.msgQueue import MsgQueue
 from lsst.resources import ResourcePath
 
@@ -62,11 +62,7 @@ class MsgIngester(object):
         LOGGER.info("max_messages set to %d", max_messages)
         self.msgQueue = MsgQueue(brokers, group_id, topics, max_messages)
 
-        self.butlers = []
-        butler_config = self.config.message_ingester.butler
-        collection_cleaner_config = self.config.collection_cleaner
-        butler = MessageAttendant(butler_config, collection_cleaner_config, csc)
-        self.butlers.append(butler)
+        self.butler = ButlerProxy(self.config, csc)
 
         self.tasks = []
         self.dequeue_task = None
@@ -83,11 +79,9 @@ class MsgIngester(object):
             A list containing each butler task to run
         """
         tasks = []
-        for butler in self.butlers:
-            tasks.append(butler.clean_task)
+        tasks.append(self.butler.clean_task)
 
-        for butler in self.butlers:
-            tasks.append(butler.send_status_task)
+        tasks.append(self.butler.send_status_task)
         return tasks
 
     async def ingest(self, butler_file_list):
@@ -104,8 +98,7 @@ class MsgIngester(object):
         # will send out via a CSC logevent.
         LOGGER.info("ingest called")
         try:
-            for butler in self.butlers:
-                await butler.ingest(butler_file_list)
+            await self.butler.ingest(butler_file_list)
         except Exception as e:
             LOGGER.warning("Exception: %s", e)
 

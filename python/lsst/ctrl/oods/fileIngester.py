@@ -59,9 +59,7 @@ class FileIngester(object):
 
         self.fileQueue = FileQueue(self.image_staging_directory, seconds, csc)
 
-        self.butlers = []
-        butler = ButlerProxy(main_config, csc)
-        self.butlers.append(butler)
+        self.butler = ButlerProxy(main_config, csc)
 
         cache_config = main_config.file_ingester.cache_cleaner
         self.cache_cleaner = CacheCleaner(cache_config, csc)
@@ -83,8 +81,7 @@ class FileIngester(object):
 
         """
         methods = []
-        for butler in self.butlers:
-            methods.append(butler.clean)
+        methods.append(self.butler.clean)
         return methods
 
     def get_butler_tasks(self):
@@ -96,11 +93,8 @@ class FileIngester(object):
             A list containing each butler run_task method
         """
         tasks = []
-        for butler in self.butlers:
-            tasks.append(butler.clean_task)
-
-        for butler in self.butlers:
-            tasks.append(butler.send_status_task)
+        tasks.append(self.butler.clean_task)
+        tasks.append(self.butler.send_status_task)
 
         return tasks
 
@@ -138,14 +132,12 @@ class FileIngester(object):
         specific to each butler.
         """
         files = {}
-        for butlerProxy in self.butlers:
-            files[butlerProxy] = []
+        files[self.butler] = []
         for filename in file_list:
             try:
-                for butlerProxy in self.butlers:
-                    local_staging_dir = butlerProxy.getStagingDirectory()
+                    local_staging_dir = self.butler.getStagingDirectory()
                     newfile = self.move_staged_file(filename, local_staging_dir)
-                    files[butlerProxy].append(newfile)
+                    files[self.butler].append(newfile)
             except Exception as e:
                 LOGGER.info("error staging files butler for %s, %s", filename, e)
                 continue
@@ -164,8 +156,7 @@ class FileIngester(object):
         # Success or failure is noted in a message description which
         # will send out via a CSC logevent.
         try:
-            for butler in self.butlers:
-                await butler.ingest(butler_file_list[butler])
+            await self.butler.ingest(butler_file_list[self.butler])
         except Exception as e:
             LOGGER.warning("Exception: %s", e)
 

@@ -57,11 +57,11 @@ class S3AuxtelIngesterTestCase(HeartbeatBase):
         # create a path to the configuration file
 
         testdir = os.path.abspath(os.path.dirname(__file__))
-        configFile = os.path.join(testdir, "etc", config_name)
+        config_file = os.path.join(testdir, "etc", config_name)
 
         # load the YAML configuration
 
-        config = OODSConfig.load(configFile)
+        config = OODSConfig.load(config_file)
 
         ingesterConfig = config.message_ingester
         butlerConfig = ingesterConfig.butler
