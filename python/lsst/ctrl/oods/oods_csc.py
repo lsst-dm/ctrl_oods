@@ -53,7 +53,7 @@ class OodsCsc(DmCsc):
         if "CTRL_OODS_CONFIG_FILE" in os.environ:
             filename = os.environ["CTRL_OODS_CONFIG_FILE"]
             LOGGER.info("using configuration %s", filename)
-            self.config = OODSConfig(filename)
+            self.config = OODSConfig.load(filename)
         else:
             raise FileNotFoundError("CTRL_OODS_CONFIG_FILE is not set")
 
@@ -100,7 +100,7 @@ class OodsCsc(DmCsc):
         self.task_list = self.ingester.run_tasks()
 
     def createIngester(self):
-        if self.config.get_ingester_type() == OODSConfig.FILE_INGESTER:
+        if self.config.ingester_config_type() == OODSConfig.FILE_INGESTER:
             ingester = FileIngester(self.config, self)
         else:
             ingester = MsgIngester(self.config, self)
