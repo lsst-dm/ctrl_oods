@@ -221,7 +221,7 @@ class ButlerAttendant:
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
-                LOGGER.info("about to ingest guiders")
+                LOGGER.debug("about to ingest guiders")
                 await loop.run_in_executor(executor, self._ingest_saved_guiders, self.guiders)
                 LOGGER.info("done with guider ingest")
             except RuntimeError as re:
@@ -250,7 +250,7 @@ class ButlerAttendant:
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
-                LOGGER.info("about to ingest")
+                LOGGER.debug("about to ingest")
                 await loop.run_in_executor(executor, self.task.run, file_list)
                 LOGGER.info("done with ingest")
             except RuntimeError as re:
@@ -412,7 +412,7 @@ class ButlerAttendant:
         )
         t = t - td
 
-        LOGGER.info("cleaning collections")
+        LOGGER.debug("cleaning collections")
         LOGGER.debug("about to createButler()")
         butler = self.createButler()
 
@@ -476,7 +476,7 @@ class ButlerAttendant:
         LOGGER.debug("about to run pruneDatasets")
         butler.pruneDatasets(ref, purge=True, unstore=True)
         LOGGER.debug("done running pruneDatasets")
-        LOGGER.info("done cleaning collections")
+        LOGGER.debug("done cleaning collections")
 
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary
