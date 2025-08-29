@@ -56,6 +56,10 @@ class ButlerConfig(BaseModel):
     collections: list[str]
     s3profile: str | None = None
 
+class S3ButlerConfig(ButlerConfig):
+    """Configuration for Butler data management, with S3profile"""
+    s3profile: str | None = None
+
 
 class CacheCleanerConfig(BaseModel):
     """Configuration for cache cleanup."""
@@ -91,7 +95,7 @@ class MessageIngesterConfig(BaseModel):
     """Configuration for message ingestion."""
 
     kafka: KafkaConfig
-    butler: ButlerConfig
+    butler: S3ButlerConfig
 
 
 class CollectionCleanupRule(BaseModel):

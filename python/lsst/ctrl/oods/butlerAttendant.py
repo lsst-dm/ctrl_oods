@@ -188,7 +188,7 @@ class ButlerAttendant:
         """
         for dataset in datasets:
             image_data = ImageData(dataset)
-            self.transmit_status(image_data.get_info(), code=0, description="guider file ingested")
+            self.transmit_status(image_data.get_info(), code=0, description="file ingested")
             LOGGER.debug("removing %s from guider list after successful ingestion", dataset.path)
             self.guiders.remove(dataset.path)
 
