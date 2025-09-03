@@ -66,13 +66,13 @@ The ``file_ingester`` section has several elements and sections.
 
 The ``new_file_scan_interval`` section is the interval at which the file system is scanned.  In this example, scans pause for one section, before a new file system scan starts.
 
-The ``butler`` section describes:
+The ``butler`` section describes
     * ``instrument`` - the camera type
     * ``repo_directory`` - the butler repository location
     * ``collections`` - the butler collection used to initialize the OODS butler
     * ``collection_cleaner`` section describes, collections and how long files will remain in the Butler before being removed, and the interval at which files are cleaned
 
-The ``cache_cleaner`` section describes:
+The ``cache_cleaner`` section describes
     * ``clear_empty_directories_and_old_files`` - a list of directories to scan for empty directories, or old files
     * ``cleaning_interval`` - how often to clean
     * ``files_older_than`` - how old the files have to be before they'll be removed
@@ -133,13 +133,13 @@ The ``default_interval`` section is used for the initial values of `intervals` u
 
 The ``file_ingester`` section has two sections: ``kafka`` and ``butler``
 
-The `kafka` section describes:
+The `kafka` section describes
     * ``brokers`` - a list of Kafka brokers the OODS will connect  to for messages
     * ``topics`` - a list of Kafka topics the OODS will listen on
     * ``group_id`` - the group id of this client
     * ``max_messages`` - the maximum number of messages to wait for before returning.  Note that the OODS may read less messages if it times out before one second.
 
-The ``butler`` section describes:
+The ``butler`` section describes
     * ``instrument`` - the camera type
     * ``repo_directory`` - the butler repository location
     * ``s3profile`` - the S3 profile used to connect to the message store
