@@ -14,16 +14,21 @@ file_ingester:
         seconds: 10
 
     butler:
-        instrument: lsst.obs.lsst.Latiss
         repo_directory : repo
+        instrument: lsst.obs.lsst.Latiss
         collections:
-            - LATISS/raw/all
+            - collection_a
+            - collection_b
         collection_cleaner:
             collections_to_clean:
-                - collection: LATISS/raw/all
+                - collection: collection_a
                   files_older_than:
                       <<: *interval
-                      seconds: 1
+                      days: 3
+                - collection: collection_b
+                  files_older_than:
+                      <<: *interval
+                      days: 3
             cleaning_interval:
                 <<: *interval
                 seconds: 2
@@ -34,10 +39,10 @@ file_ingester:
             - repo/raw
         cleaning_interval:
             <<: *interval
-            seconds: 30
+            seconds: 3
         files_older_than:
             <<: *interval
-            days: 30 
+            days: 1
         directories_empty_for_more_than:
             <<: *interval
             days: 1

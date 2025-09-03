@@ -19,6 +19,16 @@ file_ingester:
         instrument: lsst.obs.lsst.LsstComCam
         collections:
             - LSSTComCam/raw/all
+        collection_cleaner:
+            collections_to_clean:
+                - collection: LSSTComCam/raw/all
+                  files_older_than:
+                      <<: *interval
+                      seconds: 1
+            cleaning_interval:
+                <<: *interval
+                seconds: 1
+        
 
     cache_cleaner:
         clear_empty_directories_and_old_files:
@@ -32,14 +42,4 @@ file_ingester:
         directories_empty_for_more_than:
             <<: *interval
             days: 1
-
-collection_cleaner:
-    collections_to_clean:
-        - collection: LSSTComCam/raw/all
-          files_older_than:
-              <<: *interval
-              seconds: 1
-    cleaning_interval:
-        <<: *interval
-        seconds: 1
 

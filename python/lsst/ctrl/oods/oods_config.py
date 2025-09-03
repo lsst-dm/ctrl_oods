@@ -47,6 +47,19 @@ class TimeInterval(BaseModel):
         """Convert to Python timedelta object."""
         return timedelta(days=self.days, hours=self.hours, minutes=self.minutes, seconds=self.seconds)
 
+class CollectionCleanupRule(BaseModel):
+    """Rule for cleaning up a specific collection."""
+
+    collection: str
+    files_older_than: TimeInterval
+
+
+class CollectionCleanerConfig(BaseModel):
+    """Configuration for collection cleanup."""
+
+    collections_to_clean: list[CollectionCleanupRule]
+    cleaning_interval: TimeInterval
+
 
 class ButlerConfig(BaseModel):
     """Configuration for Butler data management."""
@@ -54,7 +67,8 @@ class ButlerConfig(BaseModel):
     instrument: str
     repo_directory: str
     collections: list[str]
-    s3profile: str | None = None
+    collection_cleaner: CollectionCleanerConfig
+
 
 class S3ButlerConfig(ButlerConfig):
     """Configuration for Butler data management, with S3profile"""
@@ -98,20 +112,6 @@ class MessageIngesterConfig(BaseModel):
     butler: S3ButlerConfig
 
 
-class CollectionCleanupRule(BaseModel):
-    """Rule for cleaning up a specific collection."""
-
-    collection: str
-    files_older_than: TimeInterval
-
-
-class CollectionCleanerConfig(BaseModel):
-    """Configuration for collection cleanup."""
-
-    collections_to_clean: list[CollectionCleanupRule]
-    cleaning_interval: TimeInterval
-
-
 class OODSConfig(BaseModel):
     """
     Main configuration model for OODS (Observatory Operations Data Service).
@@ -128,9 +128,6 @@ class OODSConfig(BaseModel):
     # Exactly one of these must be present
     file_ingester: FileIngesterConfig | None = None
     message_ingester: MessageIngesterConfig | None = None
-
-    # Always present
-    collection_cleaner: CollectionCleanerConfig
 
     # Optional - typically only present with file_ingester
     cache_cleaner: CacheCleanerConfig | None = None

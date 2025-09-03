@@ -20,7 +20,21 @@ file_ingester:
         repo_directory : /tmp/repo
         collections:
             - LSSTCam/raw/all
-
+        collection_cleaner:
+            collections_to_clean:
+                - collection: LSSTCam/raw/all
+                  files_older_than:
+                      <<: *interval
+                      seconds: 10
+                - collection: LSSTCam/raw/guider
+                  files_older_than:
+                      <<: *interval
+                      seconds: 10
+            cleaning_interval:
+                <<: *interval
+                seconds: 15
+    
+    
     cache_cleaner:
         clear_empty_directories_and_old_files:
             - repo/raw
@@ -34,16 +48,5 @@ file_ingester:
             <<: *interval
             days: 2
 
-
-collection_cleaner:
-    collections_to_clean:
-        - collection: LSSTCam/raw/all
-          files_older_than:
-              <<: *interval
-              seconds: 10
-
-    cleaning_interval:
-        <<: *interval
-        seconds: 15
 
 

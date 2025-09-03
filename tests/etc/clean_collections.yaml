@@ -19,7 +19,21 @@ file_ingester:
         collections:
             - collection_a
             - collection_b
-
+        collection_cleaner:
+            collections_to_clean:
+                - collection: collection_a
+                  files_older_than:
+                      <<: *interval
+                      days: 3
+                - collection: collection_b
+                  files_older_than:
+                      <<: *interval
+                      days: 3
+            cleaning_interval:
+                <<: *interval
+                seconds: 2
+        
+        
     cache_cleaner:
         clear_empty_directories_and_old_files:
             - repo/raw
@@ -32,18 +46,4 @@ file_ingester:
         directories_empty_for_more_than:
             <<: *interval
             days: 1
-
-collection_cleaner:
-    collections_to_clean:
-        - collection: collection_a
-          files_older_than:
-              <<: *interval
-              days: 3
-        - collection: collection_b
-          files_older_than:
-              <<: *interval
-              days: 3
-    cleaning_interval:
-        <<: *interval
-        seconds: 2
 

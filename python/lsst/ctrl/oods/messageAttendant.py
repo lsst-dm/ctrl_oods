@@ -39,8 +39,7 @@ class MessageAttendant(ButlerAttendant):
 
     def __init__(self, config, csc=None):
         super().__init__(
-            butler_config=config.message_ingester.butler,
-            collection_cleaner_config=config.collection_cleaner,
+            butler_config = config.message_ingester.butler,
             csc=csc,
         )
 

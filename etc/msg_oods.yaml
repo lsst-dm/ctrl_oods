@@ -18,17 +18,17 @@ message_ingester:
         instrument: lsst.obs.lsst.LsstCam
         collections:
             - LSSTCam/raw/all
-
-collection_cleaner:
-    collections_to_clean:
-        - collection: LSSTCam/raw/all
-          files_older_than:
-              <<: *interval
-              seconds: 10
-        - collection: LSSTCam/raw/guider
-          files_older_than:
-              <<: *interval
-              seconds: 10
-    cleaning_interval:
-        <<: *interval
-        seconds: 10
+        collection_cleaner:
+            collections_to_clean:
+                - collection: LSSTCam/raw/all
+                  files_older_than:
+                      <<: *interval
+                      seconds: 10
+                - collection: LSSTCam/raw/guider
+                  files_older_than:
+                      <<: *interval
+                      seconds: 10
+            cleaning_interval:
+                <<: *interval
+                seconds: 10
+        

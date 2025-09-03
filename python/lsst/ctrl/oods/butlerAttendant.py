@@ -47,16 +47,20 @@ class ButlerAttendant:
     SUCCESS = 0
     FAILURE = 1
 
-    def __init__(self, butler_config, collection_cleaner_config, csc=None):
+    def __init__(self, butler_config, csc=None):
         self.csc = csc
 
         self.status_queue = asyncio.Queue()
+        collection_cleaner_config = butler_config.collection_cleaner
         self.butler_repo = butler_config.repo_directory
         self.instrument = butler_config.instrument
         self.scanInterval = collection_cleaner_config.cleaning_interval
         self.collections = butler_config.collections
         self.cleanCollections = collection_cleaner_config.collections_to_clean
-        self.s3profile = butler_config.s3profile
+        if hasattr(butler_config, "s3profile"):
+            self.s3profile = butler_config.s3profile
+        else:
+            self.s3profile = None
 
         LOGGER.info(f"Using Butler repo located at {self.butler_repo}")
 

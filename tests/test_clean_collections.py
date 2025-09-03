@@ -67,7 +67,7 @@ class CleanCollectionsTestCase(HeartbeatBase):
 
         butlerConfig.repo_directory = self.repoDir
 
-        self.clean_collections = self.config.collection_cleaner.collections_to_clean
+        self.clean_collections = butlerConfig.collection_cleaner.collections_to_clean
         print(f"{self.clean_collections=}")
 
         # Define the run collection
