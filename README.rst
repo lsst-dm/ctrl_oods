@@ -89,3 +89,59 @@ The ``collections_to_clean`` section describes lists of collections, and cleanin
 In this case, files in collection ``LSSTCam/raw/all`` will be removed after 10 seconds
 
 The ``cleaning_interval`` is the interval at which cleaning takes place.  In this case, a cleaning check takes places every 15 seconds.
+
+Example YAML file for message ingest
+---------------------------------
+
+.. code-block:: yaml
+
+    default_interval: &interval
+        days: 0
+        hours: 0
+        minutes: 0
+        seconds: 0
+    
+    message_ingester:
+        kafka:
+            brokers:
+                - kafka:9092
+            topics: 
+                - atoods
+            group_id: ATOODS
+            max_messages: 10
+        butler:
+            instrument: lsst.obs.lsst.LsstCam
+            repo_directory : /tmp/repo
+            s3profile: testprofile
+            collections:
+                - LSSTCam/raw/all
+            collection_cleaner:
+                collections_to_clean:
+                    - collection: LSSTCam/raw/all
+                      files_older_than:
+                          <<: *interval
+                          seconds: 10
+                    - collection: LSSTCam/raw/guider
+                      files_older_than:
+                          <<: *interval
+                          seconds: 10
+                cleaning_interval:
+                    <<: *interval
+                    seconds: 10
+
+The ``default_interval`` section is used for the initial values of `intervals` used in the rest of the YAML configuration.
+
+The ``file_ingester`` section has two sections: ``kafka`` and ``butler``
+
+The `kafka` section describes:
+    * ``brokers`` - a list of Kafka brokers the OODS will connect  to for messages
+    * ``topics`` - a list of Kafka topics the OODS will listen on
+    * ``group_id`` - the group id of this client
+    * ``max_messages`` - the maximum number of messages to wait for before returning.  Note that the OODS may read less messages if it times out before one second.
+
+The ``butler`` section describes:
+    * ``instrument`` - the camera type
+    * ``repo_directory`` - the butler repository location
+    * ``s3profile`` - the S3 profile used to connect to the message store
+    * ``collections`` - the butler collection used to initialize the OODS butler
+    * ``collection_cleaner`` section describes, collections and how long files will remain in the Butler before being removed, and the interval at which files are cleaned
