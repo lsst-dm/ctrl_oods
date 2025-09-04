@@ -91,7 +91,7 @@ In this case, files in collection ``LSSTCam/raw/all`` will be removed after 10 s
 The ``cleaning_interval`` is the interval at which cleaning takes place.  In this case, a cleaning check takes places every 15 seconds.
 
 Example YAML file for message ingest
----------------------------------
+------------------------------------
 
 .. code-block:: yaml
 
