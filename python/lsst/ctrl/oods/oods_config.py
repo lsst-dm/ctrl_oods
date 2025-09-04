@@ -73,6 +73,7 @@ class ButlerConfig(BaseModel):
 
 class S3ButlerConfig(ButlerConfig):
     """Configuration for Butler data management, with S3profile"""
+
     s3profile: str | None = None
 
 
