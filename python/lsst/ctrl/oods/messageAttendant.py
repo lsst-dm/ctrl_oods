@@ -39,10 +39,9 @@ class MessageAttendant(ButlerAttendant):
 
     def __init__(self, config, csc=None):
         super().__init__(
-            butler_config = config.message_ingester.butler,
+            butler_config=config.message_ingester.butler,
             csc=csc,
         )
-
 
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary

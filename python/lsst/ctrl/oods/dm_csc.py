@@ -20,9 +20,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
-import eups
 import logging
 
+import eups
 from lsst.ts.salobj import BaseCsc, State
 
 from . import __version__
@@ -67,7 +67,7 @@ class DmCsc(BaseCsc):
     def get_subsystem_versions(self) -> str:
         product = eups.Eups().findSetupProduct("lsst_distrib")
         if product is None:
-            lsst_distrib_version="lsst distrib version unknown"
+            lsst_distrib_version = "lsst distrib version unknown"
         else:
             lsst_distrib_version = ":".join(product.tags)
         return lsst_distrib_version

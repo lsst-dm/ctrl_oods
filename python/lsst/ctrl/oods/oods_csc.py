@@ -23,9 +23,9 @@ import logging
 import os
 
 from lsst.ctrl.oods.dm_csc import DmCsc
-from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.msgIngester import MsgIngester
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.ts import salobj
 
 LOGGER = logging.getLogger(__name__)

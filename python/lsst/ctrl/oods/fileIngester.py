@@ -135,9 +135,9 @@ class FileIngester(object):
         files[self.butler] = []
         for filename in file_list:
             try:
-                    local_staging_dir = self.butler.getStagingDirectory()
-                    newfile = self.move_staged_file(filename, local_staging_dir)
-                    files[self.butler].append(newfile)
+                local_staging_dir = self.butler.getStagingDirectory()
+                newfile = self.move_staged_file(filename, local_staging_dir)
+                files[self.butler].append(newfile)
             except Exception as e:
                 LOGGER.info("error staging files butler for %s, %s", filename, e)
                 continue

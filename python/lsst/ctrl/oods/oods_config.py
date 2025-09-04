@@ -1,9 +1,9 @@
 import sys
-import yaml
-
-from typing import ClassVar
-from pydantic import BaseModel, model_validator
 from datetime import timedelta
+from typing import ClassVar
+
+import yaml
+from pydantic import BaseModel, model_validator
 
 
 class TimeInterval(BaseModel):
@@ -46,6 +46,7 @@ class TimeInterval(BaseModel):
     def to_timedelta(self) -> timedelta:
         """Convert to Python timedelta object."""
         return timedelta(days=self.days, hours=self.hours, minutes=self.minutes, seconds=self.seconds)
+
 
 class CollectionCleanupRule(BaseModel):
     """Rule for cleaning up a specific collection."""
@@ -116,8 +117,8 @@ class OODSConfig(BaseModel):
     """
     Main configuration model for OODS (Observatory Operations Data Service).
 
-    This model can handle both file-based and message-based OODS configurations.
-    Must contain exactly one of file_ingester or message_ingester, but not both.
+    This model can handle both file-based and message-based OODS configurations
+    Must contain exactly one of file_ingester or message_ingester, but not both
     """
 
     FILE_INGESTER: ClassVar = "file_ingester"
@@ -139,7 +140,7 @@ class OODSConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_ingester_config(self):
-        """Ensure exactly one of file_ingester or message_ingester is present."""
+        """Ensure only one of file_ingester or message_ingester is present."""
         file_ingester = self.file_ingester
         message_ingester = self.message_ingester
 

@@ -29,9 +29,9 @@ from unittest.mock import MagicMock
 import lsst.utils.tests
 from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.bucketMessage import BucketMessage
-from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.ctrl.oods.msgIngester import MsgIngester
 from lsst.ctrl.oods.msgQueue import MsgQueue
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.daf.butler import Butler
 
 

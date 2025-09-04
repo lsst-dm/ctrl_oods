@@ -23,8 +23,8 @@ import logging
 import os
 import time
 
-from lsst.ctrl.oods.scanner import Scanner
 from lsst.ctrl.oods.oods_config import TimeInterval
+from lsst.ctrl.oods.scanner import Scanner
 
 LOGGER = logging.getLogger(__name__)
 
