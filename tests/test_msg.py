@@ -63,17 +63,17 @@ class S3AuxtelIngesterTestCase(HeartbeatBase):
 
         config = OODSConfig.load(config_file)
 
-        ingesterConfig = config.message_ingester
-        butlerConfig = ingesterConfig.butler
+        ingester_config = config.message_ingester
+        butler_config = ingester_config.butler
 
-        self.repoDir = tempfile.mkdtemp()
-        Butler.makeRepo(self.repoDir)
-        butlerConfig.repo_directory = self.repoDir
+        self.repo_dir = tempfile.mkdtemp()
+        Butler.makeRepo(self.repo_dir)
+        butler_config.repo_directory = self.repo_dir
 
         return config
 
     def tearDown(self):
-        shutil.rmtree(self.repoDir, ignore_errors=True)
+        shutil.rmtree(self.repo_dir, ignore_errors=True)
 
     def returnVal(self, num_messages, timeout):
         if self.attempts == 0:

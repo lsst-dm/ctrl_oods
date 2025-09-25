@@ -131,7 +131,7 @@ Example YAML file for message ingest
 
 The ``default_interval`` section is used for the initial values of `intervals` used in the rest of the YAML configuration.
 
-The ``file_ingester`` section has two sections: ``kafka`` and ``butler``
+The ``message_ingester`` section has two sections: ``kafka`` and ``butler``
 
 The `kafka` section describes
     * ``brokers`` - a list of Kafka brokers the OODS will connect  to for messages

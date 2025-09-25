@@ -102,30 +102,30 @@ class CollectionTestCase(HeartbeatBase):
         # and alter the image staging directory to point
         # at the temporary directories created for this test
 
-        ingesterConfig = config.file_ingester
-        self.imageStagingDir = tempfile.mkdtemp()
-        ingesterConfig.image_staging_directory = self.imageStagingDir
+        ingester_config = config.file_ingester
+        self.image_staging_dir = tempfile.mkdtemp()
+        ingester_config.image_staging_directory = self.image_staging_dir
 
-        self.badDir = tempfile.mkdtemp()
-        butlerConfig = ingesterConfig.butler
-        ingesterConfig.bad_file_directory = self.badDir
-        self.stagingDirectory = tempfile.mkdtemp()
-        ingesterConfig.staging_directory = self.stagingDirectory
+        self.bad_dir = tempfile.mkdtemp()
+        butler_config = ingester_config.butler
+        ingester_config.bad_file_directory = self.bad_dir
+        self.staging_directory = tempfile.mkdtemp()
+        ingester_config.staging_directory = self.staging_directory
 
-        butlerConfig.repo_directory = self.repoDir
+        butler_config.repo_directory = self.repoDir
 
-        self.collections = butlerConfig.collections
+        self.collections = butler_config.collections
         logging.info(f"{self.collections=}")
 
         # copy the FITS file to it's test location
 
-        subDir = tempfile.mkdtemp(dir=self.imageStagingDir)
-        self.destFile = os.path.join(subDir, fits_name)
+        sub_dir = tempfile.mkdtemp(dir=self.image_staging_dir)
+        self.destFile = os.path.join(sub_dir, fits_name)
         shutil.copyfile(data_file, self.destFile)
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        image_staging_dir = ingesterConfig.image_staging_directory
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
@@ -151,8 +151,8 @@ class CollectionTestCase(HeartbeatBase):
         # moved to the OODS staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = self.strip_prefix(self.destFile, self.imageStagingDir)
-        staged_file = os.path.join(self.stagingDirectory, name)
+        name = self.strip_prefix(self.destFile, self.image_staging_dir)
+        staged_file = os.path.join(self.staging_directory, name)
         self.assertTrue(os.path.exists(staged_file))
 
         # this file should now not exist

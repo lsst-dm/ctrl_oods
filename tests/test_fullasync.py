@@ -69,19 +69,19 @@ class AsyncIngestTestCase(HeartbeatBase):
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = config.file_ingester
+        ingester_config = config.file_ingester
         self.imageStagingDir = tempfile.mkdtemp()
-        ingesterConfig.image_staging_directory = self.imageStagingDir
+        ingester_config.image_staging_directory = self.imageStagingDir
 
         self.badDir = tempfile.mkdtemp()
-        butlerConfig = ingesterConfig.butler
-        ingesterConfig.bad_file_directory = self.badDir
+        butler_config = ingester_config.butler
+        ingester_config.bad_file_directory = self.badDir
         self.stagingDirectory = tempfile.mkdtemp()
-        ingesterConfig.staging_directory = self.stagingDirectory
+        ingester_config.staging_directory = self.stagingDirectory
 
         self.repoDir = tempfile.mkdtemp()
         Butler.makeRepo(self.repoDir)
-        butlerConfig.repo_directory = self.repoDir
+        butler_config.repo_directory = self.repoDir
 
         # copy the FITS file to it's test location
 
@@ -120,8 +120,8 @@ class AsyncIngestTestCase(HeartbeatBase):
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = config.file_ingester
-        image_staging_dir = ingesterConfig.image_staging_directory
+        ingester_config = config.file_ingester
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)

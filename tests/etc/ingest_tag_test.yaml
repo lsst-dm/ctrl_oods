@@ -38,8 +38,7 @@ file_ingester:
             seconds: 30
         files_older_than:
             <<: *interval
-            days: 30 
+            days: 30
         directories_empty_for_more_than:
             <<: *interval
             days: 1
-

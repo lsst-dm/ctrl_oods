@@ -32,7 +32,7 @@ class IntervalTestCase(lsst.utils.tests.TestCase):
         config.minutes = 1
         config.seconds = 1
 
-        seconds = TimeInterval.calculateTotalSeconds(config)
+        seconds = TimeInterval.calculate_total_seconds(config)
         self.assertTrue(seconds, 86400 + 3600 + 60 + 1)
 
 

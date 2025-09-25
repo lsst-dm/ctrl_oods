@@ -17,7 +17,7 @@ file_ingester:
 
     butler:
         instrument: lsst.obs.lsst.LsstComCam
-        repo_directory : /tmp/repo
+        repo_directory: /tmp/repo
         collections:
             - LSSTCam/raw/all
         collection_cleaner:
@@ -43,7 +43,7 @@ file_ingester:
             seconds: 30
         files_older_than:
             <<: *interval
-            days: 30 
+            days: 30
         directories_empty_for_more_than:
             <<: *interval
             days: 2

@@ -52,22 +52,22 @@ class CleanCollectionsTestCase(HeartbeatBase):
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = self.config.file_ingester
-        self.imageDir = tempfile.mkdtemp()
-        ingesterConfig.image_staging_directory = self.imageDir
+        ingester_config = self.config.file_ingester
+        self.image_dir = tempfile.mkdtemp()
+        ingester_config.image_staging_directory = self.image_dir
 
-        self.badDir = tempfile.mkdtemp()
-        butlerConfig = ingesterConfig.butler
-        ingesterConfig.bad_file_directory = self.badDir
+        self.bad_dir = tempfile.mkdtemp()
+        butler_config = ingester_config.butler
+        ingester_config.bad_file_directory = self.bad_dir
         self.stagingDir = tempfile.mkdtemp()
-        ingesterConfig.staging_directory = self.stagingDir
+        ingester_config.staging_directory = self.stagingDir
 
-        self.repoDir = tempfile.mkdtemp()
-        Butler.makeRepo(self.repoDir)
+        self.repo_dir = tempfile.mkdtemp()
+        Butler.makeRepo(self.repo_dir)
 
-        butlerConfig.repo_directory = self.repoDir
+        butler_config.repo_directory = self.repo_dir
 
-        self.clean_collections = butlerConfig.collection_cleaner.collections_to_clean
+        self.clean_collections = butler_config.collection_cleaner.collections_to_clean
         print(f"{self.clean_collections=}")
 
         # Define the run collection
@@ -77,7 +77,7 @@ class CleanCollectionsTestCase(HeartbeatBase):
 
         # Initialize the Butler
         opts = dict(writeable=True)
-        self.butler = Butler(self.repoDir, **opts)
+        self.butler = Butler(self.repo_dir, **opts)
 
         self.butler.registry.registerCollection(run_a, CollectionType.RUN)
         self.butler.registry.registerCollection(run_b, CollectionType.RUN)
@@ -100,7 +100,7 @@ class CleanCollectionsTestCase(HeartbeatBase):
 
     def tearDown(self):
         """Remove butler repo directory"""
-        shutil.rmtree(self.repoDir, ignore_errors=True)
+        shutil.rmtree(self.repo_dir, ignore_errors=True)
 
     def number_of_datasets(self):
         """count the number of files in the butler
@@ -133,7 +133,7 @@ class CleanCollectionsTestCase(HeartbeatBase):
                 entry.files_older_than.seconds = seconds
                 return
 
-    async def testCleanTask(self):
+    async def testCleanCask(self):
         """test clean collections operations"""
 
         # ensure two files are registered on setUp

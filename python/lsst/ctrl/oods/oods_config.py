@@ -19,8 +19,8 @@ class TimeInterval(BaseModel):
     SECONDS_PER_MINUTE: ClassVar = 60
 
     @staticmethod
-    def calculateTotalSeconds(config):
-        """calculate the number of seconds represented by this configuration
+    def calculate_total_seconds(config):
+        """Calculate the number of seconds represented by this configuration
 
         Parameters
         ----------

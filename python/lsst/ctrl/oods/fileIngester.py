@@ -55,7 +55,7 @@ class FileIngester(object):
 
         LOGGER.info(f"will ingest in groups of batchSize={self.batch_size}")
         scanInterval = self.config.new_file_scan_interval
-        seconds = TimeInterval.calculateTotalSeconds(scanInterval)
+        seconds = TimeInterval.calculate_total_seconds(scanInterval)
 
         self.fileQueue = FileQueue(self.image_staging_directory, seconds, csc)
 

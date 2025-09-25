@@ -360,7 +360,7 @@ class ButlerAttendant:
 
     async def clean_task(self):
         """run the clean() method at the configured interval"""
-        seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
+        seconds = TimeInterval.calculate_total_seconds(self.scanInterval)
         LOGGER.info("clean_task created!")
         while True:
             LOGGER.debug("cleaning")

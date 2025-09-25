@@ -70,35 +70,35 @@ class AutoIngestTestCase(HeartbeatBase):
         # at the temporary directories created for his test
 
         ingester_config = config.file_ingester
-        self.imageDir = tempfile.mkdtemp()
-        ingester_config.image_staging_directory = self.imageDir
+        self.image_dir = tempfile.mkdtemp()
+        ingester_config.image_staging_directory = self.image_dir
 
-        self.badDir = tempfile.mkdtemp()
-        butlerConfig = ingester_config.butler
-        ingester_config.bad_file_directory = self.badDir
-        self.stagingDir = tempfile.mkdtemp()
-        ingester_config.staging_directory = self.stagingDir
+        self.bad_dir = tempfile.mkdtemp()
+        butler_config = ingester_config.butler
+        ingester_config.bad_file_directory = self.bad_dir
+        self.staging_dir = tempfile.mkdtemp()
+        ingester_config.staging_directory = self.staging_dir
 
-        self.repoDir = tempfile.mkdtemp()
-        Butler.makeRepo(self.repoDir)
+        self.repo_dir = tempfile.mkdtemp()
+        Butler.makeRepo(self.repo_dir)
 
-        butlerConfig.repo_directory = self.repoDir
+        butler_config.repo_directory = self.repo_dir
 
         # copy the FITS file to it's test location
 
-        self.subDir = tempfile.mkdtemp(dir=self.imageDir)
-        self.destFile = os.path.join(self.subDir, fits_name)
-        shutil.copyfile(fitsFile, self.destFile)
+        self.sub_dir = tempfile.mkdtemp(dir=self.image_dir)
+        self.dest_file = os.path.join(self.sub_dir, fits_name)
+        shutil.copyfile(fitsFile, self.dest_file)
 
         return config
 
     def tearDown(self):
         """Remove directories created by createConfig"""
-        shutil.rmtree(self.imageDir, ignore_errors=True)
-        shutil.rmtree(self.badDir, ignore_errors=True)
-        shutil.rmtree(self.stagingDir, ignore_errors=True)
-        shutil.rmtree(self.repoDir, ignore_errors=True)
-        shutil.rmtree(self.subDir, ignore_errors=True)
+        shutil.rmtree(self.image_dir, ignore_errors=True)
+        shutil.rmtree(self.bad_dir, ignore_errors=True)
+        shutil.rmtree(self.staging_dir, ignore_errors=True)
+        shutil.rmtree(self.repo_dir, ignore_errors=True)
+        shutil.rmtree(self.sub_dir, ignore_errors=True)
 
     async def testAuxTelIngest(self):
         """test ingesting an auxtel file"""
@@ -117,7 +117,7 @@ class AutoIngestTestCase(HeartbeatBase):
         # create a FileIngester
         ingester = FileIngester(config)
 
-        staged_files = ingester.stageFiles([self.destFile])
+        staged_files = ingester.stageFiles([self.dest_file])
         await ingester.ingest(staged_files)
 
         # check to make sure file was moved from image staging directory
@@ -125,7 +125,7 @@ class AutoIngestTestCase(HeartbeatBase):
         self.assertEqual(len(files), 0)
 
         # check to be sure the file didn't land in the "bad file" directory
-        bad_path = os.path.join(self.badDir, fits_name)
+        bad_path = os.path.join(self.bad_dir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
     async def testComCamIngest(self):
@@ -146,9 +146,9 @@ class AutoIngestTestCase(HeartbeatBase):
         ingester = FileIngester(config)
 
         # check to see that the file is there before ingestion
-        self.assertTrue(os.path.exists(self.destFile))
+        self.assertTrue(os.path.exists(self.dest_file))
 
-        staged_files = ingester.stageFiles([self.destFile])
+        staged_files = ingester.stageFiles([self.dest_file])
         await ingester.ingest(staged_files)
 
         # make sure image staging area is now empty
@@ -160,12 +160,12 @@ class AutoIngestTestCase(HeartbeatBase):
         # moved to the butler staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = Utils.strip_prefix(self.destFile, self.imageDir)
-        file_to_ingest = os.path.join(self.stagingDir, name)
+        name = Utils.strip_prefix(self.dest_file, self.image_dir)
+        file_to_ingest = os.path.join(self.staging_dir, name)
         self.assertTrue(os.path.exists(file_to_ingest))
 
         # this file should now not exist
-        self.assertFalse(os.path.exists(self.destFile))
+        self.assertFalse(os.path.exists(self.dest_file))
 
         await asyncio.sleep(1)
         clean_methods = ingester.getButlerCleanMethods()
@@ -179,7 +179,7 @@ class AutoIngestTestCase(HeartbeatBase):
 
         # check to be sure that the file wasn't "bad" (and
         # therefore, not ingested)
-        bad_path = os.path.join(self.badDir, fits_name)
+        bad_path = os.path.join(self.bad_dir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
     async def testBadIngest(self):
@@ -196,14 +196,14 @@ class AutoIngestTestCase(HeartbeatBase):
 
         ingester = FileIngester(config)
 
-        staged_files = ingester.stageFiles([self.destFile])
+        staged_files = ingester.stageFiles([self.dest_file])
         await ingester.ingest(staged_files)
         await asyncio.sleep(0)  # appease coverage
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        name = Utils.strip_prefix(self.destFile, image_staging_dir)
-        bad_path = os.path.join(self.badDir, name)
+        name = Utils.strip_prefix(self.dest_file, image_staging_dir)
+        bad_path = os.path.join(self.bad_dir, name)
         self.assertTrue(os.path.exists(bad_path))
 
     async def testRepoExists(self):
