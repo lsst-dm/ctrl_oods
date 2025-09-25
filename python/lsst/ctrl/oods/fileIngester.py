@@ -28,12 +28,10 @@ from itertools import islice
 from lsst.ctrl.oods.butlerProxy import ButlerProxy
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.fileQueue import FileQueue
-from lsst.ctrl.oods.timeInterval import TimeInterval
+from lsst.ctrl.oods.oods_config import TimeInterval
 from lsst.ctrl.oods.utils import Utils
 
 LOGGER = logging.getLogger(__name__)
-
-DEFAULT_BATCH_SIZE = 1000
 
 
 class FileIngester(object):
@@ -47,32 +45,23 @@ class FileIngester(object):
         A butler configuration dictionary
     """
 
-    def __init__(self, mainConfig, csc=None):
+    def __init__(self, main_config, csc=None):
         self.SUCCESS = 0
         self.FAILURE = 1
-        self.config = mainConfig["ingester"]
+        self.config = main_config.file_ingester
 
-        self.image_staging_dir = self.config["imageStagingDirectory"]
-        self.batch_size = self.config.get("batchSize", None)
-        if self.batch_size is None:
-            LOGGER.info(f"configuration 'batchSize' not set, defaulting to {DEFAULT_BATCH_SIZE}")
-            self.batch_size = DEFAULT_BATCH_SIZE
+        self.image_staging_directory = self.config.image_staging_directory
+        self.batch_size = self.config.batch_size
+
         LOGGER.info(f"will ingest in groups of batchSize={self.batch_size}")
-        scanInterval = self.config["scanInterval"]
-        seconds = TimeInterval.calculateTotalSeconds(scanInterval)
+        scanInterval = self.config.new_file_scan_interval
+        seconds = TimeInterval.calculate_total_seconds(scanInterval)
 
-        self.fileQueue = FileQueue(self.image_staging_dir, seconds, csc)
+        self.fileQueue = FileQueue(self.image_staging_directory, seconds, csc)
 
-        butlerConfigs = self.config["butlers"]
-        if len(butlerConfigs) == 0:
-            raise Exception("No Butlers configured; check configuration file")
+        self.butler = ButlerProxy(main_config, csc)
 
-        self.butlers = []
-        for butlerConfig in butlerConfigs:
-            butler = ButlerProxy(butlerConfig["butler"], csc)
-            self.butlers.append(butler)
-
-        cache_config = mainConfig["cacheCleaner"]
+        cache_config = main_config.file_ingester.cache_cleaner
         self.cache_cleaner = CacheCleaner(cache_config, csc)
 
         self.tasks = []
@@ -80,7 +69,7 @@ class FileIngester(object):
 
     def getStagingDirectory(self):
         """Return the directory where the external service stages files"""
-        return self.image_staging_dir
+        return self.image_staging_directory
 
     def getButlerCleanMethods(self):
         """Return the list of all butler clean methods
@@ -92,8 +81,7 @@ class FileIngester(object):
 
         """
         methods = []
-        for butler in self.butlers:
-            methods.append(butler.clean)
+        methods.append(self.butler.clean)
         return methods
 
     def get_butler_tasks(self):
@@ -105,11 +93,8 @@ class FileIngester(object):
             A list containing each butler run_task method
         """
         tasks = []
-        for butler in self.butlers:
-            tasks.append(butler.clean_task)
-
-        for butler in self.butlers:
-            tasks.append(butler.send_status_task)
+        tasks.append(self.butler.clean_task)
+        tasks.append(self.butler.send_status_task)
 
         return tasks
 
@@ -128,7 +113,7 @@ class FileIngester(object):
         # in a subdirectory of the staging directory.  We want to retain
         #  that subdirectory name
 
-        basefile = Utils.strip_prefix(filename, self.image_staging_dir)
+        basefile = Utils.strip_prefix(filename, self.image_staging_directory)
 
         # create a new full path to where the file will be moved for the OODS
         new_file = os.path.join(dirname, basefile)
@@ -147,14 +132,12 @@ class FileIngester(object):
         specific to each butler.
         """
         files = {}
-        for butlerProxy in self.butlers:
-            files[butlerProxy] = []
+        files[self.butler] = []
         for filename in file_list:
             try:
-                for butlerProxy in self.butlers:
-                    local_staging_dir = butlerProxy.getStagingDirectory()
-                    newfile = self.move_staged_file(filename, local_staging_dir)
-                    files[butlerProxy].append(newfile)
+                local_staging_dir = self.butler.getStagingDirectory()
+                newfile = self.move_staged_file(filename, local_staging_dir)
+                files[self.butler].append(newfile)
             except Exception as e:
                 LOGGER.info("error staging files butler for %s, %s", filename, e)
                 continue
@@ -173,8 +156,7 @@ class FileIngester(object):
         # Success or failure is noted in a message description which
         # will send out via a CSC logevent.
         try:
-            for butler in self.butlers:
-                await butler.ingest(butler_file_list[butler])
+            await self.butler.ingest(butler_file_list[self.butler])
         except Exception as e:
             LOGGER.warning("Exception: %s", e)
 

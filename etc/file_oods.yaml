@@ -5,31 +5,36 @@ default_interval: &interval
     seconds: 0
 
 file_ingester:
-    image_staging_directory: data
+    image_staging_directory: /tmp/image_staging
     bad_file_directory: /tmp/bad
     staging_directory: /tmp/staging
     batch_size: 20
 
     new_file_scan_interval:
         <<: *interval
-        seconds: 10
+        seconds: 1
+
 
     butler:
-        repo_directory: repo
         instrument: lsst.obs.lsst.LsstComCam
+        repo_directory: /tmp/repo
         collections:
-            - LSSTComCam/raw/all
+            - LSSTCam/raw/all
         collection_cleaner:
             collections_to_clean:
-                - collection: LSSTComCam/raw/all
+                - collection: LSSTCam/raw/all
                   files_older_than:
                       <<: *interval
-                      seconds: 1
+                      seconds: 10
+                - collection: LSSTCam/raw/guider
+                  files_older_than:
+                      <<: *interval
+                      seconds: 10
             cleaning_interval:
                 <<: *interval
-                seconds: 1
-        
-
+                seconds: 15
+    
+    
     cache_cleaner:
         clear_empty_directories_and_old_files:
             - repo/raw
@@ -41,4 +46,7 @@ file_ingester:
             days: 30
         directories_empty_for_more_than:
             <<: *interval
-            days: 1
+            days: 2
+
+
+

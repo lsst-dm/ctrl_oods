@@ -22,6 +22,7 @@
 import asyncio
 import logging
 
+import eups
 from lsst.ts.salobj import BaseCsc, State
 
 from . import __version__
@@ -48,7 +49,6 @@ class DmCsc(BaseCsc):
 
     def __init__(self, name, initial_state):
         super().__init__(name, initial_state=initial_state)
-        LOGGER.info(f"OODS version: {self.version}")
 
         self.estimated_timeout = 5.0
 
@@ -59,6 +59,18 @@ class DmCsc(BaseCsc):
             State.OFFLINE: "offline",
             State.STANDBY: "standby",
         }
+        subsystem_versions = self.get_subsystem_versions()
+        self.evt_softwareVersions.set(cscVersion=self.version, subsystemVersions=subsystem_versions)
+        LOGGER.info(f"OODS version: {self.version}")
+        LOGGER.info(f"subsystem versions: {subsystem_versions}")
+
+    def get_subsystem_versions(self) -> str:
+        product = eups.Eups().findSetupProduct("lsst_distrib")
+        if product is None:
+            lsst_distrib_version = "lsst distrib version unknown"
+        else:
+            lsst_distrib_version = ":".join(product.tags)
+        return lsst_distrib_version
 
     async def configure(self, config):
         """Configure this CSC and output the ``settingsApplied`` event.

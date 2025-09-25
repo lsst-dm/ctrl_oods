@@ -21,11 +21,11 @@
 
 import logging
 import os
-from importlib import import_module
 
-import yaml
 from lsst.ctrl.oods.dm_csc import DmCsc
+from lsst.ctrl.oods.fileIngester import FileIngester
 from lsst.ctrl.oods.msgIngester import MsgIngester
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.ts import salobj
 
 LOGGER = logging.getLogger(__name__)
@@ -53,14 +53,11 @@ class OodsCsc(DmCsc):
         if "CTRL_OODS_CONFIG_FILE" in os.environ:
             filename = os.environ["CTRL_OODS_CONFIG_FILE"]
             LOGGER.info("using configuration %s", filename)
-            with open(filename, "r") as f:
-                self.config = yaml.safe_load(f)
+            self.config = OODSConfig.load(filename)
         else:
             raise FileNotFoundError("CTRL_OODS_CONFIG_FILE is not set")
 
         self.task_list = None
-
-        self.ingester_config = self.config["ingester"]
 
     async def send_imageInOODS(self, info):
         """Send SAL message that the images has been ingested into the OODS
@@ -103,19 +100,10 @@ class OodsCsc(DmCsc):
         self.task_list = self.ingester.run_tasks()
 
     def createIngester(self):
-        if "ingesterClass" not in self.config:
+        if self.config.ingester_config_type() == OODSConfig.FILE_INGESTER:
+            ingester = FileIngester(self.config, self)
+        else:
             ingester = MsgIngester(self.config, self)
-            return ingester
-
-        # this is a fall back, in case we want to use another
-        # ingestion type (like FileIngester)
-        classConfig = self.config["ingesterClass"]
-        importFile = classConfig["ingesterType"]
-        name = classConfig["ingesterName"]
-
-        mod = import_module(importFile)
-        ingesterClass = getattr(mod, name)
-        ingester = ingesterClass(self.config, self)
         return ingester
 
     async def stop_services(self):

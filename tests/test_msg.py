@@ -27,11 +27,11 @@ import time
 from unittest.mock import MagicMock
 
 import lsst.utils.tests
-import yaml
 from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.bucketMessage import BucketMessage
 from lsst.ctrl.oods.msgIngester import MsgIngester
 from lsst.ctrl.oods.msgQueue import MsgQueue
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.daf.butler import Butler
 
 
@@ -57,24 +57,23 @@ class S3AuxtelIngesterTestCase(HeartbeatBase):
         # create a path to the configuration file
 
         testdir = os.path.abspath(os.path.dirname(__file__))
-        configFile = os.path.join(testdir, "etc", config_name)
+        config_file = os.path.join(testdir, "etc", config_name)
 
         # load the YAML configuration
 
-        with open(configFile, "r") as f:
-            config = yaml.safe_load(f)
+        config = OODSConfig.load(config_file)
 
-        ingesterConfig = config["ingester"]
-        butlerConfig = ingesterConfig["butlers"][0]["butler"]
+        ingester_config = config.message_ingester
+        butler_config = ingester_config.butler
 
-        self.repoDir = tempfile.mkdtemp()
-        Butler.makeRepo(self.repoDir)
-        butlerConfig["repoDirectory"] = self.repoDir
+        self.repo_dir = tempfile.mkdtemp()
+        Butler.makeRepo(self.repo_dir)
+        butler_config.repo_directory = self.repo_dir
 
         return config
 
     def tearDown(self):
-        shutil.rmtree(self.repoDir, ignore_errors=True)
+        shutil.rmtree(self.repo_dir, ignore_errors=True)
 
     def returnVal(self, num_messages, timeout):
         if self.attempts == 0:

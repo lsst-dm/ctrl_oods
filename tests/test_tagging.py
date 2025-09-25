@@ -27,10 +27,10 @@ from pathlib import PurePath
 from shutil import copyfile
 
 import lsst.utils.tests
-import yaml
 from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.daf.butler import Butler
 from lsst.daf.butler.registry import CollectionType
 
@@ -93,58 +93,56 @@ class TaggingTestCase(HeartbeatBase):
 
         # create a path to the configuration file
 
-        testdir = os.path.abspath(os.path.dirname(__file__))
-        config_file = os.path.join(testdir, "etc", config_name)
+        test_dir = os.path.abspath(os.path.dirname(__file__))
+        config_file = os.path.join(test_dir, "etc", config_name)
 
         # path to the FITS file to ingest
 
-        fitsFile = os.path.join(testdir, "data", fits_name)
+        fits_file = os.path.join(test_dir, "data", fits_name)
 
         # load the YAML configuration
 
-        with open(config_file, "r") as f:
-            self.config = yaml.safe_load(f)
+        self.config = OODSConfig.load(config_file)
 
         # extract parts of the ingester configuration
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = self.config["ingester"]
-        self.imageStagingDir = tempfile.mkdtemp()
-        ingesterConfig["imageStagingDirectory"] = self.imageStagingDir
+        ingester_config = self.config.file_ingester
+        self.image_staging_dir = tempfile.mkdtemp()
+        ingester_config.image_staging_directory = self.image_staging_dir
 
-        self.badDir = tempfile.mkdtemp()
-        butlerConfig = ingesterConfig["butlers"][0]["butler"]
-        butlerConfig["badFileDirectory"] = self.badDir
-        self.stagingDirectory = tempfile.mkdtemp()
-        butlerConfig["stagingDirectory"] = self.stagingDirectory
+        self.bad_dir = tempfile.mkdtemp()
+        butler_config = ingester_config.butler
+        ingester_config.bad_file_directory = self.bad_dir
+        self.staging_directory = tempfile.mkdtemp()
+        ingester_config.staging_directory = self.staging_directory
 
-        self.repoDir = tempfile.mkdtemp()
-        Butler.makeRepo(self.repoDir)
-        butlerConfig["repoDirectory"] = self.repoDir
+        self.repo_dir = tempfile.mkdtemp()
+        Butler.makeRepo(self.repo_dir)
+        butler_config.repo_directory = self.repo_dir
 
-        self.collections = butlerConfig["collections"]
+        self.collections = butler_config.collections
 
         # copy the FITS file to it's test location
 
-        subDir = tempfile.mkdtemp(dir=self.imageStagingDir)
-        self.destFile = os.path.join(subDir, fits_name)
-        copyfile(fitsFile, self.destFile)
+        subDir = tempfile.mkdtemp(dir=self.image_staging_dir)
+        self.dest_file = os.path.join(subDir, fits_name)
+        copyfile(fits_file, self.dest_file)
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = self.config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         # check to see that the file is there before ingestion
-        self.assertTrue(os.path.exists(self.destFile))
+        self.assertTrue(os.path.exists(self.dest_file))
 
         # stage the files
         ingester = FileIngester(self.config)
-        staged_files = ingester.stageFiles([self.destFile])
+        staged_files = ingester.stageFiles([self.dest_file])
         await ingester.ingest(staged_files)
 
         # make sure staging area is now empty
@@ -156,12 +154,12 @@ class TaggingTestCase(HeartbeatBase):
         # moved to the OODS staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = self.strip_prefix(self.destFile, self.imageStagingDir)
-        staged_file = os.path.join(self.stagingDirectory, name)
+        name = self.strip_prefix(self.dest_file, self.image_staging_dir)
+        staged_file = os.path.join(self.staging_directory, name)
         self.assertTrue(os.path.exists(staged_file))
 
         # this file should now not exist
-        self.assertFalse(os.path.exists(self.destFile))
+        self.assertFalse(os.path.exists(self.dest_file))
 
         return staged_file
 
@@ -197,7 +195,7 @@ class TaggingTestCase(HeartbeatBase):
 
         # now that the file has been ingested, create a butler
         # and tag the file
-        butler = Butler(self.repoDir, writeable=True)
+        butler = Butler(self.repo_dir, writeable=True)
 
         # register the new collection
         butler.registry.registerCollection("test_collection", CollectionType.TAGGED)
@@ -231,7 +229,7 @@ class TaggingTestCase(HeartbeatBase):
         await asyncio.sleep(5)
         logging.info("about to disassociate file")
         # create a butler and remove the file from the TAGGED collecdtion
-        butler = Butler(self.repoDir, writeable=True)
+        butler = Butler(self.repo_dir, writeable=True)
 
         results = set(
             butler.registry.queryDatasets(

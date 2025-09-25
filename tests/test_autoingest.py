@@ -25,10 +25,10 @@ import shutil
 import tempfile
 
 import lsst.utils.tests
-import yaml
 from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler
 
@@ -55,7 +55,7 @@ class AutoIngestTestCase(HeartbeatBase):
         # create a path to the configuration file
 
         testdir = os.path.abspath(os.path.dirname(__file__))
-        configFile = os.path.join(testdir, "etc", config_name)
+        config_file = os.path.join(testdir, "etc", config_name)
 
         # path to the FITS file to ingest
 
@@ -63,43 +63,42 @@ class AutoIngestTestCase(HeartbeatBase):
 
         # load the YAML configuration
 
-        with open(configFile, "r") as f:
-            config = yaml.safe_load(f)
+        config = OODSConfig.load(config_file)
 
         # extract parts of the ingester configuration
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = config["ingester"]
-        self.imageDir = tempfile.mkdtemp()
-        ingesterConfig["imageStagingDirectory"] = self.imageDir
+        ingester_config = config.file_ingester
+        self.image_dir = tempfile.mkdtemp()
+        ingester_config.image_staging_directory = self.image_dir
 
-        self.badDir = tempfile.mkdtemp()
-        butlerConfig = ingesterConfig["butlers"][0]["butler"]
-        butlerConfig["badFileDirectory"] = self.badDir
-        self.stagingDir = tempfile.mkdtemp()
-        butlerConfig["stagingDirectory"] = self.stagingDir
+        self.bad_dir = tempfile.mkdtemp()
+        butler_config = ingester_config.butler
+        ingester_config.bad_file_directory = self.bad_dir
+        self.staging_dir = tempfile.mkdtemp()
+        ingester_config.staging_directory = self.staging_dir
 
-        self.repoDir = tempfile.mkdtemp()
-        Butler.makeRepo(self.repoDir)
+        self.repo_dir = tempfile.mkdtemp()
+        Butler.makeRepo(self.repo_dir)
 
-        butlerConfig["repoDirectory"] = self.repoDir
+        butler_config.repo_directory = self.repo_dir
 
         # copy the FITS file to it's test location
 
-        self.subDir = tempfile.mkdtemp(dir=self.imageDir)
-        self.destFile = os.path.join(self.subDir, fits_name)
-        shutil.copyfile(fitsFile, self.destFile)
+        self.sub_dir = tempfile.mkdtemp(dir=self.image_dir)
+        self.dest_file = os.path.join(self.sub_dir, fits_name)
+        shutil.copyfile(fitsFile, self.dest_file)
 
         return config
 
     def tearDown(self):
         """Remove directories created by createConfig"""
-        shutil.rmtree(self.imageDir, ignore_errors=True)
-        shutil.rmtree(self.badDir, ignore_errors=True)
-        shutil.rmtree(self.stagingDir, ignore_errors=True)
-        shutil.rmtree(self.repoDir, ignore_errors=True)
-        shutil.rmtree(self.subDir, ignore_errors=True)
+        shutil.rmtree(self.image_dir, ignore_errors=True)
+        shutil.rmtree(self.bad_dir, ignore_errors=True)
+        shutil.rmtree(self.staging_dir, ignore_errors=True)
+        shutil.rmtree(self.repo_dir, ignore_errors=True)
+        shutil.rmtree(self.sub_dir, ignore_errors=True)
 
     async def testAuxTelIngest(self):
         """test ingesting an auxtel file"""
@@ -109,8 +108,8 @@ class AutoIngestTestCase(HeartbeatBase):
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        ingester_config = config.file_ingester
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
@@ -118,7 +117,7 @@ class AutoIngestTestCase(HeartbeatBase):
         # create a FileIngester
         ingester = FileIngester(config)
 
-        staged_files = ingester.stageFiles([self.destFile])
+        staged_files = ingester.stageFiles([self.dest_file])
         await ingester.ingest(staged_files)
 
         # check to make sure file was moved from image staging directory
@@ -126,7 +125,7 @@ class AutoIngestTestCase(HeartbeatBase):
         self.assertEqual(len(files), 0)
 
         # check to be sure the file didn't land in the "bad file" directory
-        bad_path = os.path.join(self.badDir, fits_name)
+        bad_path = os.path.join(self.bad_dir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
     async def testComCamIngest(self):
@@ -136,8 +135,8 @@ class AutoIngestTestCase(HeartbeatBase):
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        ingester_config = config.file_ingester
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
@@ -147,9 +146,9 @@ class AutoIngestTestCase(HeartbeatBase):
         ingester = FileIngester(config)
 
         # check to see that the file is there before ingestion
-        self.assertTrue(os.path.exists(self.destFile))
+        self.assertTrue(os.path.exists(self.dest_file))
 
-        staged_files = ingester.stageFiles([self.destFile])
+        staged_files = ingester.stageFiles([self.dest_file])
         await ingester.ingest(staged_files)
 
         # make sure image staging area is now empty
@@ -161,12 +160,12 @@ class AutoIngestTestCase(HeartbeatBase):
         # moved to the butler staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = Utils.strip_prefix(self.destFile, self.imageDir)
-        file_to_ingest = os.path.join(self.stagingDir, name)
+        name = Utils.strip_prefix(self.dest_file, self.image_dir)
+        file_to_ingest = os.path.join(self.staging_dir, name)
         self.assertTrue(os.path.exists(file_to_ingest))
 
         # this file should now not exist
-        self.assertFalse(os.path.exists(self.destFile))
+        self.assertFalse(os.path.exists(self.dest_file))
 
         await asyncio.sleep(1)
         clean_methods = ingester.getButlerCleanMethods()
@@ -180,7 +179,7 @@ class AutoIngestTestCase(HeartbeatBase):
 
         # check to be sure that the file wasn't "bad" (and
         # therefore, not ingested)
-        bad_path = os.path.join(self.badDir, fits_name)
+        bad_path = os.path.join(self.bad_dir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
     async def testBadIngest(self):
@@ -189,22 +188,22 @@ class AutoIngestTestCase(HeartbeatBase):
         config = self.createConfig("ingest_comcam_gen3.yaml", fits_name)
 
         # setup directory to scan for files in the image staging directory
-        ingesterConfig = config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        ingester_config = config.file_ingester
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         ingester = FileIngester(config)
 
-        staged_files = ingester.stageFiles([self.destFile])
+        staged_files = ingester.stageFiles([self.dest_file])
         await ingester.ingest(staged_files)
         await asyncio.sleep(0)  # appease coverage
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        name = Utils.strip_prefix(self.destFile, image_staging_dir)
-        bad_path = os.path.join(self.badDir, name)
+        name = Utils.strip_prefix(self.dest_file, image_staging_dir)
+        bad_path = os.path.join(self.bad_dir, name)
         self.assertTrue(os.path.exists(bad_path))
 
     async def testRepoExists(self):

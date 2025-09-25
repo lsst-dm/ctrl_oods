@@ -21,7 +21,6 @@
 
 
 import asyncio
-import collections
 import logging
 import os
 import os.path
@@ -30,7 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 import astropy.units as u
 from astropy.time import Time, TimeDelta
 from lsst.ctrl.oods.imageData import ImageData
-from lsst.ctrl.oods.timeInterval import TimeInterval
+from lsst.ctrl.oods.oods_config import TimeInterval
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler, CollectionType
 from lsst.obs.base import DefineVisitsTask
@@ -48,20 +47,22 @@ class ButlerAttendant:
     SUCCESS = 0
     FAILURE = 1
 
-    def __init__(self, config, csc=None):
+    def __init__(self, butler_config, csc=None):
         self.csc = csc
-        self.config = config
 
         self.status_queue = asyncio.Queue()
-        repo = self.config["repoDirectory"]
-        self.instrument = self.config["instrument"]
-        self.scanInterval = self.config["scanInterval"]
-        self.collections = self.config["collections"]
-        self.cleanCollections = self.config.get("cleanCollections")
-        self.s3profile = self.config.get("s3profile", None)
+        collection_cleaner_config = butler_config.collection_cleaner
+        self.butler_repo = butler_config.repo_directory
+        self.instrument = butler_config.instrument
+        self.scanInterval = collection_cleaner_config.cleaning_interval
+        self.collections = butler_config.collections
+        self.cleanCollections = collection_cleaner_config.collections_to_clean
+        if hasattr(butler_config, "s3profile"):
+            self.s3profile = butler_config.s3profile
+        else:
+            self.s3profile = None
 
-        LOGGER.info(f"Using Butler repo located at {repo}")
-        self.butlerConfig = repo
+        LOGGER.info(f"Using Butler repo located at {self.butler_repo}")
 
         try:
             self.butler = self.createButler()
@@ -93,7 +94,7 @@ class ButlerAttendant:
         instr = Instrument.from_string(self.instrument)
         run = instr.makeDefaultRawIngestRunName()
         opts = dict(run=run, writeable=True, collections=self.collections)
-        butler = Butler(self.butlerConfig, **opts)
+        butler = Butler(self.butler_repo, **opts)
         # Register an instrument.
         instr.register(butler.registry)
 
@@ -191,7 +192,7 @@ class ButlerAttendant:
         """
         for dataset in datasets:
             image_data = ImageData(dataset)
-            self.transmit_status(image_data.get_info(), code=0, description="guider file ingested")
+            self.transmit_status(image_data.get_info(), code=0, description="file ingested")
             LOGGER.debug("removing %s from guider list after successful ingestion", dataset.path)
             self.guiders.remove(dataset.path)
 
@@ -224,7 +225,7 @@ class ButlerAttendant:
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
-                LOGGER.info("about to ingest guiders")
+                LOGGER.debug("about to ingest guiders")
                 await loop.run_in_executor(executor, self._ingest_saved_guiders, self.guiders)
                 LOGGER.info("done with guider ingest")
             except RuntimeError as re:
@@ -253,7 +254,7 @@ class ButlerAttendant:
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
-                LOGGER.info("about to ingest")
+                LOGGER.debug("about to ingest")
                 await loop.run_in_executor(executor, self.task.run, file_list)
                 LOGGER.info("done with ingest")
             except RuntimeError as re:
@@ -359,7 +360,7 @@ class ButlerAttendant:
 
     async def clean_task(self):
         """run the clean() method at the configured interval"""
-        seconds = TimeInterval.calculateTotalSeconds(self.scanInterval)
+        seconds = TimeInterval.calculate_total_seconds(self.scanInterval)
         LOGGER.info("clean_task created!")
         while True:
             LOGGER.debug("cleaning")
@@ -372,8 +373,8 @@ class ButlerAttendant:
         were ingested before the configured time interval
         """
         for entry in self.cleanCollections:
-            collection = entry["collection"]
-            olderThan = entry["filesOlderThan"]
+            collection = entry.collection
+            olderThan = entry.files_older_than
             loop = asyncio.get_event_loop()
             try:
                 with ThreadPoolExecutor() as executor:
@@ -394,7 +395,7 @@ class ButlerAttendant:
             except Exception as e:
                 LOGGER.info(f"{e=}")
 
-    def cleanCollection(self, collection, olderThan):
+    def cleanCollection(self, collection, older_than):
         """Remove all the datasets in the butler that
         were ingested before the configured Interval
 
@@ -409,13 +410,13 @@ class ButlerAttendant:
         # calculate the time value which is Time.now - the
         # "olderThan" configuration
         t = Time.now()
-        interval = collections.namedtuple("Interval", olderThan.keys())(*olderThan.values())
+        interval = older_than
         td = TimeDelta(
             interval.days * u.d + interval.hours * u.h + interval.minutes * u.min + interval.seconds * u.s
         )
         t = t - td
 
-        LOGGER.info("cleaning collections")
+        LOGGER.debug("cleaning collections")
         LOGGER.debug("about to createButler()")
         butler = self.createButler()
 
@@ -479,7 +480,7 @@ class ButlerAttendant:
         LOGGER.debug("about to run pruneDatasets")
         butler.pruneDatasets(ref, purge=True, unstore=True)
         LOGGER.debug("done running pruneDatasets")
-        LOGGER.info("done cleaning collections")
+        LOGGER.debug("done cleaning collections")
 
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary

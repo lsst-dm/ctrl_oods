@@ -25,10 +25,10 @@ import shutil
 import tempfile
 
 import lsst.utils.tests
-import yaml
 from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
 from lsst.ctrl.oods.fileIngester import FileIngester
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.ctrl.oods.utils import Utils
 from lsst.daf.butler import Butler
 
@@ -53,34 +53,33 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
         # create a path to the configuration file
 
         testdir = os.path.abspath(os.path.dirname(__file__))
-        configFile = os.path.join(testdir, "etc", config_name)
+        config_file = os.path.join(testdir, "etc", config_name)
 
         # load the YAML configuration
 
-        with open(configFile, "r") as f:
-            config = yaml.safe_load(f)
+        config = OODSConfig.load(config_file)
 
         # extract parts of the ingester configuration
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = config["ingester"]
-        self.imageStagingDir = tempfile.mkdtemp()
-        ingesterConfig["imageStagingDirectory"] = self.imageStagingDir
+        ingester_config = config.file_ingester
+        self.image_staging_dir = tempfile.mkdtemp()
+        ingester_config.image_staging_directory = self.image_staging_dir
 
-        self.badDir = tempfile.mkdtemp()
-        butlerConfig = ingesterConfig["butlers"][0]["butler"]
-        butlerConfig["badFileDirectory"] = self.badDir
-        self.stagingDirectory = tempfile.mkdtemp()
-        butlerConfig["stagingDirectory"] = self.stagingDirectory
+        self.bad_dir = tempfile.mkdtemp()
+        butler_config = ingester_config.butler
+        ingester_config.bad_file_directory = self.bad_dir
+        self.staging_directory = tempfile.mkdtemp()
+        ingester_config.staging_directory = self.staging_directory
 
         self.repoDir = tempfile.mkdtemp()
         Butler.makeRepo(self.repoDir)
-        butlerConfig["repoDirectory"] = self.repoDir
+        butler_config.repo_directory = self.repoDir
 
         # copy the FITS file to it's test location
 
-        self.subDir = tempfile.mkdtemp(dir=self.imageStagingDir)
+        self.sub_dir = tempfile.mkdtemp(dir=self.image_staging_dir)
 
         return config
 
@@ -99,24 +98,38 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
         shutil.copyfile(fitsFile, destFile)
         return destFile
 
+    def setUp(self):
+        self.dest_file = None
+        self.image_staging_dir = None
+        self.bad_dir = None
+        self.staging_directory = None
+        self.repoDir = None
+        self.sub_dir = None
+
     def tearDown(self):
-        shutil.rmtree(self.destFile, ignore_errors=True)
-        shutil.rmtree(self.imageStagingDir, ignore_errors=True)
-        shutil.rmtree(self.badDir, ignore_errors=True)
-        shutil.rmtree(self.stagingDirectory, ignore_errors=True)
-        shutil.rmtree(self.repoDir, ignore_errors=True)
-        shutil.rmtree(self.subDir, ignore_errors=True)
+        if self.dest_file:
+            shutil.rmtree(self.dest_file, ignore_errors=True)
+        if self.image_staging_dir:
+            shutil.rmtree(self.image_staging_dir, ignore_errors=True)
+        if self.bad_dir:
+            shutil.rmtree(self.bad_dir, ignore_errors=True)
+        if self.staging_directory:
+            shutil.rmtree(self.staging_directory, ignore_errors=True)
+        if self.repoDir:
+            shutil.rmtree(self.repoDir, ignore_errors=True)
+        if self.sub_dir:
+            shutil.rmtree(self.sub_dir, ignore_errors=True)
 
     async def testAuxTelIngest(self):
         """test ingesting an auxtel file"""
         fits_name = "2020032700020-det000.fits.fz"
         config = self.createConfig("ingest_auxtel_gen3.yaml")
-        self.destFile = self.placeFitsFile(self.subDir, fits_name)
+        self.dest_file = self.placeFitsFile(self.sub_dir, fits_name)
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        ingester_config = config.file_ingester
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
@@ -124,7 +137,7 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
         # create a FileIngester
         ingester = FileIngester(config)
 
-        staged_files = ingester.stageFiles([self.destFile])
+        staged_files = ingester.stageFiles([self.dest_file])
         await ingester.ingest(staged_files)
 
         # check to make sure the file was moved from the staging directory
@@ -132,18 +145,18 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
         self.assertEqual(len(files), 0)
 
         # check to be sure the file didn't land in the "bad file" directory
-        bad_path = os.path.join(self.badDir, fits_name)
+        bad_path = os.path.join(self.bad_dir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
     async def testComCamIngest(self):
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml")
-        self.destFile = self.placeFitsFile(self.subDir, fits_name)
+        self.dest_file = self.placeFitsFile(self.sub_dir, fits_name)
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        ingester_config = config.file_ingester
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
@@ -152,9 +165,9 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
         # create the tasks
         ingester = FileIngester(config)
         # check to see that the file is there before ingestion
-        self.assertTrue(os.path.exists(self.destFile))
+        self.assertTrue(os.path.exists(self.dest_file))
 
-        staged_files = ingester.stageFiles([self.destFile])
+        staged_files = ingester.stageFiles([self.dest_file])
         await ingester.ingest(staged_files)
 
         # make sure staging area is now empty
@@ -166,12 +179,12 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
         # moved to the OODS staging area before ingestion. On "direct"
         # ingestion, this is where the file is located.  This is a check
         # to be sure that happened.
-        name = Utils.strip_prefix(self.destFile, self.imageStagingDir)
-        file_to_ingest = os.path.join(self.stagingDirectory, name)
+        name = Utils.strip_prefix(self.dest_file, self.image_staging_dir)
+        file_to_ingest = os.path.join(self.staging_directory, name)
         self.assertTrue(os.path.exists(file_to_ingest))
 
         # this file should now not exist
-        self.assertFalse(os.path.exists(self.destFile))
+        self.assertFalse(os.path.exists(self.dest_file))
 
         await asyncio.sleep(1)
         await self.perform_clean(config)
@@ -185,20 +198,20 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
 
         # check to be sure that the file wasn't "bad" (and
         # therefore, not ingested)
-        bad_path = os.path.join(self.badDir, fits_name)
+        bad_path = os.path.join(self.bad_dir, fits_name)
         self.assertFalse(os.path.exists(bad_path))
 
     async def testCleanTask(self):
         fits_name = "2020032700020-det000.fits.fz"
         fits_name2 = "AT_O_20221122_000951_R00_S00.fits.fz"
         config = self.createConfig("ingest_auxtel_clean.yaml")
-        self.destFile = self.placeFitsFile(self.subDir, fits_name)
-        self.destFile2 = self.placeFitsFile(self.subDir, fits_name2)
+        self.dest_file = self.placeFitsFile(self.sub_dir, fits_name)
+        self.dest_file2 = self.placeFitsFile(self.sub_dir, fits_name2)
 
         # setup directory to scan for files in the image staging directory
         # and ensure one file is there
-        ingesterConfig = config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        ingester_config = config.file_ingester
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 2)
@@ -208,10 +221,10 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
         ingester = FileIngester(config)
 
         # check to see that the file is there before ingestion
-        self.assertTrue(os.path.exists(self.destFile))
-        self.assertTrue(os.path.exists(self.destFile2))
+        self.assertTrue(os.path.exists(self.dest_file))
+        self.assertTrue(os.path.exists(self.dest_file2))
 
-        staged_files = ingester.stageFiles([self.destFile, self.destFile2])
+        staged_files = ingester.stageFiles([self.dest_file, self.dest_file2])
         await ingester.ingest(staged_files)
 
         # make sure staging area is now empty
@@ -250,18 +263,18 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
     async def testBadIngest(self):
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml")
-        self.destFile = self.placeFitsFile(self.subDir, fits_name)
+        self.dest_file = self.placeFitsFile(self.sub_dir, fits_name)
 
         # setup directory to scan for files in the image staging directory
-        ingesterConfig = config["ingester"]
-        image_staging_dir = ingesterConfig["imageStagingDirectory"]
+        ingester_config = config.file_ingester
+        image_staging_dir = ingester_config.image_staging_directory
         scanner = DirectoryScanner([image_staging_dir])
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 1)
 
         ingester = FileIngester(config)
 
-        staged_files = ingester.stageFiles([self.destFile])
+        staged_files = ingester.stageFiles([self.dest_file])
         print(f"{staged_files=}")
         print(f"{ingester=}")
 
@@ -270,14 +283,14 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
         files = await scanner.getAllFiles()
         self.assertEqual(len(files), 0)
 
-        name = Utils.strip_prefix(self.destFile, image_staging_dir)
-        bad_path = os.path.join(self.badDir, name)
+        name = Utils.strip_prefix(self.dest_file, image_staging_dir)
+        bad_path = os.path.join(self.bad_dir, name)
         self.assertTrue(os.path.exists(bad_path))
 
     async def testRepoExists(self):
         fits_name = "bad.fits.fz"
         config = self.createConfig("ingest_comcam_gen3.yaml")
-        self.destFile = self.placeFitsFile(self.subDir, fits_name)
+        self.dest_file = self.placeFitsFile(self.sub_dir, fits_name)
 
         FileIngester(config)
 

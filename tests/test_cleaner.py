@@ -27,6 +27,7 @@ import lsst.utils.tests
 from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.cacheCleaner import CacheCleaner
 from lsst.ctrl.oods.directoryScanner import DirectoryScanner
+from lsst.ctrl.oods.oods_config import OODSConfig, TimeInterval
 
 
 class CleanerTestCase(HeartbeatBase):
@@ -34,35 +35,37 @@ class CleanerTestCase(HeartbeatBase):
 
     async def testFileCleaner(self):
         # create a temporary directory that looks like the cache
-        dirPath = tempfile.mkdtemp()
+        dir_path = tempfile.mkdtemp()
+        test_dir = os.path.abspath(os.path.dirname(__file__))
+        config = OODSConfig.load(os.path.join(test_dir, "etc", "cleaner.yaml"))
 
-        config = {}
-        config["clearEmptyDirectoriesAndOldFiles"] = [dirPath]
+        cc_config = config.file_ingester.cache_cleaner
+        cc_config.clear_empty_directories_and_old_files = [dir_path]
 
-        interval = {}
-        interval["days"] = 1
-        interval["minutes"] = 0
-        interval["hours"] = 0
-        interval["seconds"] = 0
+        interval = TimeInterval()
+        interval.days = 1
+        interval.minutes = 0
+        interval.hours = 0
+        interval.seconds = 0
 
-        scanInterval = {}
-        scanInterval["days"] = 0
-        scanInterval["minutes"] = 0
-        scanInterval["hours"] = 0
-        scanInterval["seconds"] = 3
+        scan_interval = TimeInterval()
+        scan_interval.days = 0
+        scan_interval.minutes = 0
+        scan_interval.hours = 0
+        scan_interval.seconds = 3
 
-        config["filesOlderThan"] = interval
-        config["directoriesEmptyForMoreThan"] = interval
-        config["scanInterval"] = scanInterval
+        cc_config.files_older_than = interval
+        cc_config.directories_empty_for_more_than = interval
+        cc_config.cleaning_interval = scan_interval
 
         # put some files into it
-        (fh1, filename1) = tempfile.mkstemp(dir=dirPath)
-        (fh2, filename2) = tempfile.mkstemp(dir=dirPath)
-        (fh3, filename3) = tempfile.mkstemp(dir=dirPath)
+        (fh1, filename1) = tempfile.mkstemp(dir=dir_path)
+        (fh2, filename2) = tempfile.mkstemp(dir=dir_path)
+        (fh3, filename3) = tempfile.mkstemp(dir=dir_path)
 
         # create a DirectoryScanner so we can keep tabs on the files
         # we put into the temp directory
-        scanner = DirectoryScanner([dirPath])
+        scanner = DirectoryScanner([dir_path])
         files = await scanner.getAllFiles()
 
         # check to make sure we have the files in there that we
@@ -70,7 +73,7 @@ class CleanerTestCase(HeartbeatBase):
         self.assertEqual(len(files), 3)
 
         # run the cleaner once
-        cleaner = CacheCleaner(config)
+        cleaner = CacheCleaner(cc_config)
         await cleaner.clean()
 
         # get the list of files
@@ -101,42 +104,45 @@ class CleanerTestCase(HeartbeatBase):
         self.assertEqual(len(files), 0)
 
         # remove the temporary directory we created
-        os.rmdir(dirPath)
+        os.rmdir(dir_path)
 
     async def testDirectoryCleaner(self):
         # create a temporary directory that looks like the cache
-        dirPath = tempfile.mkdtemp()
+        dir_path = tempfile.mkdtemp()
 
-        config = {}
-        config["clearEmptyDirectoriesAndOldFiles"] = [dirPath]
+        test_dir = os.path.abspath(os.path.dirname(__file__))
+        config = OODSConfig.load(os.path.join(test_dir, "etc", "cleaner.yaml"))
 
-        interval = {}
-        interval["days"] = 1
-        interval["hours"] = 0
-        interval["minutes"] = 0
-        interval["seconds"] = 0
+        cc_config = config.file_ingester.cache_cleaner
+        cc_config.clear_empty_directories_and_old_files = [dir_path]
 
-        scanInterval = {}
-        scanInterval["days"] = 0
-        scanInterval["minutes"] = 0
-        scanInterval["hours"] = 0
-        scanInterval["seconds"] = 3
+        interval = TimeInterval()
+        interval.days = 1
+        interval.hours = 0
+        interval.minutes = 0
+        interval.seconds = 0
 
-        config["filesOlderThan"] = interval
-        config["directoriesEmptyForMoreThan"] = interval
-        config["scanInterval"] = scanInterval
+        scan_interval = TimeInterval()
+        scan_interval.days = 0
+        scan_interval.minutes = 0
+        scan_interval.hours = 0
+        scan_interval.seconds = 3
+
+        cc_config.files_older_than = interval
+        cc_config.directories_empty_for_more_than = interval
+        cc_config.cleaning_interval = scan_interval
 
         # put some directories into it
-        dirname1 = tempfile.mkdtemp(dir=dirPath)
-        dirname2 = tempfile.mkdtemp(dir=dirPath)
-        dirname3 = tempfile.mkdtemp(dir=dirPath)
+        dirname1 = tempfile.mkdtemp(dir=dir_path)
+        dirname2 = tempfile.mkdtemp(dir=dir_path)
+        dirname3 = tempfile.mkdtemp(dir=dir_path)
 
         # ... and one file into dirname1, and one in the main directory
         (fh1, filename1) = tempfile.mkstemp(dir=dirname1)
-        (fh2, filename2) = tempfile.mkstemp(dir=dirPath)
+        (fh2, filename2) = tempfile.mkstemp(dir=dir_path)
 
         # run the cleaner once
-        cleaner = CacheCleaner(config)
+        cleaner = CacheCleaner(cc_config)
         await cleaner.clean()
 
         # check to see if all the directories are still there
@@ -205,7 +211,7 @@ class CleanerTestCase(HeartbeatBase):
         os.close(fh1)
         os.close(fh2)
         # remove the temporary directory we created
-        os.rmdir(dirPath)
+        os.rmdir(dir_path)
 
     def changeModificationDate(self, filename):
         # change the modification time of the file/dir to Jan 2, 2018 03:04:05

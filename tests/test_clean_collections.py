@@ -24,8 +24,8 @@ import shutil
 import tempfile
 
 import lsst.utils.tests
-import yaml
 from heartbeat_base import HeartbeatBase
+from lsst.ctrl.oods.oods_config import OODSConfig
 from lsst.daf.butler import Butler, CollectionType
 from lsst.daf.butler.tests import MetricsExample, addDataIdValue, addDatasetType, registerMetricsExample
 
@@ -42,33 +42,32 @@ class CleanCollectionsTestCase(HeartbeatBase):
         # create a path to the configuration file
 
         testdir = os.path.abspath(os.path.dirname(__file__))
-        configFile = os.path.join(testdir, "etc", config_name)
+        config_file = os.path.join(testdir, "etc", config_name)
 
         # load the YAML configuration
 
-        with open(configFile, "r") as f:
-            self.config = yaml.safe_load(f)
+        self.config = OODSConfig.load(config_file)
 
         # extract parts of the ingester configuration
         # and alter the image staging directory to point
         # at the temporary directories created for his test
 
-        ingesterConfig = self.config["ingester"]
-        self.imageDir = tempfile.mkdtemp()
-        ingesterConfig["imageStagingDirectory"] = self.imageDir
+        ingester_config = self.config.file_ingester
+        self.image_dir = tempfile.mkdtemp()
+        ingester_config.image_staging_directory = self.image_dir
 
-        self.badDir = tempfile.mkdtemp()
-        butlerConfig = ingesterConfig["butlers"][0]["butler"]
-        butlerConfig["badFileDirectory"] = self.badDir
+        self.bad_dir = tempfile.mkdtemp()
+        butler_config = ingester_config.butler
+        ingester_config.bad_file_directory = self.bad_dir
         self.stagingDir = tempfile.mkdtemp()
-        butlerConfig["stagingDirectory"] = self.stagingDir
+        ingester_config.staging_directory = self.stagingDir
 
-        self.repoDir = tempfile.mkdtemp()
-        Butler.makeRepo(self.repoDir)
+        self.repo_dir = tempfile.mkdtemp()
+        Butler.makeRepo(self.repo_dir)
 
-        butlerConfig["repoDirectory"] = self.repoDir
+        butler_config.repo_directory = self.repo_dir
 
-        self.clean_collections = butlerConfig["cleanCollections"]
+        self.clean_collections = butler_config.collection_cleaner.collections_to_clean
         print(f"{self.clean_collections=}")
 
         # Define the run collection
@@ -78,7 +77,7 @@ class CleanCollectionsTestCase(HeartbeatBase):
 
         # Initialize the Butler
         opts = dict(writeable=True)
-        self.butler = Butler(self.repoDir, **opts)
+        self.butler = Butler(self.repo_dir, **opts)
 
         self.butler.registry.registerCollection(run_a, CollectionType.RUN)
         self.butler.registry.registerCollection(run_b, CollectionType.RUN)
@@ -101,7 +100,7 @@ class CleanCollectionsTestCase(HeartbeatBase):
 
     def tearDown(self):
         """Remove butler repo directory"""
-        shutil.rmtree(self.repoDir, ignore_errors=True)
+        shutil.rmtree(self.repo_dir, ignore_errors=True)
 
     def number_of_datasets(self):
         """count the number of files in the butler
@@ -126,15 +125,15 @@ class CleanCollectionsTestCase(HeartbeatBase):
             number of seconds after which files will reaped
         """
         for entry in self.clean_collections:
-            collection = entry["collection"]
+            collection = entry.collection
             if collection == name:
-                entry["filesOlderThan"]["days"] = 0
-                entry["filesOlderThan"]["hours"] = 0
-                entry["filesOlderThan"]["minutes"] = 0
-                entry["filesOlderThan"]["seconds"] = seconds
+                entry.files_older_than.days = 0
+                entry.files_older_than.hours = 0
+                entry.files_older_than.minutes = 0
+                entry.files_older_than.seconds = seconds
                 return
 
-    async def testCleanTask(self):
+    async def testCleanCask(self):
         """test clean collections operations"""
 
         # ensure two files are registered on setUp

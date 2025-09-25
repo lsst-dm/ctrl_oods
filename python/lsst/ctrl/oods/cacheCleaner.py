@@ -23,8 +23,8 @@ import logging
 import os
 import time
 
+from lsst.ctrl.oods.oods_config import TimeInterval
 from lsst.ctrl.oods.scanner import Scanner
-from lsst.ctrl.oods.timeInterval import TimeInterval
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,14 +41,12 @@ class CacheCleaner(object):
     def __init__(self, config, csc=None):
         self.config = config
         self.csc = csc
-        self.files_and_directories = self.config["clearEmptyDirectoriesAndOldFiles"]
+        self.files_and_directories = self.config.clear_empty_directories_and_old_files
         self.only_empty_directories = []
-        if "clearEmptyDirectories" in self.config:
-            self.only_empty_directories = self.config["clearEmptyDirectories"]
-        self.fileInterval = self.config["filesOlderThan"]
-        self.emptyDirsInterval = self.config["directoriesEmptyForMoreThan"]
-        scanInterval = self.config["scanInterval"]
-        self.seconds = TimeInterval.calculateTotalSeconds(scanInterval)
+        self.fileInterval = self.config.files_older_than
+        self.emptyDirsInterval = self.config.directories_empty_for_more_than
+        scanInterval = self.config.cleaning_interval
+        self.seconds = TimeInterval.calculate_total_seconds(scanInterval)
         self.terminate = False
 
     async def run_tasks(self):
@@ -83,7 +81,7 @@ class CacheCleaner(object):
         now = time.time()
 
         # remove old files
-        seconds = TimeInterval.calculateTotalSeconds(self.fileInterval)
+        seconds = TimeInterval.calculate_total_seconds(self.fileInterval)
         seconds = now - seconds
 
         files = await self.getAllFilesOlderThan(seconds, self.files_and_directories)
@@ -96,7 +94,7 @@ class CacheCleaner(object):
                 LOGGER.info("Couldn't remove %s: %s", name, e)
 
         # remove empty directories
-        seconds = TimeInterval.calculateTotalSeconds(self.emptyDirsInterval)
+        seconds = TimeInterval.calculate_total_seconds(self.emptyDirsInterval)
         seconds = now - seconds
 
         await self.clearEmptyDirectories(seconds, self.files_and_directories)
