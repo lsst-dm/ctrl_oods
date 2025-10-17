@@ -11,7 +11,7 @@ message_ingester:
         topics: 
             - atoods
         group_id: ATOODS
-        max_messages: 10
+        max_messages: 250
     butler:
         repo_directory : /tmp/repo
         s3profile: testprofile

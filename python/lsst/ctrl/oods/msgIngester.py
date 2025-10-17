@@ -46,6 +46,7 @@ class MsgIngester(object):
         self.SUCCESS = 0
         self.FAILURE = 1
         self.config = mainConfig
+        self.csc = csc
 
         kafka_config = self.config.message_ingester.kafka
 
@@ -62,7 +63,7 @@ class MsgIngester(object):
         LOGGER.info("max_messages set to %d", max_messages)
         self.msgQueue = MsgQueue(brokers, group_id, topics, max_messages)
 
-        self.butler = ButlerProxy(self.config, csc)
+        self.butler = ButlerProxy(self.config, self.csc)
 
         self.tasks = []
         self.dequeue_task = None
@@ -96,20 +97,30 @@ class MsgIngester(object):
         # for each butler, attempt to ingest the requested file,
         # Success or failure is noted in a message description which
         # will send out via a CSC logevent.
-        LOGGER.info("ingest called")
+        LOGGER.info("calling ingest")
         try:
             await self.butler.ingest(butler_file_list)
         except Exception as e:
             LOGGER.warning("Exception: %s", e)
+        LOGGER.info("ingest completed")
 
-    def _helper_done_callback(self, task):
-        LOGGER.info("called")
+    def _queue_helper_done_callback(self, task):
+        self._helper_done_callback(task, "dequeue task completed")
+
+    def _helper_done_callback(self, task, msg=None):
+        # LOGGER.info("called")
         if task.exception():
             try:
                 task.result()
             except Exception as e:
                 LOGGER.info(f"Task {task}: {e}")
-        LOGGER.info("completed")
+        if msg is not None:
+            LOGGER.info(msg)
+        else:
+            # LOGGER.info("completed")
+            pass
+        if self.csc.has_faulted:
+            asyncio.create_task(self.csc.call_fault(code=2, report="exception occurred"))
 
     def run_tasks(self):
         """run tasks to queue files and ingest them"""
@@ -119,7 +130,7 @@ class MsgIngester(object):
         # do the ingest
 
         task = asyncio.create_task(self.dequeue_and_ingest_files())
-        task.add_done_callback(self._helper_done_callback)
+        task.add_done_callback(self._queue_helper_done_callback)
         self.tasks.append(task)
 
         butler_tasks = self.get_butler_tasks()
@@ -150,14 +161,19 @@ class MsgIngester(object):
             for m in message_list:
                 if m.error():
                     if m.error().code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
+                        if self.csc:
+                            self.csc.has_faulted = True
                         raise Exception("The topic or partition does not exist")
                     else:
+                        if self.csc:
+                            self.csc.has_faulted = True
                         raise Exception(f"KafkaError = {m.error().code()}")
                 rps = self._gather_all_resource_paths(m)
                 if rps is None:
                     continue
                 resources.extend(rps)
-            await self.ingest(resources)
+            if resources:
+                await self.ingest(resources)
 
             # XXX - commit on success, failure, or metadata_failure
             self.msgQueue.commit(message=message_list[-1])
