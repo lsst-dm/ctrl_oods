@@ -108,7 +108,7 @@ class MsgIngester(object):
         self._helper_done_callback(task, "dequeue task completed")
 
     def _helper_done_callback(self, task, msg=None):
-        # LOGGER.info("called")
+        LOGGER.info("called")
         if task.exception():
             try:
                 task.result()
@@ -117,8 +117,7 @@ class MsgIngester(object):
         if msg is not None:
             LOGGER.info(msg)
         else:
-            # LOGGER.info("completed")
-            pass
+            LOGGER.info("completed")
         if self.csc.has_faulted:
             asyncio.create_task(self.csc.call_fault(code=2, report="exception occurred"))
 
@@ -160,13 +159,11 @@ class MsgIngester(object):
             resources = []
             for m in message_list:
                 if m.error():
+                    if self.csc:
+                        self.csc.has_faulted = True
                     if m.error().code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
-                        if self.csc:
-                            self.csc.has_faulted = True
                         raise Exception("The topic or partition does not exist")
                     else:
-                        if self.csc:
-                            self.csc.has_faulted = True
                         raise Exception(f"KafkaError = {m.error().code()}")
                 rps = self._gather_all_resource_paths(m)
                 if rps is None:
