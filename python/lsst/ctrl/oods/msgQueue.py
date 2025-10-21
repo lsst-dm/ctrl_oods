@@ -75,6 +75,7 @@ class MsgQueue(object):
             LOGGER.info(f"{PROTOCOL_KEY} set to {protocol}")
             config = {
                 "bootstrap.servers": ",".join(self.brokers),
+                "client.id": "oods message dequeue",
                 "group.id": self.group_id,
                 "auto.offset.reset": "earliest",
                 "security.protocol": protocol,
@@ -86,6 +87,7 @@ class MsgQueue(object):
             LOGGER.info("Defaulting to no authentication to Kafka")
             config = {
                 "bootstrap.servers": ",".join(self.brokers),
+                "client.id": "oods message dequeue",
                 "group.id": self.group_id,
                 "auto.offset.reset": "earliest",
             }

@@ -137,6 +137,7 @@ class DmCsc(BaseCsc):
         if (self.current_state is None) and (self.summary_state == State.STANDBY):
             self.current_state = State.STANDBY
             self.transitioning_to_fault_evt.clear()
+            self.has_faulted = False
             return
 
         # if going from STANDBY to DISABLED, start external services

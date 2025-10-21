@@ -143,7 +143,6 @@ class ButlerAttendant:
         file_list: `list`
             files to ingest
         """
-
         # Ingest images, giving precedence to wavefront sensors, then raws,
         # then guiders. Wavefront sensors are separated out because they
         # want those ingested asap; guiders are last because a raw has to
@@ -180,6 +179,7 @@ class ButlerAttendant:
         if raws:
             await self._ingest(raws)
         await self.ingest_guiders()
+        LOGGER.debug("ingest done")
 
     def on_guider_success(self, datasets):
         """Callback used on successful guider ingest. Used to transmit
@@ -256,7 +256,7 @@ class ButlerAttendant:
             try:
                 LOGGER.debug("about to ingest")
                 await loop.run_in_executor(executor, self.task.run, file_list)
-                LOGGER.info("done with ingest")
+                LOGGER.debug("done with ingest")
             except RuntimeError as re:
                 LOGGER.info(f"{re}")
             except Exception as e:
@@ -416,7 +416,7 @@ class ButlerAttendant:
         )
         t = t - td
 
-        LOGGER.debug("cleaning collections")
+        LOGGER.info("cleaning collection %s", collection)
         LOGGER.debug("about to createButler()")
         butler = self.createButler()
 
@@ -477,10 +477,10 @@ class ButlerAttendant:
                 except Exception as e:
                     LOGGER.warning("couldn't remove %s: %s", uri, e)
 
-        LOGGER.debug("about to run pruneDatasets")
+        LOGGER.info("about to run pruneDatasets")
         butler.pruneDatasets(ref, purge=True, unstore=True)
-        LOGGER.debug("done running pruneDatasets")
-        LOGGER.debug("done cleaning collections")
+        LOGGER.info("done running pruneDatasets")
+        LOGGER.info("done cleaning collection %s", collection)
 
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary
