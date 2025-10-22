@@ -9,6 +9,18 @@ ctrl_oods
 The Observatory Operations Data Service watches for files in one or more directories, and then ingests them into an LSST Butler repository.   
 Files are expired from the repository at specified intervals.
 
+Setting logging level
+---------------------
+Set the environment variable CTRL_OODS_DEBUG_LEVEL to control the logging level.
+
+.. code-block:: shell
+
+    export CTRL_OODS_DEBUG_LEVEL=DEBUG
+
+sets it to ``logging.DEBUG``
+
+The default is ``logging.INFO``
+
 Example YAML file for file ingest
 ---------------------------------
 
