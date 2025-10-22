@@ -29,10 +29,6 @@ import lsst.log as lsstlog
 import yaml
 from lsst.ctrl.oods.msgIngester import MsgIngester
 
-LOGGER = logging.getLogger(__name__)
-F = "%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s"
-logging.basicConfig(level=logging.INFO, format=F, datefmt="%Y-%m-%d %H:%M:%S")
-
 
 class Standalone(object):
     """Standalone class to run tests without CSC requirements."""
@@ -112,5 +108,17 @@ class Standalone(object):
 
 
 if __name__ == "__main__":
+
+    oods_level = "INFO"
+    if "CTRL_OODS_DEBUG_LEVEL" in os.environ:
+        oods_level = os.environ["CTRL_OODS_DEBUG_LEVEL"]
+
+    level_mapping = logging.getLevelNamesMapping()
+    debug_level = level_mapping.get(oods_level, logging.INFO)
+
+    LOGGER = logging.getLogger(__name__)
+    F = "%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s"
+    logging.basicConfig(level=debug_level, format=F, datefmt="%Y-%m-%d %H:%M:%S")
+
     alone = Standalone()
     asyncio.run(alone.main())
