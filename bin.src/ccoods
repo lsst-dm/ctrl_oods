@@ -31,14 +31,14 @@ from lsst.ctrl.oods.ccoods_csc import CcOodsCsc
 lsstlog.usePythonLogging()
 
 oods_level = "INFO"
-if "CTRL_OODS_DEBUG_LEVEL" in os.environ:
-    oods_level = os.environ["CTRL_OODS_DEBUG_LEVEL"]
+if "CTRL_OODS_LOG_LEVEL" in os.environ:
+    log_level_name = os.environ["CTRL_OODS_LOG_LEVEL"]
 
 level_mapping = logging.getLevelNamesMapping()
-debug_level = level_mapping.get(oods_level, logging.INFO)
+log_level = level_mapping.get(log_level_name, logging.INFO)
 
 LOGGER = logging.getLogger(__name__)
 F = "%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s"
-logging.basicConfig(level=debug_level, format=F, datefmt="%Y-%m-%d %H:%M:%S")
+logging.basicConfig(level=log_level, format=F, datefmt="%Y-%m-%d %H:%M:%S")
 
 asyncio.run(CcOodsCsc.amain(index=None))

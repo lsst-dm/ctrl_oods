@@ -13,7 +13,9 @@ Setting logging level
 ---------------------
 Set the environment variable CTRL_OODS_DEBUG_LEVEL to control the logging level.
 
-export CTRL_OODS_DEBUG_LEVEL=DEBUG
+.. code-block:: shell
+
+    export CTRL_OODS_DEBUG_LEVEL=DEBUG
 
 sets it to ``logging.DEBUG``
 
