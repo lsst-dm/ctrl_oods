@@ -178,7 +178,7 @@ class ButlerAttendant:
 
         if raws:
             await self._ingest(raws)
-        await self.ingest_guiders()
+            await self.ingest_guiders()
         LOGGER.debug("ingest done")
 
     def on_guider_success(self, datasets):
