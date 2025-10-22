@@ -178,8 +178,9 @@ class ButlerAttendant:
 
         if raws:
             await self._ingest(raws)
-            await self.ingest_guiders()
-        LOGGER.debug("ingest done")
+
+        await self.ingest_guiders()
+        LOGGER.info("ingest done")
 
     def on_guider_success(self, datasets):
         """Callback used on successful guider ingest. Used to transmit
