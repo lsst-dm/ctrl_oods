@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # This file is part of ctrl_oods
 #
 # Developed for the LSST Data Management System.
@@ -21,24 +19,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import asyncio
-import logging
-import os
 
-import lsst.log as lsstlog
-from lsst.ctrl.oods.atoods_csc import AtOodsCsc
+import time
 
-lsstlog.usePythonLogging()
 
-log_level_name = "INFO"
-if "CTRL_OODS_LOG_LEVEL" in os.environ:
-    log_level_name = os.environ["CTRL_OODS_LOG_LEVEL"]
+class GuiderEntry:
+    """Represents a guider file. Creates a timestamp on object creation
 
-level_mapping = logging.getLevelNamesMapping()
-log_level = level_mapping.get(log_level_name, logging.INFO)
-
-LOGGER = logging.getLogger(__name__)
-F = "%(levelname) -10s %(asctime)s.%(msecs)03dZ %(name) -30s %(funcName) -35s %(lineno) -5d: %(message)s"
-logging.basicConfig(level=log_level, format=F, datefmt="%Y-%m-%d %H:%M:%S")
-
-asyncio.run(AtOodsCsc.amain(index=None))
+    Parameters
+    ----------
+    guider_resource_path: `ResourcePath`
+        location of the guider file
+    """
+    def __init__(self, guider_resource_path):
+        self.guider_resource_path = guider_resource_path
+        self.timestamp = time.time()

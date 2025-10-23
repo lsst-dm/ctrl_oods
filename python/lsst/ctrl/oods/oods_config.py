@@ -69,6 +69,7 @@ class ButlerConfig(BaseModel):
     repo_directory: str
     collections: list[str]
     collection_cleaner: CollectionCleanerConfig
+    guider_max_age_seconds: int = 30
 
 
 class S3ButlerConfig(ButlerConfig):

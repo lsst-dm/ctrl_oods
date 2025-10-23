@@ -28,6 +28,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import astropy.units as u
 from astropy.time import Time, TimeDelta
+from lsst.ctrl.oods.guiderEntry import GuiderEntry
+from lsst.ctrl.oods.guiderList import GuiderList
 from lsst.ctrl.oods.imageData import ImageData
 from lsst.ctrl.oods.oods_config import TimeInterval
 from lsst.ctrl.oods.utils import Utils
@@ -57,6 +59,7 @@ class ButlerAttendant:
         self.scanInterval = collection_cleaner_config.cleaning_interval
         self.collections = butler_config.collections
         self.cleanCollections = collection_cleaner_config.collections_to_clean
+        self.guider_max_age_seconds = butler_config.guider_max_age_seconds
         if hasattr(butler_config, "s3profile"):
             self.s3profile = butler_config.s3profile
         else:
@@ -88,7 +91,7 @@ class ButlerAttendant:
         define_visits_config.groupExposures = "one-to-one-and-by-counter"
         self.visit_definer = DefineVisitsTask(config=define_visits_config, butler=self.butler)
 
-        self.guiders = []
+        self.guider_list = GuiderList()
 
     def createButler(self):
         instr = Instrument.from_string(self.instrument)
@@ -140,7 +143,7 @@ class ButlerAttendant:
 
         Parameters
         ----------
-        file_list: `list`
+        file_list : `list`
             files to ingest
         """
         # Ingest images, giving precedence to wavefront sensors, then raws,
@@ -174,12 +177,18 @@ class ButlerAttendant:
         guider_pattern = ["_guider.fits"]
         guiders, raws = self._filter_files(other_entries, guider_pattern)
 
-        self.guiders.extend(guiders)
-
         if raws:
             await self._ingest(raws)
 
+        for guider_resource_path in guiders:
+            self.guider_list.append(GuiderEntry(guider_resource_path=guider_resource_path))
+
         await self.ingest_guiders()
+
+        removed_entries = self.guider_list.purge_old_entries(self.guider_max_age_seconds)
+        for entry in removed_entries:
+            LOGGER.info(f"{entry.guider_resource_path} expired; removed from waiting list")
+
         LOGGER.info("ingest done")
 
     def on_guider_success(self, datasets):
@@ -188,26 +197,26 @@ class ButlerAttendant:
 
         Parameters
         ----------
-        datasets: `list`
+        datasets : `list`
             list of Datasets
         """
         for dataset in datasets:
             image_data = ImageData(dataset)
             self.transmit_status(image_data.get_info(), code=0, description="file ingested")
             LOGGER.debug("removing %s from guider list after successful ingestion", dataset.path)
-            self.guiders.remove(dataset.path)
+            self.guider_list.remove_by_name(dataset.path)
 
     def on_undefined_exposure(self, dataset, obsid):
         """Callback used on unsuccessful guider ingest.
 
         Parameters
         ----------
-        dataset: `ResourcePath`
+        dataset : `ResourcePath`
             guider dataset that failed to ingest
-        obsid: `str`
+        obsid : `str`
             observation id
         """
-        LOGGER.info(f"undefined exposure for {obsid=} {dataset.path}; will try again")
+        LOGGER.info(f"undefined exposure for {obsid=} {dataset.path}")
 
     async def ingest_guiders(self):
         """Ingest any available guider files
@@ -221,16 +230,15 @@ class ButlerAttendant:
         code hasn't gotten any messages, but an attempt to ingest any left
         over guiders in the list.
         """
-        if not self.guiders:
+        if not self.guider_list:
             return
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
-                LOGGER.debug("about to ingest guiders")
-                await loop.run_in_executor(executor, self._ingest_saved_guiders, self.guiders)
-                LOGGER.info("done with guider ingest")
+                names = self.guider_list.get_guider_resource_paths()
+                await loop.run_in_executor(executor, self._ingest_saved_guiders, names)
             except RuntimeError as re:
-                LOGGER.warning(f"{re}; will try again soon")
+                LOGGER.warning(f"{re}")
             except Exception as e:
                 LOGGER.exception(f"Exception! {e=}")
 
@@ -239,8 +247,8 @@ class ButlerAttendant:
 
         Parameters
         ----------
-        datasets: `list`
-            list of Datasets
+        file_list : `list[ResourcePath]`
+            list of files to ingest
         """
         ingest_guider(
             self.butler,
