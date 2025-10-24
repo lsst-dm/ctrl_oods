@@ -30,7 +30,7 @@ from lsst.ctrl.oods.ccoods_csc import CcOodsCsc
 
 lsstlog.usePythonLogging()
 
-oods_level = "INFO"
+log_level_name = "INFO"
 if "CTRL_OODS_LOG_LEVEL" in os.environ:
     log_level_name = os.environ["CTRL_OODS_LOG_LEVEL"]
 
