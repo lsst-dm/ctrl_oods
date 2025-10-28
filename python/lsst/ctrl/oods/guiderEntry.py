@@ -31,6 +31,7 @@ class GuiderEntry:
     guider_resource_path: `ResourcePath`
         location of the guider file
     """
+
     def __init__(self, guider_resource_path):
         self.guider_resource_path = guider_resource_path
         self.timestamp = time.time()
