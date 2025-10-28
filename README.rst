@@ -21,6 +21,16 @@ sets it to ``logging.DEBUG``
 
 The default is ``logging.INFO``
 
+Guiders
+-------
+Guider files must be ingested after a WF or regular CCD has been ingested, or the guider ingest will fail. If the guider ingest fails,
+that guider file is added to an ingestion candidate list, with an expiration time.  When new 
+WFs or regular CCDs arrive for the OODS to be ingested, another attempt to ingest the guider file will happen.  If after the guider
+ingest attempt fails, the expiration time has past, the guider file will be deemed uningestible, and removed from the ingestion candidates list.
+The expiration time ``guider_max_age_seconds`` should be set to a time by which a WF or regular CCD message should have arrived to the OODS.  Since
+ingests should happen quickly, setting that expiration time to 30 or 60 seconds is reasonable, and well beyond when a WF or CCDS for that image
+should have arrived.
+
 Example YAML file for file ingest
 ---------------------------------
 
@@ -40,6 +50,7 @@ Example YAML file for file ingest
             <<: *interval
             seconds: 1
         butler:
+            guider_max_age_seconds: 30
             instrument: lsst.obs.lsst.LsstComCam
             repo_directory : /tmp/repo
             collections:
@@ -79,6 +90,7 @@ The ``file_ingester`` section has several elements and sections.
 The ``new_file_scan_interval`` section is the interval at which the file system is scanned.  In this example, scans pause for one section, before a new file system scan starts.
 
 The ``butler`` section describes
+    * ``guider_max_age_seconds`` - the number of seconds guiders that haven't been successfully ingested will attempt to be ingested before giving up
     * ``instrument`` - the camera type
     * ``repo_directory`` - the butler repository location
     * ``collections`` - the butler collection used to initialize the OODS butler
@@ -122,6 +134,7 @@ Example YAML file for message ingest
             group_id: ATOODS
             max_messages: 10
         butler:
+            guider_max_age_seconds: 30
             instrument: lsst.obs.lsst.LsstCam
             repo_directory : /tmp/repo
             s3profile: testprofile
@@ -152,6 +165,7 @@ The `kafka` section describes
     * ``max_messages`` - the maximum number of messages to wait for before returning.  Note that the OODS may read less messages if it times out before one second.
 
 The ``butler`` section describes
+    * ``guider_max_age_seconds`` - the number of seconds guiders that haven't been successfully ingested will attempt to be ingested before giving up
     * ``instrument`` - the camera type
     * ``repo_directory`` - the butler repository location
     * ``s3profile`` - the S3 profile used to connect to the message store

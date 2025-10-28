@@ -13,6 +13,7 @@ message_ingester:
        group_id: ATOODS
        max_messages: 10
     butler:
+        guider_max_age_seconds: 30
         repo_directory: repo
         instrument: lsst.obs.lsst.Latiss
         collections:
