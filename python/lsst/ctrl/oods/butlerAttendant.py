@@ -158,32 +158,17 @@ class ButlerAttendant:
 
         entries = [ResourcePath(s) for s in new_list]
 
-        wavefront_patterns = [
-            "R00_SW0",
-            "R00_SW1",
-            "R04_SW0",
-            "R04_SW1",
-            "R40_SW0",
-            "R40_SW1",
-            "R44_SW0",
-            "R44_SW1",
-        ]
-
-        wavefront_sensors, other_entries = self._filter_files(entries, wavefront_patterns)
-
-        if wavefront_sensors:
-            await self._ingest(wavefront_sensors)
-
         guider_pattern = ["_guider.fits"]
-        guiders, raws = self._filter_files(other_entries, guider_pattern)
+        guiders, others = self._filter_files(entries, guider_pattern)
 
-        if raws:
-            await self._ingest(raws)
+        if others:
+            await self._ingest(others)
 
         for guider_resource_path in guiders:
             self.guider_list.append(GuiderEntry(guider_resource_path=guider_resource_path))
 
-        await self.ingest_guiders()
+        if self.guider_list:
+            await self.ingest_guiders()
 
         removed_entries = self.guider_list.purge_old_entries(self.guider_max_age_seconds)
         for entry in removed_entries:
