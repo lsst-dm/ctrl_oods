@@ -150,6 +150,7 @@ class ButlerAttendant:
         # then guiders. Wavefront sensors are separated out because they
         # want those ingested asap; guiders are last because a raw has to
         # be ingested before a guider can.
+        LOGGER.info("ingest routine starting")
         await asyncio.sleep(0)
         new_list = file_list
         if self.s3profile:
@@ -174,7 +175,7 @@ class ButlerAttendant:
         for entry in removed_entries:
             LOGGER.info(f"{entry.guider_resource_path} expired; removed from waiting list")
 
-        LOGGER.info("ingest done")
+        LOGGER.info("ingest routine completed")
 
     def on_guider_success(self, datasets):
         """Callback used on successful guider ingest. Used to transmit
@@ -186,6 +187,7 @@ class ButlerAttendant:
             list of Datasets
         """
         for dataset in datasets:
+            LOGGER.info("file %s successfully ingested", dataset.path)
             image_data = ImageData(dataset)
             self.transmit_status(image_data.get_info(), code=0, description="file ingested")
             LOGGER.debug("removing %s from guider list after successful ingestion", dataset.path)
@@ -221,7 +223,9 @@ class ButlerAttendant:
         with ThreadPoolExecutor() as executor:
             try:
                 names = self.guider_list.get_guider_resource_paths()
+                LOGGER.info("about to ingest guiders")
                 await loop.run_in_executor(executor, self._ingest_saved_guiders, names)
+                LOGGER.info("done with ingesting guiders")
             except RuntimeError as re:
                 LOGGER.warning(f"{re}")
             except Exception as e:
@@ -248,9 +252,9 @@ class ButlerAttendant:
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
-                LOGGER.debug("about to ingest")
+                LOGGER.info("ingesting ccds starting")
                 await loop.run_in_executor(executor, self.task.run, file_list)
-                LOGGER.debug("done with ingest")
+                LOGGER.info("ingesting ccds completed")
             except RuntimeError as re:
                 LOGGER.info(f"{re}")
             except Exception as e:
