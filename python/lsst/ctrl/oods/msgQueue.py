@@ -51,7 +51,7 @@ class MsgQueue(object):
     max_messages : `int`
         Maximum number of messages to grab at once
     max_wait_time : `float`
-        Maximum amount of time in seconds to wait before returning from consumer request
+        Maximum amount of time in seconds to wait for consumer read
     """
 
     def __init__(self, brokers, group_id, topics, max_messages, max_wait_time):
