@@ -44,7 +44,7 @@ class MsgQueueTestCase(HeartbeatBase):
         with open(dataFile, "r") as f:
             message = f.read()
 
-        mq = MsgQueue(brokers, group_id, topics, max_messages)
+        mq = MsgQueue(brokers, group_id, topics, max_messages, 1.0)
         mq.consumer = MagicMock()
         mq.consumer.consume = MagicMock(return_value=[message])
         mq.consumer.commit = MagicMock()

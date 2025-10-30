@@ -106,6 +106,7 @@ class KafkaConfig(BaseModel):
     topics: list[str]
     group_id: str
     max_messages: int
+    max_wait_time: float = 1.0
 
 
 class MessageIngesterConfig(BaseModel):

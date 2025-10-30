@@ -57,11 +57,12 @@ class MsgIngester(object):
         topics = kafka_config.topics
 
         max_messages = kafka_config.max_messages
+        max_wait_time = kafka_config.max_wait_time
 
         LOGGER.info("listening to brokers %s", brokers)
         LOGGER.info("listening on topics %s", topics)
         LOGGER.info("max_messages set to %d", max_messages)
-        self.msgQueue = MsgQueue(brokers, group_id, topics, max_messages)
+        self.msgQueue = MsgQueue(brokers, group_id, topics, max_messages, max_wait_time)
 
         self.butler = ButlerProxy(self.config, self.csc)
 
