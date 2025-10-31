@@ -133,6 +133,7 @@ Example YAML file for message ingest
                 - atoods
             group_id: ATOODS
             max_messages: 10
+            max_wait_time: 1.0
         butler:
             guider_max_age_seconds: 30
             instrument: lsst.obs.lsst.LsstCam
@@ -162,7 +163,8 @@ The `kafka` section describes
     * ``brokers`` - a list of Kafka brokers the OODS will connect  to for messages
     * ``topics`` - a list of Kafka topics the OODS will listen on
     * ``group_id`` - the group id of this client
-    * ``max_messages`` - the maximum number of messages to wait for before returning.  Note that the OODS may read less messages if it times out before one second.
+    * ``max_messages`` - the maximum number of messages to wait for before returning.  Note that the OODS may read less messages if it times out before ``max_wait_time``.
+    * ``max_wait_time`` - the maximum about of time to wait for before returning, regardless of the number of messages retrieved.
 
 The ``butler`` section describes
     * ``guider_max_age_seconds`` - the number of seconds guiders that haven't been successfully ingested will attempt to be ingested before giving up

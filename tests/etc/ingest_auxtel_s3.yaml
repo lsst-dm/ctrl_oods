@@ -6,12 +6,13 @@ default_interval: &interval
 
 message_ingester:
     kafka:
-       brokers:
-           - kafka:9092
-       topics:
-           - atoods
-       group_id: ATOODS
-       max_messages: 10
+        brokers:
+            - kafka:9092
+        topics:
+            - atoods
+        group_id: ATOODS
+        max_messages: 10
+        max_wait_time: 1.0
     butler:
         guider_max_age_seconds: 30
         repo_directory: repo

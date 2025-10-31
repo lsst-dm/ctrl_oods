@@ -150,6 +150,7 @@ class ButlerAttendant:
         # then guiders. Wavefront sensors are separated out because they
         # want those ingested asap; guiders are last because a raw has to
         # be ingested before a guider can.
+        LOGGER.info("ingest routine starting")
         await asyncio.sleep(0)
         new_list = file_list
         if self.s3profile:
@@ -158,38 +159,23 @@ class ButlerAttendant:
 
         entries = [ResourcePath(s) for s in new_list]
 
-        wavefront_patterns = [
-            "R00_SW0",
-            "R00_SW1",
-            "R04_SW0",
-            "R04_SW1",
-            "R40_SW0",
-            "R40_SW1",
-            "R44_SW0",
-            "R44_SW1",
-        ]
-
-        wavefront_sensors, other_entries = self._filter_files(entries, wavefront_patterns)
-
-        if wavefront_sensors:
-            await self._ingest(wavefront_sensors)
-
         guider_pattern = ["_guider.fits"]
-        guiders, raws = self._filter_files(other_entries, guider_pattern)
+        guiders, others = self._filter_files(entries, guider_pattern)
 
-        if raws:
-            await self._ingest(raws)
+        if others:
+            await self._ingest(others)
 
         for guider_resource_path in guiders:
             self.guider_list.append(GuiderEntry(guider_resource_path=guider_resource_path))
 
-        await self.ingest_guiders()
+        if self.guider_list:
+            await self.ingest_guiders()
 
         removed_entries = self.guider_list.purge_old_entries(self.guider_max_age_seconds)
         for entry in removed_entries:
             LOGGER.info(f"{entry.guider_resource_path} expired; removed from waiting list")
 
-        LOGGER.info("ingest done")
+        LOGGER.info("ingest routine completed")
 
     def on_guider_success(self, datasets):
         """Callback used on successful guider ingest. Used to transmit
@@ -201,6 +187,7 @@ class ButlerAttendant:
             list of Datasets
         """
         for dataset in datasets:
+            LOGGER.info("file %s successfully ingested", dataset.path)
             image_data = ImageData(dataset)
             self.transmit_status(image_data.get_info(), code=0, description="file ingested")
             LOGGER.debug("removing %s from guider list after successful ingestion", dataset.path)
@@ -236,7 +223,9 @@ class ButlerAttendant:
         with ThreadPoolExecutor() as executor:
             try:
                 names = self.guider_list.get_guider_resource_paths()
+                LOGGER.info("about to ingest guiders")
                 await loop.run_in_executor(executor, self._ingest_saved_guiders, names)
+                LOGGER.info("done with ingesting guiders")
             except RuntimeError as re:
                 LOGGER.warning(f"{re}")
             except Exception as e:
@@ -263,9 +252,9 @@ class ButlerAttendant:
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as executor:
             try:
-                LOGGER.debug("about to ingest")
+                LOGGER.info("ingesting ccds starting")
                 await loop.run_in_executor(executor, self.task.run, file_list)
-                LOGGER.debug("done with ingest")
+                LOGGER.info("ingesting ccds completed")
             except RuntimeError as re:
                 LOGGER.info(f"{re}")
             except Exception as e:

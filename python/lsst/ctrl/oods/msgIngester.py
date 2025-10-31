@@ -57,11 +57,12 @@ class MsgIngester(object):
         topics = kafka_config.topics
 
         max_messages = kafka_config.max_messages
+        max_wait_time = kafka_config.max_wait_time
 
         LOGGER.info("listening to brokers %s", brokers)
         LOGGER.info("listening on topics %s", topics)
         LOGGER.info("max_messages set to %d", max_messages)
-        self.msgQueue = MsgQueue(brokers, group_id, topics, max_messages)
+        self.msgQueue = MsgQueue(brokers, group_id, topics, max_messages, max_wait_time)
 
         self.butler = ButlerProxy(self.config, self.csc)
 
@@ -97,12 +98,12 @@ class MsgIngester(object):
         # for each butler, attempt to ingest the requested file,
         # Success or failure is noted in a message description which
         # will send out via a CSC logevent.
-        LOGGER.info("calling ingest")
+        LOGGER.info("message group ingest started")
         try:
             await self.butler.ingest(butler_file_list)
         except Exception as e:
             LOGGER.warning("Exception: %s", e)
-        LOGGER.info("ingest completed")
+        LOGGER.info("message group ingest completed")
 
     def _queue_helper_done_callback(self, task):
         self._helper_done_callback(task, "dequeue task completed")
@@ -156,6 +157,7 @@ class MsgIngester(object):
             message_list = await self.msgQueue.dequeue_messages()
             if message_list is None:
                 return
+            LOGGER.info("%d messages dequeued", len(message_list))
             resources = []
             for m in message_list:
                 if m.error():
@@ -170,6 +172,7 @@ class MsgIngester(object):
                     continue
                 resources.extend(rps)
             if resources:
+                LOGGER.info("%d FITS files to ingest", len(resources))
                 await self.ingest(resources)
 
             # XXX - commit on success, failure, or metadata_failure

@@ -38,21 +38,28 @@ MECHANISM_KEY = "LSST_KAFKA_SECURITY_MECHANISM"
 
 
 class MsgQueue(object):
-    """Report on new messages
+    """Read messages from Kafka
 
     Parameters
     ----------
-    config: `dict`
-        configuration dictionary for a consumer
-    topics: `list`
-        The topics to listen on
+    brokers : `list[str]`
+        A list of Kafka brokers
+    group_id : `str`
+        Kafka group to join
+    topics : `list[str]`
+        Kafka topics to listen on
+    max_messages : `int`
+        Maximum number of messages to grab at once
+    max_wait_time : `float`
+        Maximum amount of time in seconds to wait for consumer read
     """
 
-    def __init__(self, brokers, group_id, topics, max_messages):
+    def __init__(self, brokers, group_id, topics, max_messages, max_wait_time):
         self.brokers = brokers
         self.group_id = group_id
         self.topics = topics
         self.max_messages = max_messages
+        self.max_wait_time = max_wait_time
 
         self.msgList = list()
         self.condition = asyncio.Condition()
@@ -97,7 +104,15 @@ class MsgQueue(object):
         self.running = True
 
     def createConsumer(self, config, topics):
-        """Create a Kafka Consumer"""
+        """Create a Kafka Consumer
+
+        Parameters
+        ----------
+        config : `dict`
+            Kafka configuration for consumer
+        topics : `list[str]`
+            List of Kafka topics to subscribe to
+        """
         self.consumer = Consumer(config)
         self.consumer.subscribe(topics)
         LOGGER.info("subscribed")
@@ -107,7 +122,7 @@ class MsgQueue(object):
         LOGGER.debug("getting more messages")
         while self.running:
             try:
-                m_list = self.consumer.consume(num_messages=self.max_messages, timeout=1.0)
+                m_list = self.consumer.consume(num_messages=self.max_messages, timeout=self.max_wait_time)
             except Exception as e:
                 LOGGER.exception(e)
                 raise e
@@ -116,8 +131,14 @@ class MsgQueue(object):
             LOGGER.debug("message(s) received")
             return m_list
 
-    async def dequeue_messages(self):
-        """Retrieve messages"""
+    async def dequeue_messages(self) -> list:
+        """Retrieve messages
+
+        Returns
+        -------
+        ret : `list`
+            list of messages read from Kafka consumer
+        """
         try:
             loop = asyncio.get_running_loop()
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
@@ -127,7 +148,7 @@ class MsgQueue(object):
             LOGGER.info("get messages task cancelled")
 
     def commit(self, message):
-        """Perform Kafka commit a message
+        """Perform Kafka commit on a message
 
         Parameters
         ----------
