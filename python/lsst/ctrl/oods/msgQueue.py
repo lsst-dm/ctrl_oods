@@ -42,11 +42,11 @@ class MsgQueue(object):
 
     Parameters
     ----------
-    brokers : `dict`
-        configuration dictionary for a consumer
+    brokers : `list[str]`
+        A list of Kafka brokers
     group_id : `str`
         Kafka group to join
-    topics : `list`
+    topics : `list[str]`
         Kafka topics to listen on
     max_messages : `int`
         Maximum number of messages to grab at once
@@ -110,7 +110,7 @@ class MsgQueue(object):
         ----------
         config : `dict`
             Kafka configuration for consumer
-        topics : `list`
+        topics : `list[str]`
             List of Kafka topics to subscribe to
         """
         self.consumer = Consumer(config)
