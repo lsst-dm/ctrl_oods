@@ -75,7 +75,7 @@ class TaggingTestCase(HeartbeatBase):
        interrupts that gather() causing all tasks to stop.  End of unit test
     """
 
-    async def stage(self):
+    async def stage(self, config_name):
         """stage test data and set up ingester tasks
 
         Returns
@@ -87,9 +87,6 @@ class TaggingTestCase(HeartbeatBase):
         """
         # fits file to ingest
         fits_name = "3019053000001-R22-S00-det000.fits.fz"
-
-        # configuration file to load
-        config_name = "ingest_tag_test.yaml"
 
         # create a path to the configuration file
 
@@ -172,13 +169,43 @@ class TaggingTestCase(HeartbeatBase):
         later disassociated, they are cleaned up.
         """
         exposure = "3019053000001"
-        file_to_ingest = await self.stage()
+
+        # configuration file to load
+        config_name = "ingest_tag_test.yaml"
+        file_to_ingest = await self.stage(config_name)
 
         await self.perform_clean(self.config)
         await self.associate_file(exposure)
         self.assertTrue(os.path.exists(file_to_ingest))
 
+        # have to wait for the file to expire, and
+        # disassociate it
+        await asyncio.sleep(5)
+
         await self.disassociate_file(exposure)
+        await self.perform_clean(self.config)
+        self.assertFalse(os.path.exists(file_to_ingest))
+
+    async def testTaggedFileTestCase2(self):
+        """Test associating and disassociating of datasets
+
+        This test creates async tasks to simulate the OODS in operation
+        when outside actors associate datasets.  The associated
+        file in this test are deleted, since they're directed
+        to not be excluded from clean up.
+        """
+        exposure = "3019053000001"
+
+        # configuration file to load
+        config_name = "ingest_tag_test_exclude_false.yaml"
+        file_to_ingest = await self.stage(config_name)
+
+        await self.perform_clean(self.config)
+        await self.associate_file(exposure)
+        self.assertTrue(os.path.exists(file_to_ingest))
+
+        # have to wait for the file to expire
+        await asyncio.sleep(5)
         await self.perform_clean(self.config)
         self.assertFalse(os.path.exists(file_to_ingest))
 
@@ -225,8 +252,6 @@ class TaggingTestCase(HeartbeatBase):
             the name of the exposure to remove
         """
 
-        logging.info("waiting to disassociate file")
-        await asyncio.sleep(5)
         logging.info("about to disassociate file")
         # create a butler and remove the file from the TAGGED collecdtion
         butler = Butler(self.repo_dir, writeable=True)

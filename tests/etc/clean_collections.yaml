@@ -22,11 +22,13 @@ file_ingester:
             - collection_b
         collection_cleaner:
             collections_to_clean:
-                - collection: collection_a
+                - collections:
+                      - collection_a
                   files_older_than:
                       <<: *interval
                       days: 3
-                - collection: collection_b
+                - collections: 
+                      - collection_b
                   files_older_than:
                       <<: *interval
                       days: 3

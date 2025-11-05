@@ -57,10 +57,14 @@ Example YAML file for file ingest
                 - LSSTCam/raw/all
             collection_cleaner:
                 collections_to_clean:
-                    - collection: LSSTCam/raw/all
+                    - collections: 
+                          - LSSTCam/raw/all
                       files_older_than:
                           <<: *interval
                           seconds: 10
+                      dataset_types:
+                          - "*"
+                      exclude_tagged: true
                 cleaning_interval:
                     <<: *interval
                     seconds: 15
@@ -96,23 +100,25 @@ The ``butler`` section describes
     * ``collections`` - the butler collection used to initialize the OODS butler
     * ``collection_cleaner`` section describes, collections and how long files will remain in the Butler before being removed, and the interval at which files are cleaned
 
+The ``collection_cleaner`` section describes
+    * ``collections_to_clean`` - a list of collections from which entries will be removed
+    * ``cleaning_interval`` - the cycle at which all collections will be evaluated
+
+The ``collections_to_clean`` section describes
+    * ``collections`` - a list of collections
+    * ``files_older_than`` - a time interval which, when receached, files are canidates for removal
+    * ``dataset_types`` - the dataset types to clean.  These are the only types to be removed.  ``*`` means all dataset types
+    * ``exclude_tagged`` - indicates whether entries that are part of a tagged collection will be removed
+
+In this case, files in collection ``LSSTCam/raw/all`` will be removed after 10 seconds
+The ``cleaning_interval`` is the interval at which cleaning takes place.  In this case, a cleaning check takes places every 15 seconds.
+
 The ``cache_cleaner`` section describes
     * ``clear_empty_directories_and_old_files`` - a list of directories to scan for empty directories, or old files
     * ``cleaning_interval`` - how often to clean
     * ``files_older_than`` - how old the files have to be before they'll be removed
     * ``directories_empty_for_more_than`` - how long directories have to be empty before they are removed
 
-
-
-Sections are:
-
-The ``collections_to_clean`` section describes lists of collections, and cleaning intervals:
-    * ``collection`` - the collection to clean
-    * ``files_older_than`` - the interval at which files will be removed
-
-In this case, files in collection ``LSSTCam/raw/all`` will be removed after 10 seconds
-
-The ``cleaning_interval`` is the interval at which cleaning takes place.  In this case, a cleaning check takes places every 15 seconds.
 
 Example YAML file for message ingest
 ------------------------------------
@@ -143,14 +149,22 @@ Example YAML file for message ingest
                 - LSSTCam/raw/all
             collection_cleaner:
                 collections_to_clean:
-                    - collection: LSSTCam/raw/all
+                    - collections: 
+                          - LSSTCam/raw/all
                       files_older_than:
                           <<: *interval
                           seconds: 10
-                    - collection: LSSTCam/raw/guider
+                      dataset_types:
+                          - "*"
+                      exclude_tagged: true
+                    - collections: 
+                          - LSSTCam/raw/guider
                       files_older_than:
                           <<: *interval
                           seconds: 10
+                      dataset_types:
+                          - "*"
+                      exclude_tagged: true
                 cleaning_interval:
                     <<: *interval
                     seconds: 10
@@ -173,3 +187,13 @@ The ``butler`` section describes
     * ``s3profile`` - the S3 profile used to connect to the message store
     * ``collections`` - the butler collection used to initialize the OODS butler
     * ``collection_cleaner`` section describes, collections and how long files will remain in the Butler before being removed, and the interval at which files are cleaned
+
+The ``collection_cleaner`` section describes
+    * ``collections_to_clean`` - a list of collections from which entries will be removed
+    * ``cleaning_interval`` - the cycle at which all collections will be evaluated
+
+The ``collections_to_clean`` section describes
+    * ``collections`` - a list of collections
+    * ``files_older_than`` - a time interval which, when receached, files are canidates for removal
+    * ``dataset_types`` - the dataset types to clean.  These are the only types to be removed.  ``*`` means all dataset types
+    * ``exclude_tagged`` - indicates whether entries that are part of a tagged collection will be removed

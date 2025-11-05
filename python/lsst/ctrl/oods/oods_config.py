@@ -51,8 +51,10 @@ class TimeInterval(BaseModel):
 class CollectionCleanupRule(BaseModel):
     """Rule for cleaning up a specific collection."""
 
-    collection: str
+    collections: list[str]
     files_older_than: TimeInterval
+    dataset_types: list[str] = ["*"]
+    exclude_tagged: bool = True
 
 
 class CollectionCleanerConfig(BaseModel):

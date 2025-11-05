@@ -371,12 +371,21 @@ class ButlerAttendant:
         were ingested before the configured time interval
         """
         for entry in self.cleanCollections:
-            collection = entry.collection
+            collections = entry.collections
             olderThan = entry.files_older_than
+            dataset_types = entry.dataset_types
+            exclude_tagged = entry.exclude_tagged
             loop = asyncio.get_event_loop()
             try:
                 with ThreadPoolExecutor() as executor:
-                    await loop.run_in_executor(executor, self.cleanCollection, collection, olderThan)
+                    await loop.run_in_executor(
+                        executor,
+                        self.cleanAllCollections,
+                        collections,
+                        olderThan,
+                        dataset_types,
+                        exclude_tagged,
+                    )
             except Exception as e:
                 LOGGER.error(e)
 
@@ -393,16 +402,20 @@ class ButlerAttendant:
             except Exception as e:
                 LOGGER.info(f"{e=}")
 
-    def cleanCollection(self, collection, older_than):
+    def cleanAllCollections(self, collections, older_than, dataset_types, exclude_tagged):
         """Remove all the datasets in the butler that
         were ingested before the configured Interval
 
         Parameters
         ----------
-        collection: `str`
-            collection to clean up
-        olderThan: `dict`
+        collections : `list[str]`
+            collections to clean up
+        olderThan : `dict`
             time interval
+        dataset_types : `list[str]`
+            list of dataset_types to clean up
+        exclude_tagged : `bool`
+            whether or not to exclude datasets that are also tagged
         """
 
         # calculate the time value which is Time.now - the
@@ -414,7 +427,7 @@ class ButlerAttendant:
         )
         t = t - td
 
-        LOGGER.info("cleaning collection %s", collection)
+        LOGGER.info("cleaning collection %s", collections)
         LOGGER.debug("about to createButler()")
         butler = self.createButler()
 
@@ -425,33 +438,38 @@ class ButlerAttendant:
         LOGGER.debug("about to call queryDatasets")
         all_datasets = set(
             butler.registry.queryDatasets(
-                datasetType=...,
-                collections=[collection],
+                datasetType=dataset_types,
+                collections=collections,
                 where="ingest_date < ref_date",
                 bind={"ref_date": t},
             )
         )
         LOGGER.debug("done calling queryDatasets")
 
-        # get all TAGGED collections
-        LOGGER.debug("about to call queryCollections")
-        tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
-        LOGGER.debug("done calling queryCollections")
+        # exclude tagged collections from being deleted
+        if exclude_tagged:
+            ref = all_datasets
+            # get all TAGGED collections
+            LOGGER.debug("about to call queryCollections")
+            tagged_cols = list(butler.registry.queryCollections(collectionTypes=CollectionType.TAGGED))
+            LOGGER.debug("done calling queryCollections")
 
-        # Note: The code below is to get around an issue where passing
-        # an empty list as the collections argument to queryDatasets
-        # returns all datasets.
-        if tagged_cols:
-            # get all TAGGED datasets
-            LOGGER.debug("about to run queryDatasets for TAGGED collections")
-            tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
-            LOGGER.debug("done running queryDatasets for TAGGED collections; differencing datasets")
+            # Note: The code below is to get around an issue where passing
+            # an empty list as the collections argument to queryDatasets
+            # returns all datasets.
+            if tagged_cols:
+                # get all TAGGED datasets
+                LOGGER.debug("about to run queryDatasets for TAGGED collections")
+                tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
+                LOGGER.debug("done running queryDatasets for TAGGED collections; differencing datasets")
 
-            # get a set of datasets in all_datasets, but not in tagged_datasets
-            ref = all_datasets.difference(tagged_datasets)
-            LOGGER.debug("done differencing datasets")
+                # get set of datasets in all_datasets, but not tagged_datasets
+                ref = all_datasets.difference(tagged_datasets)
+                LOGGER.debug("done differencing datasets")
+            else:
+                # no TAGGED collections, so use all_datasets
+                ref = all_datasets
         else:
-            # no TAGGED collections, so use all_datasets
             ref = all_datasets
 
         # References outside of the Butler's datastore
@@ -478,7 +496,7 @@ class ButlerAttendant:
         LOGGER.info("about to run pruneDatasets")
         butler.pruneDatasets(ref, purge=True, unstore=True)
         LOGGER.info("done running pruneDatasets")
-        LOGGER.info("done cleaning collection %s", collection)
+        LOGGER.info("done cleaning collection %s", collections)
 
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary

@@ -24,35 +24,27 @@ file_ingester:
             collections_to_clean:
                 - collections:
                       - collection_a
-                  files_older_than:
-                      <<: *interval
-                      days: 3
-                  dataset_types:
-                      - "*"
-                  exclude_tagged: true
-                - collections:
                       - collection_b
                   files_older_than:
                       <<: *interval
                       days: 3
                   dataset_types:
-                      - "*"
+                      - DataType3
                   exclude_tagged: true
             cleaning_interval:
                 <<: *interval
                 seconds: 2
         
-
+        
     cache_cleaner:
         clear_empty_directories_and_old_files:
             - repo/raw
         cleaning_interval:
             <<: *interval
-            seconds: 3
+            seconds: 30
         files_older_than:
             <<: *interval
-            days: 1
+            days: 30
         directories_empty_for_more_than:
             <<: *interval
             days: 1
-
