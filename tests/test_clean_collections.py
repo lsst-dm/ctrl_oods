@@ -32,12 +32,10 @@ from lsst.daf.butler.tests import MetricsExample, addDataIdValue, addDatasetType
 
 class CleanCollectionsTestCase(HeartbeatBase):
 
-    def setUp(self):
+    def configureTest(self, config_name):
         """set up test info, including config dict, and populate
         Butler repo with test data
         """
-
-        config_name = "clean_collections.yaml"
 
         # create a path to the configuration file
 
@@ -68,7 +66,6 @@ class CleanCollectionsTestCase(HeartbeatBase):
         butler_config.repo_directory = self.repo_dir
 
         self.clean_collections = butler_config.collection_cleaner.collections_to_clean
-        print(f"{self.clean_collections=}")
 
         # Define the run collection
         run_a = "collection_a"
@@ -125,7 +122,7 @@ class CleanCollectionsTestCase(HeartbeatBase):
             number of seconds after which files will reaped
         """
         for entry in self.clean_collections:
-            collection = entry.collection
+            collection = entry.collections
             if collection == name:
                 entry.files_older_than.days = 0
                 entry.files_older_than.hours = 0
@@ -133,16 +130,18 @@ class CleanCollectionsTestCase(HeartbeatBase):
                 entry.files_older_than.seconds = seconds
                 return
 
-    async def testCleanCask(self):
+    async def runTest(self, config_name, remainder, final):
         """test clean collections operations"""
 
-        # ensure two files are registered on setUp
+        # ensure two files are registered
+
+        self.configureTest(config_name)
 
         self.assertEqual(self.number_of_datasets(), 2)
 
         # set expiration time to 120 seconds
-        self.modify_collection_time("collection_a", 120)
-        self.modify_collection_time("collection_b", 120)
+        self.modify_collection_time(["collection_a"], 120)
+        self.modify_collection_time(["collection_b"], 120)
 
         # attempt to clean the collections
         await self.perform_clean(self.config)
@@ -150,20 +149,31 @@ class CleanCollectionsTestCase(HeartbeatBase):
         # both should still be there
         self.assertEqual(self.number_of_datasets(), 2)
 
-        # set expiration time to 3 seconds in collection_a
-        self.modify_collection_time("collection_a", 1)
+        # set expiration time to 1 second in collection_a
+        self.modify_collection_time(["collection_a"], 1)
         await self.perform_clean(self.config)
 
-        # should have removed one in collection_a, and
-        # kept one in collection_b
-        self.assertEqual(self.number_of_datasets(), 1)
+        # should have remainder left
+        self.assertEqual(self.number_of_datasets(), remainder)
 
-        # set expiration time to 3 seconds in collection_b
-        self.modify_collection_time("collection_b", 1)
+        # set expiration time to 1 second in collection_b
+        self.modify_collection_time(["collection_b"], 1)
         await self.perform_clean(self.config)
 
-        # should be no more left
-        self.assertEqual(self.number_of_datasets(), 0)
+        # should have final left
+        self.assertEqual(self.number_of_datasets(), final)
+
+    async def testCleanTask(self):
+        await self.runTest("clean_collections.yaml", 1, 0)
+
+    async def testCleanTask2(self):
+        await self.runTest("clean_collections2.yaml", 2, 2)
+
+    async def testCleanTask3(self):
+        await self.runTest("clean_collections3.yaml", 1, 1)
+
+    async def testCleanTask4(self):
+        await self.runTest("clean_collections4.yaml", 1, 0)
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):

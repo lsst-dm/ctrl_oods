@@ -21,10 +21,14 @@ file_ingester:
             - LATISS/raw/all
         collection_cleaner:
             collections_to_clean:
-                - collection: LATISS/raw/all
+                - collections:
+                      - LATISS/raw/all
                   files_older_than:
                       <<: *interval
                       days: 30
+                  dataset_types:
+                      - "*"
+                  exclude_tagged: true
             cleaning_interval:
                 <<: *interval
                 minutes: 1

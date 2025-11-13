@@ -275,8 +275,6 @@ class Gen3ComCamIngesterTestCase(HeartbeatBase):
         ingester = FileIngester(config)
 
         staged_files = ingester.stageFiles([self.dest_file])
-        print(f"{staged_files=}")
-        print(f"{ingester=}")
 
         await ingester.ingest(staged_files)
         await asyncio.sleep(0)  # appease coverage
