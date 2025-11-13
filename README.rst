@@ -31,6 +31,20 @@ The expiration time ``guider_max_age_seconds`` should be set to a time by which 
 ingests should happen quickly, setting that expiration time to 30 or 60 seconds is reasonable, and well beyond when a WF or CCDS for that image
 should have arrived.
 
+Collection Cleaner
+------------------
+The collection cleaner section of the butler block specifies the Butler datasets to expire.  This is done for each Butler collection specified.
+Files that are older than a specified time period will be removed from the butler.  The default is to remove all dataset types (or if you prefer to
+specify all dataset types, add ``"*`` as the only list entry for ``dataset_types``.  If ``dataset_type``are specified, only those dataset types
+will be removed.  Datasets in tagged collections can be marked as exempt from being removed. By specifying ``exclude_tagged: true``, any datasets
+that would have been deleted will NOT be deleted.  If ``exclude_tagged`` is set to ``false``, the datasets will be removed.  Multiple collections
+can be grouped if you'd like to delete the same dataset_types and if ``exclude_tagged`` for each is the same.  Otherwise, you can list each
+collection individually.
+
+The ``cleaning__interval`` specifies out often collections are scanned for Butler datasets to expire.
+
+
+
 Example YAML file for file ingest
 ---------------------------------
 

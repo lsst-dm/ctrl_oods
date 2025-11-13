@@ -408,11 +408,11 @@ class ButlerAttendant:
 
         Parameters
         ----------
-        collections : `list[str]`
+        collections : `list` [`str`]
             collections to clean up
         olderThan : `dict`
             time interval
-        dataset_types : `list[str]`
+        dataset_types : `list` [`str`]
             list of dataset_types to clean up
         exclude_tagged : `bool`
             whether or not to exclude datasets that are also tagged
@@ -460,7 +460,9 @@ class ButlerAttendant:
             if tagged_cols:
                 # get all TAGGED datasets
                 LOGGER.debug("about to run queryDatasets for TAGGED collections")
-                tagged_datasets = set(butler.registry.queryDatasets(datasetType=..., collections=tagged_cols))
+                tagged_datasets = set(
+                    butler.registry.queryDatasets(datasetType=dataset_types, collections=tagged_cols)
+                )
                 LOGGER.debug("done running queryDatasets for TAGGED collections; differencing datasets")
 
                 # get set of datasets in all_datasets, but not tagged_datasets
