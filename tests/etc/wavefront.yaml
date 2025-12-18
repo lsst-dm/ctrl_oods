@@ -9,41 +9,33 @@ file_ingester:
     bad_file_directory: /tmp/bad
     staging_directory: /tmp/staging
     batch_size: 20
+
     new_file_scan_interval:
         <<: *interval
         seconds: 10
 
     butler:
         wavefronts:
-            priority: False
+            priority: True
             max_age_seconds: 3.0
         guider_max_age_seconds: 30
         repo_directory: repo
         instrument: lsst.obs.lsst.Latiss
         collections:
-            - collection_a
-            - collection_b
+            - LATISS/raw/all
         collection_cleaner:
             collections_to_clean:
                 - collections:
-                      - collection_a
+                      - LATISS/raw/all
                   files_older_than:
                       <<: *interval
-                      days: 3
-                  dataset_types:
-                      - "*"
-                  exclude_tagged: true
-                - collections:
-                      - collection_b
-                  files_older_than:
-                      <<: *interval
-                      days: 3
+                      seconds: 1
                   dataset_types:
                       - "*"
                   exclude_tagged: true
             cleaning_interval:
                 <<: *interval
-                seconds: 2
+                seconds: 1
         
 
     cache_cleaner:
@@ -51,11 +43,10 @@ file_ingester:
             - repo/raw
         cleaning_interval:
             <<: *interval
-            seconds: 3
+            seconds: 30
         files_older_than:
             <<: *interval
-            days: 1
+            days: 30
         directories_empty_for_more_than:
             <<: *interval
             days: 1
-

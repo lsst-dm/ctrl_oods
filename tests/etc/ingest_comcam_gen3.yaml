@@ -15,6 +15,9 @@ file_ingester:
         seconds: 10
 
     butler:
+        wavefronts:
+            priority: False
+            max_age_seconds: 3.0
         guider_max_age_seconds: 30
         repo_directory: repo
         instrument: lsst.obs.lsst.LsstComCam

@@ -14,6 +14,9 @@ message_ingester:
         max_messages: 250
         max_wait_time: 0.5
     butler:
+        wavefronts:
+            priority: True
+            max_age_seconds: 3.0
         guider_max_age_seconds: 30
         repo_directory : /tmp/repo
         s3profile: testprofile

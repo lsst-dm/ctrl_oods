@@ -30,6 +30,7 @@ import astropy.units as u
 from astropy.time import Time, TimeDelta
 from lsst.ctrl.oods.guiderEntry import GuiderEntry
 from lsst.ctrl.oods.guiderList import GuiderList
+from lsst.ctrl.oods.wavefrontList import WavefrontList
 from lsst.ctrl.oods.imageData import ImageData
 from lsst.ctrl.oods.oods_config import TimeInterval
 from lsst.ctrl.oods.utils import Utils
@@ -52,6 +53,10 @@ class ButlerAttendant:
     def __init__(self, butler_config, csc=None):
         self.csc = csc
 
+        self.wavefront_patterns = ["R00_SW0", "R00_SW1", "R04_SW0", "R04_SW1",
+                                   "R40_SW0", "R40_SW1", "R44_SW0", "R44_SW1"]
+        self.guider_patterns = ["_guider.fits"]
+
         self.status_queue = asyncio.Queue()
         collection_cleaner_config = butler_config.collection_cleaner
         self.butler_repo = butler_config.repo_directory
@@ -60,6 +65,8 @@ class ButlerAttendant:
         self.collections = butler_config.collections
         self.cleanCollections = collection_cleaner_config.collections_to_clean
         self.guider_max_age_seconds = butler_config.guider_max_age_seconds
+        self.wavefront_priority = butler_config.wavefronts.priority
+        self.wavefront_max_age_seconds = butler_config.wavefronts.max_age_seconds
         if hasattr(butler_config, "s3profile"):
             self.s3profile = butler_config.s3profile
         else:
@@ -92,6 +99,10 @@ class ButlerAttendant:
         self.visit_definer = DefineVisitsTask(config=define_visits_config, butler=self.butler)
 
         self.guider_list = GuiderList()
+
+        self._wavefront_pending = WavefrontList()
+        self._guider_pending_list = []
+        self._science_pending_list = []
 
     def createButler(self):
         instr = Instrument.from_string(self.instrument)
@@ -139,6 +150,64 @@ class ButlerAttendant:
         return matching_files, non_matching_files
 
     async def ingest(self, file_list):
+        """Ingest a list of files into a butler
+
+        Parameters
+        ----------
+        file_list : `list`
+            files to ingest
+        """
+        # Ingest images, giving precedence to wavefront sensors, then raws,
+        # then guiders. Wavefront sensors are separated out because they
+        # want those ingested asap; guiders are last because a raw has to
+        # be ingested before a guider can.
+        LOGGER.info("ingest routine starting")
+        await asyncio.sleep(0)
+        new_list = file_list
+        if self.s3profile:
+            # rewrite URI to add s3profile
+            new_list = [s.replace(netloc=f"{self.s3profile}@{s.netloc}") for s in file_list]
+
+        entries = [ResourcePath(s) for s in new_list]
+
+        if self.wavefront_priority:
+            LOGGER.debug("wavefront_priority")
+            wavefronts, other_entries = self._filter_files(entries, self.wavefront_patterns)
+            guiders, science = self._filter_files(other_entries, self.guider_patterns)
+
+            self._wavefront_pending.extend(wavefronts)
+            if self._wavefront_pending.should_ingest():
+                LOGGER.debug("ingesting wavefronts")
+                await self._ingest(self._wavefront_pending.get_list())
+                self._wavefront_pending.reset()
+            else:
+                LOGGER.debug("not ingesting wavefronts")
+                self._science_pending_list.extend(science)
+                self._guider_pending_list.extend(guiders)
+                return
+        else:
+            LOGGER.debug("not wavefront_priority")
+            guiders, science = self._filter_files(entries, self.guider_patterns)
+            self._science_pending_list = science
+            self._guider_pending_list = guiders
+
+        if self._science_pending_list:
+            await self._ingest(self._science_pending_list)
+            self._science_pending_list.clear()
+
+        for guider_resource_path in self._guider_pending_list:
+            self.guider_list.append(GuiderEntry(guider_resource_path=guider_resource_path))
+
+        if self.guider_list:
+            await self.ingest_guiders()
+
+        removed_entries = self.guider_list.purge_old_entries(self.guider_max_age_seconds)
+        for entry in removed_entries:
+            LOGGER.info(f"{entry.guider_resource_path} expired; removed from waiting list")
+
+        LOGGER.info("ingest routine completed")
+
+    async def ingest_orig(self, file_list):
         """Ingest a list of files into a butler
 
         Parameters

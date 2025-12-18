@@ -14,6 +14,9 @@ file_ingester:
         seconds: 10
 
     butler:
+        wavefronts:
+            priority: False
+            max_age_seconds: 3.0
         guider_max_age_seconds: 30
         instrument: lsst.obs.lsst.Latiss
         repo_directory: repo

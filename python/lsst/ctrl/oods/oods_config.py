@@ -64,6 +64,11 @@ class CollectionCleanerConfig(BaseModel):
     cleaning_interval: TimeInterval
 
 
+class WavefrontConfig(BaseModel):
+    priority: bool = True
+    max_age_seconds: float = 3.0
+
+
 class ButlerConfig(BaseModel):
     """Configuration for Butler data management."""
 
@@ -72,6 +77,15 @@ class ButlerConfig(BaseModel):
     collections: list[str]
     collection_cleaner: CollectionCleanerConfig
     guider_max_age_seconds: int = 30
+
+    # Optional - wavefront priority override
+    wavefronts: WavefrontConfig | None = None
+
+    @model_validator(mode="after")
+    def validate_config(self):
+        if self.wavefronts is None:
+            self.wavefronts = WavefrontConfig()
+        return self
 
 
 class S3ButlerConfig(ButlerConfig):
@@ -87,7 +101,6 @@ class CacheCleanerConfig(BaseModel):
     cleaning_interval: TimeInterval
     files_older_than: TimeInterval
     directories_empty_for_more_than: TimeInterval
-
 
 class FileIngesterConfig(BaseModel):
     """Configuration for file ingestion."""
@@ -144,7 +157,7 @@ class OODSConfig(BaseModel):
         return OODSConfig.MESSAGE_INGESTER
 
     @model_validator(mode="after")
-    def validate_ingester_config(self):
+    def validate_config(self):
         """Ensure only one of file_ingester or message_ingester is present."""
         file_ingester = self.file_ingester
         message_ingester = self.message_ingester
@@ -156,6 +169,7 @@ class OODSConfig(BaseModel):
             raise ValueError("Must have either file_ingester or message_ingester configured")
 
         return self
+
 
     @classmethod
     def load(cls, config_file: str) -> "OODSConfig":
