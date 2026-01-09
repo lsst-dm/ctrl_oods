@@ -1,0 +1,21 @@
+default_interval: &interval
+    days: 0
+    hours: 0
+    minutes: 0
+    seconds: 0
+
+message_ingester:
+    kafka:
+        brokers:
+            - kafka:9092
+        topics: 
+            - wfoods
+        group_id: WFOODS
+        max_messages: 8
+        max_wait_time: 0.5
+    butler:
+        repo_directory : /tmp/repo
+        s3profile: testprofile
+        instrument: lsst.obs.lsst.LsstCam
+        collections:
+            - LSSTCam/raw/all
