@@ -70,7 +70,7 @@ class ButlerConfig(BaseModel):
     instrument: str
     repo_directory: str
     collections: list[str]
-    collection_cleaner: CollectionCleanerConfig
+    collection_cleaner: CollectionCleanerConfig | None = None
     guider_max_age_seconds: int = 30
 
 

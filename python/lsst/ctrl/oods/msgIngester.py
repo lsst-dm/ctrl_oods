@@ -49,6 +49,7 @@ class MsgIngester(object):
         self.csc = csc
 
         kafka_config = self.config.message_ingester.kafka
+        self.butler_config = self.config.message_ingester.butler
 
         brokers = kafka_config.brokers
 
@@ -81,7 +82,8 @@ class MsgIngester(object):
             A list containing each butler task to run
         """
         tasks = []
-        tasks.append(self.butler.clean_task)
+        if self.butler_config.collection_cleaner:
+            tasks.append(self.butler.clean_task)
 
         tasks.append(self.butler.send_status_task)
         return tasks

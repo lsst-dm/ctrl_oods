@@ -53,12 +53,15 @@ class ButlerAttendant:
         self.csc = csc
 
         self.status_queue = asyncio.Queue()
-        collection_cleaner_config = butler_config.collection_cleaner
+        self.collection_cleaner_config = butler_config.collection_cleaner
         self.butler_repo = butler_config.repo_directory
         self.instrument = butler_config.instrument
-        self.scanInterval = collection_cleaner_config.cleaning_interval
+
+        if self.collection_cleaner_config:
+            self.scanInterval = self.collection_cleaner_config.cleaning_interval
+            self.cleanCollections = self.collection_cleaner_config.collections_to_clean
+
         self.collections = butler_config.collections
-        self.cleanCollections = collection_cleaner_config.collections_to_clean
         self.guider_max_age_seconds = butler_config.guider_max_age_seconds
         if hasattr(butler_config, "s3profile"):
             self.s3profile = butler_config.s3profile

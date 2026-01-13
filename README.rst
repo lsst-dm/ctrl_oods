@@ -43,6 +43,8 @@ collection individually.
 
 The ``cleaning__interval`` specifies out often collections are scanned for Butler datasets to expire.
 
+Note that if collection cleaner is not present, the OODS will not perform any cleaning.   This is useful if there are multiple OODSes working with the same repo.
+
 
 
 Example YAML file for file ingest
