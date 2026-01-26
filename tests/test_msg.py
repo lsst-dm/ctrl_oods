@@ -120,7 +120,7 @@ class S3AuxtelIngesterTestCase(HeartbeatBase):
         try:
             await asyncio.gather(*task_list)
         except Exception:
-            ingester.stop_tasks()
+            await ingester.stop_tasks()
             for task in task_list:
                 task.cancel()
 

@@ -143,9 +143,9 @@ class MsgIngester(object):
 
         return self.tasks
 
-    def stop_tasks(self):
+    async def stop_tasks(self):
         self.running = False
-        self.msgQueue.stop()
+        await self.msgQueue.stop()
         for task in self.tasks:
             task.cancel()
         self.tasks = []
@@ -156,8 +156,13 @@ class MsgIngester(object):
     async def dequeue_and_ingest_files(self):
         self.running = True
         while self.running:
-            message_list = await self.msgQueue.dequeue_messages()
+            try:
+                message_list = await self.msgQueue.dequeue_messages()
+            except Exception as e:
+                print(f"{e}")
             if message_list is None:
+                return
+            if len(message_list) == 0:
                 return
             LOGGER.info("%d messages dequeued", len(message_list))
             resources = []
