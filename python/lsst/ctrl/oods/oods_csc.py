@@ -108,4 +108,4 @@ class OodsCsc(DmCsc):
 
     async def stop_services(self):
         """Stop all cleanup and archiving services"""
-        self.ingester.stop_tasks()
+        await self.ingester.stop_tasks()

@@ -27,6 +27,20 @@ from heartbeat_base import HeartbeatBase
 from lsst.ctrl.oods.msgQueue import MsgQueue
 
 
+def consumer_generator():
+    testdir = os.path.abspath(os.path.dirname(__file__))
+
+    dataFile = os.path.join(testdir, "data", "kafka_msg.json")
+
+    with open(dataFile, "r") as f:
+        message = f.read()
+
+    yield [message]
+
+    while True:
+        yield []
+
+
 class MsgQueueTestCase(HeartbeatBase):
 
     @patch.object(MsgQueue, "createConsumer", return_value=None)
@@ -37,22 +51,18 @@ class MsgQueueTestCase(HeartbeatBase):
         topics = "test_topic"
         max_messages = 4
 
-        testdir = os.path.abspath(os.path.dirname(__file__))
+        self.mq = MsgQueue(brokers, group_id, topics, max_messages, 1.0)
+        self.mq.consumer = MagicMock()
+        # mq.consumer.consume = MagicMock(return_value=[message])
+        self.mq.consumer.consume.side_effect = consumer_generator()
+        self.mq.consumer.commit = MagicMock()
+        self.mq.consumer.close = MagicMock()
 
-        dataFile = os.path.join(testdir, "data", "kafka_msg.json")
-
-        with open(dataFile, "r") as f:
-            message = f.read()
-
-        mq = MsgQueue(brokers, group_id, topics, max_messages, 1.0)
-        mq.consumer = MagicMock()
-        mq.consumer.consume = MagicMock(return_value=[message])
-        mq.consumer.commit = MagicMock()
-        mq.consumer.close = MagicMock()
+        self.mq.start()
 
         task_list = []
         task_list.append(asyncio.create_task(self.interrupt_me()))
-        msg = await mq.dequeue_messages()
+        msg = await self.mq.dequeue_messages()
         self.assertEqual(len(msg), 1)
 
         try:
@@ -63,6 +73,7 @@ class MsgQueueTestCase(HeartbeatBase):
 
     async def interrupt_me(self):
         await asyncio.sleep(5)
+        await self.mq.stop()
         raise RuntimeError("I'm interrupting")
 
 
