@@ -11,7 +11,7 @@ message_ingester:
         topics: 
             - atoods
         group_id: ATOODS
-        max_messages: 250
+        max_messages: 205
         max_wait_time: 0.5
     butler:
         guider_max_age_seconds: 30

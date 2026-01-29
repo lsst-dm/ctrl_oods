@@ -20,7 +20,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
-import concurrent
+import concurrent.futures
 import logging
 import os
 
@@ -49,20 +49,28 @@ class MsgQueue(object):
     topics : `list[str]`
         Kafka topics to listen on
     max_messages : `int`
-        Maximum number of messages to grab at once
+        Maximum number of messages to grab at once from Kafka
     max_wait_time : `float`
         Maximum amount of time in seconds to wait for consumer read
     """
 
-    def __init__(self, brokers, group_id, topics, max_messages, max_wait_time):
+    def __init__(
+        self,
+        brokers,
+        group_id,
+        topics,
+        max_messages,
+        max_wait_time,
+    ):
         self.brokers = brokers
         self.group_id = group_id
         self.topics = topics
         self.max_messages = max_messages
         self.max_wait_time = max_wait_time
 
-        self.msgList = list()
-        self.condition = asyncio.Condition()
+        self._queue = asyncio.Queue()
+        self._reader_task = None
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
         username = os.environ.get(USERNAME_KEY, None)
         password = os.environ.get(PASSWORD_KEY, None)
@@ -101,6 +109,7 @@ class MsgQueue(object):
 
         # note: this is done because mocking a cimpl is...tricky
         self.createConsumer(config, topics)
+        self.start()
         self.running = True
 
     def createConsumer(self, config, topics):
@@ -118,7 +127,7 @@ class MsgQueue(object):
         LOGGER.info("subscribed")
 
     def _get_messages(self):
-        """Return up to max_messages at a time from Kafka"""
+        """Return up to max_messages at a time from Kafka (blocking call)."""
         LOGGER.debug("getting more messages")
         while self.running:
             try:
@@ -126,26 +135,76 @@ class MsgQueue(object):
             except Exception as e:
                 LOGGER.exception(e)
                 raise e
+
             if len(m_list) == 0:
                 continue
-            LOGGER.debug("message(s) received")
+
+            LOGGER.debug(f"message(s) received: {len(m_list)}")
             return m_list
+        return None
+
+    async def _reader_loop(self):
+        """Task that reads from Kafka and puts messages in the queue."""
+        loop = asyncio.get_running_loop()
+        LOGGER.info("Starting Kafka reader loop")
+        try:
+            while self.running:
+                try:
+                    LOGGER.debug("calling _get_messages")
+                    message_list = await loop.run_in_executor(self._executor, self._get_messages)
+                    if message_list is None:
+                        # running was set to False
+                        break
+                    LOGGER.info(f"adding {len(message_list)} messages to queue")
+                    for msg in message_list:
+                        await self._queue.put(msg)
+                        LOGGER.debug("Message added to internal queue")
+                except asyncio.CancelledError:
+                    LOGGER.info("Reader loop cancelled")
+                    raise
+                except Exception as e:
+                    LOGGER.exception(f"Error in reader loop: {e}")
+                    # Continue reading despite errors
+        finally:
+            LOGGER.info("Kafka reader loop stopped")
+
+    def start(self):
+        """Start the background reader task.
+
+        This must be called from within an async context (event loop running).
+        """
+        if self._reader_task is None or self._reader_task.done():
+            self._reader_task = asyncio.create_task(self._reader_loop())
+            LOGGER.info("Background reader task started")
 
     async def dequeue_messages(self) -> list:
-        """Retrieve messages
+        """Retrieve messages from the internal queue.
 
         Returns
         -------
         ret : `list`
-            list of messages read from Kafka consumer
+            List of messages retrieved from the internal queue.
         """
+        messages = []
         try:
-            loop = asyncio.get_running_loop()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                message_list = await loop.run_in_executor(pool, self._get_messages)
-            return message_list
-        except asyncio.exceptions.CancelledError:
-            LOGGER.info("get messages task cancelled")
+            # Wait indefinitely for at least one message
+            msg = await self._queue.get()
+            messages.append(msg)
+
+            # get the rest
+            while True:
+                try:
+                    msg = self._queue.get_nowait()
+                    messages.append(msg)
+                except asyncio.QueueEmpty:
+                    break
+
+            LOGGER.debug(f"Dequeued {len(messages)} message(s)")
+            return messages
+
+        except asyncio.CancelledError:
+            LOGGER.info("dequeue_messages task cancelled")
+            return messages
 
     def commit(self, message):
         """Perform Kafka commit on a message
@@ -157,7 +216,22 @@ class MsgQueue(object):
         """
         self.consumer.commit(message=message)
 
-    def stop(self):
-        """shut down"""
+    async def stop(self):
+        """Shut down the message queue gracefully."""
+        LOGGER.info("Stopping MsgQueue")
         self.running = False
+
+        # Cancel the reader task if it's running
+        if self._reader_task is not None and not self._reader_task.done():
+            self._reader_task.cancel()
+            try:
+                await self._reader_task
+            except asyncio.CancelledError:
+                pass
+
+        # Shutdown the executor
+        self._executor.shutdown(wait=False)
+
+        # Close the consumer
         self.consumer.close()
+        LOGGER.info("MsgQueue stopped")
