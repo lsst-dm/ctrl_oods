@@ -430,7 +430,7 @@ class ButlerAttendant:
         )
         t = t - td
 
-        LOGGER.info("cleaning collection %s", collections)
+        LOGGER.debug("cleaning collection %s", collections)
         LOGGER.debug("about to createButler()")
         butler = self.createButler()
 
@@ -492,16 +492,16 @@ class ButlerAttendant:
                 LOGGER.warning("butler is missing uri for %s: %s", x, e)
 
             if uri is not None:
-                LOGGER.info("removing %s", uri)
+                LOGGER.debug("removing %s", uri)
                 try:
                     uri.remove()
                 except Exception as e:
                     LOGGER.warning("couldn't remove %s: %s", uri, e)
 
-        LOGGER.info("about to run pruneDatasets")
+        LOGGER.debug("about to run pruneDatasets")
         butler.pruneDatasets(ref, purge=True, unstore=True)
-        LOGGER.info("done running pruneDatasets")
-        LOGGER.info("done cleaning collection %s", collections)
+        LOGGER.debug("done running pruneDatasets")
+        LOGGER.debug("done cleaning collection %s", collections)
 
     def rawexposure_info(self, data):
         """Return a sparsely initialized dictionary
