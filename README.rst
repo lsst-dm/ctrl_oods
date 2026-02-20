@@ -35,7 +35,7 @@ Collection Cleaner
 ------------------
 The collection cleaner section of the butler block specifies the Butler datasets to expire.  This is done for each Butler collection specified.
 Files that are older than a specified time period will be removed from the butler.  The default is to remove all dataset types (or if you prefer to
-specify all dataset types, add ``"*`` as the only list entry for ``dataset_types``.  If ``dataset_type``are specified, only those dataset types
+specify all dataset types, add ``*`` as the only list entry for ``dataset_types``.  If ``dataset_type`` are specified, only those dataset types
 will be removed.  Datasets in tagged collections can be marked as exempt from being removed. By specifying ``exclude_tagged: true``, any datasets
 that would have been deleted will NOT be deleted.  If ``exclude_tagged`` is set to ``false``, the datasets will be removed.  Multiple collections
 can be grouped if you'd like to delete the same dataset_types and if ``exclude_tagged`` for each is the same.  Otherwise, you can list each
@@ -154,8 +154,10 @@ Example YAML file for message ingest
             topics: 
                 - atoods
             group_id: ATOODS
-            max_messages: 10
+            max_messages: 197
             max_wait_time: 1.0
+            group_wait_time: 0.1
+            time_to_wait_without_data: 0.2
         butler:
             guider_max_age_seconds: 30
             instrument: lsst.obs.lsst.LsstCam
@@ -193,8 +195,19 @@ The `kafka` section describes
     * ``brokers`` - a list of Kafka brokers the OODS will connect  to for messages
     * ``topics`` - a list of Kafka topics the OODS will listen on
     * ``group_id`` - the group id of this client
-    * ``max_messages`` - the maximum number of messages to wait for before returning.  Note that the OODS may read less messages if it times out before ``max_wait_time``.
-    * ``max_wait_time`` - the maximum about of time to wait for before returning, regardless of the number of messages retrieved.
+    * ``max_messages`` - the maximum number of messages to wait for before returning.  Note that the OODS may read less messages if it times out before ``group_wait_time``.
+    * ``max_wait_time`` - the maximum about of time to wait for before returning with any data, regardless of the number of messages retrieved.
+    * ``group_wait_time`` - the maximum about of time in seconds to wait before returning from a Kafka read
+    * ``time_to_wait_without_data`` - the maximum time to wait to return from reading, if no data has come in.
+
+The OODS read loop runs as follows:
+    * Wait for up to ``group_wait_time`` for ``max_messages`` to come in from Kafka
+    * After this initial group, gather as many messages as possible within ``max_wait_time`` seconds, exiting early if we haven’t received anything within ``time_to_wait_without_data`` seconds
+
+For the WFOODS, ``max_messages`` should be set to 8, and ``group_wait_time`` should be set to 0.1 for quick turnaround.
+For the MTOODS, ``max_messages`` should be set to 197, and ``group_wait_time`` should be set to 0.1 for quick turnaround.
+The value for ``max_wait_time`` should be set to the amount of time to wait before ingestion should start, regardless of how many messages are available.
+The values for ``time_to_wait_without_data`` should be set to the amount of time to wait if no other data has come in and you want to start ingestion.
 
 The ``butler`` section describes
     * ``guider_max_age_seconds`` - the number of seconds guiders that haven't been successfully ingested will attempt to be ingested before giving up
@@ -213,3 +226,4 @@ The ``collections_to_clean`` section describes
     * ``files_older_than`` - a time interval which, when receached, files are canidates for removal
     * ``dataset_types`` - the dataset types to clean.  These are the only types to be removed.  ``*`` means all dataset types
     * ``exclude_tagged`` - indicates whether entries that are part of a tagged collection will be removed
+

@@ -11,10 +11,10 @@ message_ingester:
         topics: 
             - atoods
         group_id: ATOODS
-        max_messages: 205
+        max_messages: 8
         max_wait_time: 1.0
         group_wait_time: 0.1
-        time_to_wait_without_data: 0.5
+        time_to_wait_without_data: 0.2
     butler:
         guider_max_age_seconds: 30
         repo_directory : /tmp/repo

@@ -109,6 +109,8 @@ class KafkaConfig(BaseModel):
     group_id: str
     max_messages: int
     max_wait_time: float = 1.0
+    group_wait_time: float = 0.1
+    time_to_wait_without_data: float = 0.2
 
 
 class MessageIngesterConfig(BaseModel):

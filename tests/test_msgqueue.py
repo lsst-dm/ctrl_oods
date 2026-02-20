@@ -51,9 +51,16 @@ class MsgQueueTestCase(HeartbeatBase):
         topics = "test_topic"
         max_messages = 4
 
-        self.mq = MsgQueue(brokers, group_id, topics, max_messages, 1.0)
+        self.mq = MsgQueue(
+            brokers=brokers,
+            group_id=group_id,
+            topics=topics,
+            max_messages=max_messages,
+            max_wait_time=1.0,
+            group_wait_time=0.1,
+            time_to_wait_without_data=0.2,
+        )
         self.mq.consumer = MagicMock()
-        # mq.consumer.consume = MagicMock(return_value=[message])
         self.mq.consumer.consume.side_effect = consumer_generator()
         self.mq.consumer.commit = MagicMock()
         self.mq.consumer.close = MagicMock()
