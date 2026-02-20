@@ -192,9 +192,11 @@ class MsgQueue(object):
                     # and we're still running, and we haven't gone over time,
                     # try to read additional messages
                     #
-                    while (len(message_list) < self.max_messages and
-                           self.running and
-                           time_waited < self.max_wait_time):
+                    while (
+                        len(message_list) < self.max_messages
+                        and self.running
+                        and time_waited < self.max_wait_time
+                    ):
                         additional = await loop.run_in_executor(self._executor, self._get_messages_nowait)
                         #
                         # if there are no additional messages, and we haven't
