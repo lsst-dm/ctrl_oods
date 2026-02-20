@@ -59,11 +59,23 @@ class MsgIngester(object):
 
         max_messages = kafka_config.max_messages
         max_wait_time = kafka_config.max_wait_time
+        group_wait_time = kafka_config.group_wait_time
+        time_to_wait_without_data = kafka_config.time_to_wait_without_data
 
         LOGGER.info("listening to brokers %s", brokers)
         LOGGER.info("listening on topics %s", topics)
         LOGGER.info("max_messages set to %d", max_messages)
-        self.msgQueue = MsgQueue(brokers, group_id, topics, max_messages, max_wait_time)
+        LOGGER.info("group_wait_time set to %f", group_wait_time)
+        LOGGER.info("time_to_wait_without_data set to %f", time_to_wait_without_data)
+        self.msgQueue = MsgQueue(
+            brokers=brokers,
+            group_id=group_id,
+            topics=topics,
+            max_messages=max_messages,
+            max_wait_time=max_wait_time,
+            group_wait_time=group_wait_time,
+            time_to_wait_without_data=time_to_wait_without_data,
+        )
 
         self.butler = ButlerProxy(self.config, self.csc)
 
@@ -157,13 +169,20 @@ class MsgIngester(object):
         self.running = True
         while self.running:
             try:
-                message_list = await self.msgQueue.dequeue_messages()
+                queue_list = await self.msgQueue.dequeue_messages()
             except Exception as e:
                 LOGGER.warning(f"{e}")
-            if message_list is None:
+            if queue_list is None:
                 return
-            if not message_list:
+            if not queue_list:
                 return
+
+            # queue_list is one or more lists of messages
+            # cycle through each of the lists in queue_list
+            # and create a new list of messages.
+
+            message_list = [msg for sublist in queue_list for msg in sublist]
+
             LOGGER.info("%d messages dequeued", len(message_list))
             resources = []
             for m in message_list:
