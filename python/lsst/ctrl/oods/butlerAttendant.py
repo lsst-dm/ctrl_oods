@@ -327,7 +327,7 @@ class ButlerAttendant:
             Dictionary to print
         """
 
-        LOGGER.info(f"would have sent {msg=}")
+        LOGGER.debug(f"would have sent {msg=}")
 
     def transmit_status(self, metadata, code, description):
         """Transmit a message with given metadata, status code and description

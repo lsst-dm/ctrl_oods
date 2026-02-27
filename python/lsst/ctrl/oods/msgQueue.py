@@ -23,6 +23,7 @@ import asyncio
 import concurrent.futures
 import logging
 import os
+import time
 
 from confluent_kafka import Consumer
 
@@ -52,6 +53,10 @@ class MsgQueue(object):
         Maximum number of messages to grab at once from Kafka
     max_wait_time : `float`
         Maximum amount of time in seconds to wait for consumer read
+    group_wait_time: `float`
+        Maximum time to wait while grabbing additional messages
+    time_to_wait_without_data: `float`
+        Maximum time to wait before returning with no data
     """
 
     def __init__(
@@ -61,12 +66,16 @@ class MsgQueue(object):
         topics,
         max_messages,
         max_wait_time,
+        group_wait_time,
+        time_to_wait_without_data,
     ):
         self.brokers = brokers
         self.group_id = group_id
         self.topics = topics
         self.max_messages = max_messages
         self.max_wait_time = max_wait_time
+        self.group_wait_time = group_wait_time
+        self.time_to_wait_without_data = time_to_wait_without_data
 
         self._queue = asyncio.Queue()
         self._reader_task = None
@@ -111,6 +120,8 @@ class MsgQueue(object):
         self.createConsumer(config, topics)
         self.start()
         self.running = True
+        self.lock = asyncio.Lock()
+        self.current_batch = []
 
     def createConsumer(self, config, topics):
         """Create a Kafka Consumer
@@ -131,7 +142,7 @@ class MsgQueue(object):
         LOGGER.debug("getting more messages")
         while self.running:
             try:
-                m_list = self.consumer.consume(num_messages=self.max_messages, timeout=self.max_wait_time)
+                m_list = self.consumer.consume(num_messages=self.max_messages, timeout=self.group_wait_time)
             except Exception as e:
                 LOGGER.exception(e)
                 raise e
@@ -143,22 +154,95 @@ class MsgQueue(object):
             return m_list
         return None
 
+    def _get_messages_nowait(self):
+        """Try to retrieve additional messages with a short timeout."""
+        try:
+            return self.consumer.consume(num_messages=self.max_messages, timeout=self.group_wait_time)
+        except Exception as e:
+            LOGGER.exception(e)
+            raise e
+
     async def _reader_loop(self):
         """Task that reads from Kafka and puts messages in the queue."""
         loop = asyncio.get_running_loop()
         LOGGER.info("Starting Kafka reader loop")
+
+        #
+        # Wait for up to self.max_messages to come in from Kafka. We
+        # save a small amount of time waiting for self.max_messages,
+        # since we might get them all in one call instead of multiple calls.
+        #
+        # After this initial group, gather as many messages as possible
+        # within `self.max_wait_time` seconds, returning early if we haven’t
+        # received anything within `self.time_to_wait_without_data` seconds
+        # or if we've received `self.max_messages` messages.
+        #
         try:
+            async with self.lock:
+                self.current_list = []
+
             while self.running:
                 try:
                     LOGGER.debug("calling _get_messages")
+
                     message_list = await loop.run_in_executor(self._executor, self._get_messages)
                     if message_list is None:
                         # running was set to False
                         break
-                    LOGGER.info(f"adding {len(message_list)} messages to queue")
-                    for msg in message_list:
-                        await self._queue.put(msg)
-                        LOGGER.debug("Message added to internal queue")
+
+                    async with self.lock:
+                        self.current_list.extend(message_list)
+                        LOGGER.debug(f"starting message group with {len(self.current_list)} messages")
+
+                    current_time = time.time()
+
+                    #
+                    # time to wait until returning no matter what
+                    #
+                    cutoff_time = current_time + self.max_wait_time
+
+                    #
+                    # time to wait until returning if no data has been received
+                    #
+                    no_data_cutoff_time = current_time + self.time_to_wait_without_data
+
+                    #
+                    # while we haven't read the maximum number of messages,
+                    # and we're still running, and we haven't gone over time,
+                    # try to read additional messages
+                    #
+
+                    while self.running and cutoff_time >= time.time():
+                        async with self.lock:
+                            if len(self.current_list) >= self.max_messages:
+                                break
+
+                        additional = await loop.run_in_executor(self._executor, self._get_messages_nowait)
+                        #
+                        # if there were additional messages, add them to
+                        # the current buffer
+                        #
+                        async with self.lock:
+                            if additional:
+                                self.current_list.extend(additional)
+                                no_data_cutoff_time = time.time() + self.time_to_wait_without_data
+                            elif time.time() > no_data_cutoff_time:
+                                #
+                                # if there are no additional messages, and we haven't
+                                # received any for a while, break out of this loop
+                                #
+                                LOGGER.debug("bailed after seeing no more messages")
+                                break
+
+                    # add the entire list to the queue, rather than one at
+                    # a time.  If you add one at a time, there's a race
+                    # condition, which could cause the consumer of the queue
+                    # to deal with less work than might available.
+                    async with self.lock:
+                        if self.current_list:
+                            await self._queue.put(self.current_list)
+                            LOGGER.debug(f"added message group with {len(self.current_list)} messages")
+                            self.current_list = []
                 except asyncio.CancelledError:
                     LOGGER.info("Reader loop cancelled")
                     raise
@@ -178,33 +262,40 @@ class MsgQueue(object):
             LOGGER.info("Background reader task started")
 
     async def dequeue_messages(self) -> list:
-        """Retrieve messages from the internal queue.
+        """Retrieve message lists from the internal queue.
 
         Returns
         -------
         ret : `list`
-            List of messages retrieved from the internal queue.
+            List of list of messages retrieved from the internal queue.
         """
-        messages = []
+        message_list = []
         try:
-            # Wait indefinitely for at least one message
-            msg = await self._queue.get()
-            messages.append(msg)
+            # Wait indefinitely for at least one message list
+            m_list = await self._queue.get()
+            message_list.append(m_list)
 
             # get the rest
             while True:
                 try:
-                    msg = self._queue.get_nowait()
-                    messages.append(msg)
+                    m_list = self._queue.get_nowait()
+                    message_list.append(m_list)
                 except asyncio.QueueEmpty:
                     break
 
-            LOGGER.debug(f"Dequeued {len(messages)} message(s)")
-            return messages
+            LOGGER.debug("initial grab %d messages", sum(len(sublist) for sublist in message_list))
+            async with self.lock:
+                if self.current_list:
+                    message_list.append(self.current_list)
+                    LOGGER.debug("grabbed %d pending messages", len(self.current_list))
+                    self.current_list = []
+
+            LOGGER.debug("total returning: %d messages", sum(len(sublist) for sublist in message_list))
+            return message_list
 
         except asyncio.CancelledError:
             LOGGER.info("dequeue_messages task cancelled")
-            return messages
+            return message_list
 
     def commit(self, message):
         """Perform Kafka commit on a message
