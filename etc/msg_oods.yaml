@@ -12,10 +12,13 @@ message_ingester:
             - atoods
         group_id: ATOODS
         max_messages: 197
-        max_wait_time: 1.0
+        max_wait_time: 0.5
         group_wait_time: 0.1
         time_to_wait_without_data: 0.5
     butler:
+        ingest_scaling:
+            file_threshold: 150
+            num_workers: 2
         guider_max_age_seconds: 30
         repo_directory : /tmp/repo
         s3profile: testprofile

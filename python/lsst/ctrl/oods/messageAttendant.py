@@ -60,6 +60,17 @@ class MessageAttendant(ButlerAttendant):
         info["FILENAME"] = f"{data.filename}"
         return info
 
+    def on_exposure_record(self, record):
+        """Callback used on new exposure record creation
+
+        Parameters
+        ----------
+        record: `lsst.daf.butler.DimensionRecord`
+            dimension record
+        """
+
+        self.definer_run(record)
+
     def on_success(self, datasets):
         """Callback used on successful ingest. Used to transmit
         successful data ingestion status
@@ -69,7 +80,6 @@ class MessageAttendant(ButlerAttendant):
         datasets: `list`
             list of DatasetRefs
         """
-        self.definer_run(datasets)
         for dataset in datasets:
             LOGGER.info("file %s successfully ingested", dataset.path)
             image_data = ImageData(dataset)

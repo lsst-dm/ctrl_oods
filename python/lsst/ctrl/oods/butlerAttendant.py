@@ -25,6 +25,7 @@ import logging
 import os
 import os.path
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 import astropy.units as u
 from astropy.time import Time, TimeDelta
@@ -52,10 +53,14 @@ class ButlerAttendant:
     def __init__(self, butler_config, csc=None):
         self.csc = csc
 
+        self.ingest_scaling_config = butler_config.ingest_scaling
         self.status_queue = asyncio.Queue()
         self.collection_cleaner_config = butler_config.collection_cleaner
         self.butler_repo = butler_config.repo_directory
         self.instrument = butler_config.instrument
+
+        self.file_threshold = self.ingest_scaling_config.file_threshold
+        self.num_workers = self.ingest_scaling_config.num_workers
 
         if self.collection_cleaner_config:
             self.scanInterval = self.collection_cleaner_config.cleaning_interval
@@ -89,6 +94,7 @@ class ButlerAttendant:
             on_success=self.on_success,
             on_ingest_failure=self.on_ingest_failure,
             on_metadata_failure=self.on_metadata_failure,
+            on_exposure_record=self.on_exposure_record,
         )
         define_visits_config = DefineVisitsTask.ConfigClass()
         define_visits_config.groupExposures = "one-to-one-and-by-counter"
@@ -256,7 +262,15 @@ class ButlerAttendant:
         with ThreadPoolExecutor() as executor:
             try:
                 LOGGER.info("ingesting ccds starting")
-                await loop.run_in_executor(executor, self.task.run, file_list)
+                num_files = len(file_list)
+                if self.num_workers == 1 or num_files < self.file_threshold:
+                    LOGGER.info("ingesting %d files with 1 worker", num_files)
+                    await loop.run_in_executor(executor, self.task.run, file_list)
+                else:
+                    LOGGER.info("ingesting %d files with %d workers", num_files, self.num_workers)
+                    await loop.run_in_executor(
+                        executor, partial(self.task.run, file_list, num_workers=self.num_workers)
+                    )
                 LOGGER.info("ingesting ccds completed")
             except RuntimeError as re:
                 LOGGER.info(f"{re}")
@@ -547,13 +561,16 @@ class ButlerAttendant:
         info["SENSOR"] = "S??"
         return info
 
-    def definer_run(self, file_datasets):
-        ids = []
-        for fds in file_datasets:
-            refs = fds.refs
-            ids.extend([ref.dataId for ref in refs])
+    def definer_run(self, record):
+        """call run method of visit_definer with record
+
+        Parameters
+        ----------
+        record:  `lsst.daf.butler.DimensionRecord`
+
+        """
         try:
-            self.visit_definer.run(ids, incremental=True)
-            LOGGER.debug("Defined visits for %s", ids)
+            self.visit_definer.run([record], incremental=True)
+            LOGGER.debug("Defined visit for %s", record.dataId)
         except Exception as e:
             LOGGER.exception(e)
