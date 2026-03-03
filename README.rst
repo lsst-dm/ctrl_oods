@@ -159,6 +159,9 @@ Example YAML file for message ingest
             group_wait_time: 0.1
             time_to_wait_without_data: 0.2
         butler:
+            ingest_scaling:
+                file_threshold: 150
+                num_workers: 2
             guider_max_age_seconds: 30
             instrument: lsst.obs.lsst.LsstCam
             repo_directory : /tmp/repo
@@ -210,12 +213,17 @@ The value for ``max_wait_time`` should be set to the amount of time to wait befo
 The values for ``time_to_wait_without_data`` should be set to the amount of time to wait if no other data has come in and you want to start ingestion.
 
 The ``butler`` section describes
+    * ``ingest_scaling`` - section describes what threshold of files to ingest with more threads
     * ``guider_max_age_seconds`` - the number of seconds guiders that haven't been successfully ingested will attempt to be ingested before giving up
     * ``instrument`` - the camera type
     * ``repo_directory`` - the butler repository location
     * ``s3profile`` - the S3 profile used to connect to the message store
     * ``collections`` - the butler collection used to initialize the OODS butler
     * ``collection_cleaner`` section describes, collections and how long files will remain in the Butler before being removed, and the interval at which files are cleaned
+
+The ``ingest_scaling`` section describes
+    * ``file_threshold`` - the number of files at which ingest scaling triggers
+    * ``num_workers`` - the number of threads to use for ingest
 
 The ``collection_cleaner`` section describes
     * ``collections_to_clean`` - a list of collections from which entries will be removed

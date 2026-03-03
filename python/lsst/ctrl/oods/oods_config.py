@@ -3,7 +3,7 @@ from datetime import timedelta
 from typing import ClassVar
 
 import yaml
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class TimeInterval(BaseModel):
@@ -64,6 +64,13 @@ class CollectionCleanerConfig(BaseModel):
     cleaning_interval: TimeInterval
 
 
+class IngestScalingConfig(BaseModel):
+    """Configuration for ingest scaling."""
+
+    file_threshold: int = 1
+    num_workers: int = 1
+
+
 class ButlerConfig(BaseModel):
     """Configuration for Butler data management."""
 
@@ -72,6 +79,7 @@ class ButlerConfig(BaseModel):
     collections: list[str]
     collection_cleaner: CollectionCleanerConfig | None = None
     guider_max_age_seconds: int = 30
+    ingest_scaling: IngestScalingConfig = Field(default_factory=IngestScalingConfig)
 
 
 class S3ButlerConfig(ButlerConfig):
